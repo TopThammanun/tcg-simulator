@@ -1,0 +1,46 @@
+---
+import Game from '../components/game/Game.svelte';
+import { formatDecklist } from '../data/decklist';
+import { deckKeys } from '../engine/db';
+import Base from '../layouts/Base.astro';
+import { loadDecks } from '../lib/decks';
+
+const decks = (await loadDecks()).map((d) => ({
+  slug: d.slug,
+  name: d.meta.name,
+  side: d.meta.side,
+  rank: d.meta.rank,
+  metaShare: d.meta.metaShare,
+  optional: d.meta.optional,
+  cards: deckKeys(d.lines.map((l) => l.entry)),
+}));
+const playerList = formatDecklist((await loadDecks()).find((d) => d.meta.side === 'player')!.lines.map((l) => l.entry));
+---
+
+<Base title="เล่นกับบอท">
+  <p class="eyebrow">โหมด 1 · คุณเล่นเองกับบอท</p>
+  <h1>เล่นกับบอท</h1>
+  <p class="how">
+    ลากการ์ดจากมือไปวางบนสนาม: พลังงาน / Tool / วิวัฒนาการวางบน Pokémon, Basic วางบน Bench, Item / Supporter / Stadium
+    วางตรงไหนก็ได้บนสนาม · ลากตัวหลักไปทับตัวบน Bench เพื่อถอย · หรือแตะการ์ดแล้วแตะเป้าหมายก็ได้ · คลิกขวา
+    (หรือกดค้างบนมือถือ) เพื่อดูการ์ดใหญ่ · กดบรรทัดใน log เพื่อย้อนดูสนาม
+  </p>
+  <Game client:only="svelte" {decks} {playerList} />
+</Base>
+
+<style>
+  h1 {
+    margin: 0 0 4px;
+  }
+  .how {
+    margin: 0 0 16px;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+  @media (max-width: 700px) {
+    .how {
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+  }
+</style>

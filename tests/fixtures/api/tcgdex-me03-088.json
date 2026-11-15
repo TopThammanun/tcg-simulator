@@ -1,0 +1,32 @@
+{
+  "category": "Energy",
+  "id": "me03-088",
+  "image": "https://assets.tcgdex.net/en/me/me03/088",
+  "localId": "088",
+  "name": "Telepathic Psychic Energy",
+  "rarity": "Rare",
+  "set": {
+    "cardCount": {
+      "official": 88,
+      "total": 124
+    },
+    "id": "me03",
+    "logo": "https://assets.tcgdex.net/en/me/me03/logo",
+    "name": "Perfect Order",
+    "symbol": "https://assets.tcgdex.net/univ/me/me03/symbol"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": true,
+    "normal": true,
+    "reverse": true,
+    "wPromo": false
+  },
+  "effect": "As long as this card is attached to a Pokémon, it provides {P} Energy.\nWhen you attach this card from your hand to a {P} Pokémon, search your deck for up to 2 Basic {P} Pokémon and put them onto your Bench. Then, shuffle your deck.",
+  "energyType": "Normal",
+  "regulationMark": "J",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

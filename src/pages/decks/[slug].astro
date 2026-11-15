@@ -1,0 +1,325 @@
+---
+import type { GetStaticPaths } from 'astro';
+import CardText from '../../components/CardText.astro';
+import CardTile from '../../components/CardTile.astro';
+import type { DeckSection } from '../../data/decklist';
+import Base from '../../layouts/Base.astro';
+import { loadDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../lib/decks';
+
+export const getStaticPaths = (async () => {
+  const decks = await loadDecks();
+  return decks.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
+}) satisfies GetStaticPaths;
+
+const { deck } = Astro.props as { deck: DeckView };
+const sections: DeckSection[] = ['pokemon', 'trainer', 'energy'];
+const SOURCE_NOTE = {
+  tcgdex: 'รูปจาก TCGdex',
+  'pokemontcg.io': 'รูปจาก pokemontcg.io',
+  'alt-print': 'รูปจาก print อื่นที่ข้อความเหมือนกัน',
+  none: 'ไม่มีรูปในทั้งสอง API — แสดงเป็นกรอบข้อความ',
+};
+let tileIndex = 0;
+---
+
+<Base title={deck.meta.name}>
+  <a class="back" href="/decks/">← เด็คทั้งหมด</a>
+  <header class="deck-head">
+    <p class="eyebrow">
+      {deck.meta.side === 'player' ? 'เด็คของคุณ' : `บอท · อันดับ ${deck.meta.rank} · meta share ${deck.meta.metaShare?.toFixed(2)}%`}
+      {deck.meta.optional && ' · เสริม'}
+    </p>
+    <h1>{deck.meta.name}</h1>
+    <p class="source">
+      {deck.meta.listSource}
+      {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">list บน Limitless ↗</a>}
+    </p>
+  </header>
+
+  <div class="layout">
+    <aside class="sheet" aria-label="decklist">
+      {
+        sections.map((s) => (
+          <section>
+            <h2>
+              {SECTION_LABEL[s]} <span class="mono">{sectionCount(deck, s)}</span>
+            </h2>
+            <ul>
+              {deck.lines
+                .filter((l) => l.entry.section === s)
+                .map((l) => (
+                  <li>
+                    <button type="button" data-detail={l.print.key}>
+                      <span class="mono qty">{l.entry.count}</span>
+                      <span class="cname">{l.entry.name}</span>
+                      <span class="mono setno">
+                        {l.entry.set} {l.entry.number}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))
+      }
+      <p class="total mono">รวม {deck.lines.reduce((n, l) => n + l.entry.count, 0)} ใบ</p>
+    </aside>
+
+    <div class="cards">
+      {
+        sections.map((s) => (
+          <section>
+            <h2 class="section-title">{SECTION_LABEL[s]}</h2>
+            <div class="grid">
+              {deck.lines
+                .filter((l) => l.entry.section === s)
+                .map((l) => (
+                  <CardTile print={l.print} card={l.card} count={l.entry.count} index={tileIndex++} />
+                ))}
+            </div>
+          </section>
+        ))
+      }
+    </div>
+  </div>
+
+  <dialog id="card-dialog" aria-label="รายละเอียดการ์ด">
+    <form method="dialog"><button class="close" aria-label="ปิด">×</button></form>
+    <div class="dialog-body"></div>
+  </dialog>
+
+  {
+    deck.lines.map((l) => (
+      <template id={`detail-${l.print.key}`}>
+        <div class="detail">
+          {l.print.image.high && (
+            <img
+              src={l.print.image.high}
+              alt={l.card.name}
+              width="600"
+              height="825"
+              onerror="this.remove()"
+            />
+          )}
+          <div class="detail-text">
+            <CardText card={l.card} />
+            <p class="detail-meta mono">
+              {l.print.key} · {SOURCE_NOTE[l.print.image.source]}
+              {l.print.image.altOf && ` (${l.print.image.altOf})`}
+            </p>
+          </div>
+        </div>
+      </template>
+    ))
+  }
+</Base>
+
+<script>
+  const dialog = document.getElementById('card-dialog') as HTMLDialogElement;
+  const body = dialog.querySelector('.dialog-body')!;
+
+  document.addEventListener('click', (e) => {
+    const trigger = (e.target as Element).closest<HTMLElement>('[data-detail]');
+    if (!trigger) return;
+    const tpl = document.getElementById(`detail-${trigger.dataset.detail}`) as HTMLTemplateElement | null;
+    if (!tpl) return;
+    body.replaceChildren(tpl.content.cloneNode(true));
+    dialog.showModal();
+  });
+
+  // Click on the backdrop closes the dialog.
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+</script>
+
+<style>
+  .back {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--stamp);
+  }
+  .deck-head {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    margin: 0 0 6px;
+  }
+  .source {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+  .source a {
+    margin-left: 10px;
+    color: var(--teal);
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .sheet {
+    position: sticky;
+    top: 16px;
+    padding: 16px 16px 12px;
+    background: var(--card-bg);
+    border: 1.5px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--paper-deep);
+  }
+  .sheet h2 {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    margin: 12px 0 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .sheet section:first-child h2 {
+    margin-top: 0;
+  }
+  .sheet ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .sheet button {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr auto;
+    gap: 6px;
+    width: 100%;
+    padding: 2px 4px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    background-image: linear-gradient(var(--rule), var(--rule));
+    background-size: 100% 1px;
+    background-position: bottom;
+    background-repeat: no-repeat;
+  }
+  .sheet button:hover {
+    background-color: var(--paper-deep);
+  }
+  .qty {
+    font-weight: 600;
+    color: var(--stamp);
+  }
+  .cname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .setno {
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+  }
+  .total {
+    margin: 10px 0 0;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .section-title {
+    font-size: 1.1rem;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+  .cards section + section {
+    margin-top: 28px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 18px 14px;
+  }
+
+  dialog {
+    width: min(860px, calc(100% - 32px));
+    max-height: calc(100% - 32px);
+    padding: 24px;
+    border: 2px solid var(--ink);
+    background: var(--card-bg);
+    color: var(--ink);
+    box-shadow: 10px 10px 0 color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+  dialog::backdrop {
+    background: color-mix(in srgb, #1a150c 55%, transparent);
+    backdrop-filter: blur(2px);
+  }
+  .close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .dialog-body :global(.detail) {
+    display: grid;
+    grid-template-columns: minmax(0, 300px) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .dialog-body :global(.detail img) {
+    width: 100%;
+    height: auto;
+    border-radius: 4.5% / 3.2%;
+    box-shadow: var(--shadow);
+  }
+  .dialog-body :global(.detail-text) {
+    font-size: 1.1rem;
+    /* keep the name/HP line clear of the close button */
+    padding-right: 32px;
+  }
+  .dialog-body :global(.detail-meta) {
+    margin: 16px 0 0;
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 760px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    .sheet {
+      position: static;
+    }
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 14px 10px;
+    }
+    .dialog-body :global(.detail) {
+      grid-template-columns: 1fr;
+    }
+    .dialog-body :global(.detail img) {
+      max-width: 260px;
+      margin: 0 auto;
+    }
+  }
+</style>

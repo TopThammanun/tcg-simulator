@@ -1,0 +1,40 @@
+---
+import SimRunner from '../components/sim/SimRunner.svelte';
+import { formatDecklist } from '../data/decklist';
+import { deckKeys } from '../engine/db';
+import Base from '../layouts/Base.astro';
+import { loadDecks } from '../lib/decks';
+
+const decks = (await loadDecks()).map((d) => ({
+  slug: d.slug,
+  name: d.meta.name,
+  side: d.meta.side,
+  metaShare: d.meta.metaShare,
+  optional: d.meta.optional,
+  variant: d.meta.variant,
+  cards: deckKeys(d.lines.map((l) => l.entry)),
+}));
+const playerList = formatDecklist((await loadDecks()).find((d) => d.meta.side === 'player')!.lines.map((l) => l.entry));
+---
+
+<Base title="รันหลายพันเกม">
+  <p class="eyebrow">โหมด 2 · บอทเล่นกับบอท</p>
+  <h1>รันหลายพันเกม</h1>
+  <p class="how">
+    list ของคุณ (เล่นโดยบอทตามกลยุทธ์ที่ตั้ง) เจอเด็คบอททั้ง 6 เด็ค แล้วถ่วง win rate ด้วย meta share การทดลองแต่ละข้อใช้ seed ชุดเดียวกันทั้งสองฝั่ง
+    ส่วนต่างจึงมาจากกลยุทธ์ ไม่ใช่ดวง บอทยังไม่ได้เล่นเก่งระดับแข่ง ให้ดูที่ส่วนต่างระหว่างแผนมากกว่าตัวเลขรายเด็ค
+  </p>
+  <SimRunner client:only="svelte" {decks} {playerList} />
+</Base>
+
+<style>
+  h1 {
+    margin: 0 0 4px;
+  }
+  .how {
+    max-width: 72ch;
+    margin: 0 0 16px;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+</style>

@@ -1,0 +1,31 @@
+{
+  "category": "Energy",
+  "id": "sv05-161",
+  "image": "https://assets.tcgdex.net/en/sv/sv05/161",
+  "localId": "161",
+  "name": "Mist Energy",
+  "rarity": "Uncommon",
+  "set": {
+    "cardCount": {
+      "official": 162,
+      "total": 218
+    },
+    "id": "sv05",
+    "name": "Temporal Forces",
+    "symbol": "https://assets.tcgdex.net/univ/sv/sv05/symbol"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": false,
+    "normal": true,
+    "reverse": true,
+    "wPromo": false
+  },
+  "effect": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nPrevent all effects of attacks used by your opponent's Pokémon done to the Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)",
+  "energyType": "Special",
+  "regulationMark": "H",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

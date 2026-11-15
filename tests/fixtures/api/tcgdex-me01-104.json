@@ -1,0 +1,66 @@
+{
+  "category": "Pokemon",
+  "id": "me01-104",
+  "illustrator": "5ban Graphics",
+  "image": "https://assets.tcgdex.net/en/me/me01/104",
+  "localId": "104",
+  "name": "Mega Kangaskhan ex",
+  "rarity": "Double rare",
+  "set": {
+    "cardCount": {
+      "official": 132,
+      "total": 188
+    },
+    "id": "me01",
+    "logo": "https://assets.tcgdex.net/en/me/me01/logo",
+    "name": "Mega Evolution",
+    "symbol": "https://assets.tcgdex.net/univ/me/me01/symbol"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": true,
+    "normal": false,
+    "reverse": false,
+    "wPromo": false
+  },
+  "dexId": [
+    115
+  ],
+  "hp": 300,
+  "types": [
+    "Colorless"
+  ],
+  "stage": "Basic",
+  "suffix": "ex",
+  "abilities": [
+    {
+      "type": "Ability",
+      "name": "Run Errand",
+      "effect": "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw 2 cards. You can't use more than 1 Run Errand Ability each turn."
+    }
+  ],
+  "attacks": [
+    {
+      "cost": [
+        "Colorless",
+        "Colorless",
+        "Colorless"
+      ],
+      "name": "Rapid-Fire Combo",
+      "effect": "Flip a coin until you get tails. This attack does 50 more damage for each heads.",
+      "damage": "200+"
+    }
+  ],
+  "weaknesses": [
+    {
+      "type": "Fighting",
+      "value": "×2"
+    }
+  ],
+  "retreat": 3,
+  "regulationMark": "I",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

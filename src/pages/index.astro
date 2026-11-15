@@ -1,0 +1,181 @@
+---
+import Base from '../layouts/Base.astro';
+import { manifest } from '../data/manifest';
+import { loadDecks } from '../lib/decks';
+
+const decks = await loadDecks();
+const prints = Object.values(manifest.prints);
+const withImage = prints.filter((p) => p.image.source !== 'none').length;
+const cards = Object.values(manifest.cards).length;
+
+// Milestones from PLAN.md
+const phases = [
+  { n: 0, name: 'ข้อมูลการ์ด', gate: 'รูปจริง 128/129, ข้อความครบ 117 การ์ด', done: true },
+  { n: 1, name: 'Engine: กฎ + การ์ด', gate: 'scenario test ผ่าน, fuzz 10,000 เกมไม่พัง', done: true },
+  { n: 2, name: 'หน้าเล่นเอง + บอท Basic Box', gate: 'v1 · เล่นจบเกมได้, บอทคิดไม่ถึง 20 ms ต่อเทิร์น', done: true },
+  { n: 3, name: 'บอท Dragapult ex', gate: 'v1.1 · 1,000 เกม invariant ไม่พัง', done: true },
+  { n: 4, name: 'Slowking, N’s Zoroark, Alakazam, Festival', gate: 'v1.2 · เด็คละ 1,000 เกม ไม่พัง', done: true },
+  { n: 5, name: 'ปุ่มแนะนำ + รันหลายพันเกม', gate: 'v2 · 600 เกมใน 2.5 วินาที, การทดลองครบ 5 ข้อ', done: true },
+  { n: 6, name: 'บอทยาก + แก้ list', gate: 'v3 · บอทยากชนะบอทปกติ 59.8% ใน 1,000 เกม', done: true },
+];
+---
+
+<Base title="หน้าแรก">
+  <section class="hero">
+    <p class="eyebrow">Pokémon TCG · Basic Box vs meta</p>
+    <h1>เด็คของคุณ<br /><span>vs top 5 meta</span></h1>
+    <p class="lede">
+      เล่น Mega Kangaskhan / Ogerpon / Raging Bolt กับบอทที่ใช้เด็คอันดับต้นของ meta ตามกฎจริง แล้วรันหลายพันเกมเพื่อดู
+      win rate ถ่วงตาม meta share
+    </p>
+    <span class="ctas">
+      <a class="cta" href="/play/">เล่นกับบอท →</a>
+      <a class="cta alt" href="/sim/">รันหลายพันเกม</a>
+      <a class="cta alt" href="/decks/">ดูเด็คทั้งหมด</a>
+    </span>
+  </section>
+
+  <section class="stats" aria-label="ข้อมูลการ์ด">
+    <div><span class="num">{decks.length}</span><span>decklist</span></div>
+    <div><span class="num">{cards}</span><span>การ์ดไม่ซ้ำ</span></div>
+    <div><span class="num">{withImage}/{prints.length}</span><span>print ที่มีรูปจริง</span></div>
+  </section>
+
+  <section class="phases">
+    <h2>Milestones</h2>
+    <ol>
+      {
+        phases.map((p) => (
+          <li class:list={{ done: p.done }}>
+            <span class="pn mono">{p.n}</span>
+            <span class="pname">{p.name}</span>
+            <span class="pgate">{p.gate}</span>
+            <span class="pstate">{p.done ? 'ผ่านด่าน' : 'ยังไม่เริ่ม'}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    padding: 24px 0 32px;
+    border-bottom: 2px solid var(--ink);
+  }
+  h1 {
+    font-size: clamp(2.6rem, 8vw, 5.4rem);
+    margin: 0 0 16px;
+    /* room for Thai marks above and below the line (e.g. คุณ) */
+    line-height: 1.18;
+  }
+  h1 span {
+    color: var(--stamp);
+  }
+  .lede {
+    max-width: 56ch;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+  }
+  .cta {
+    display: inline-block;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 4px 4px 0 var(--stamp);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--stamp);
+  }
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cta.alt {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    box-shadow: none;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--rule);
+  }
+  .stats div {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 12px;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+  .stats div + div {
+    border-left: 1px solid var(--rule);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2rem;
+    color: var(--ink);
+  }
+  .phases h2 {
+    font-size: 1.2rem;
+    margin: 28px 0 8px;
+  }
+  .phases ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .phases li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1.2fr) minmax(0, 1.4fr) 6.5rem;
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .pn {
+    font-weight: 600;
+  }
+  .pname {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .pgate {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+  .pstate {
+    justify-self: end;
+    font-size: 0.75rem;
+    padding: 1px 8px;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+  }
+  .done .pstate {
+    border-color: var(--teal);
+    background: var(--teal);
+    color: var(--paper);
+  }
+  @media (max-width: 640px) {
+    .phases li {
+      grid-template-columns: 2rem 1fr;
+    }
+    .pgate,
+    .pstate {
+      grid-column: 2;
+      justify-self: start;
+    }
+    .num {
+      font-size: 1.5rem;
+    }
+  }
+</style>

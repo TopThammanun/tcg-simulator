@@ -1,0 +1,33 @@
+{
+  "category": "Trainer",
+  "id": "me05-077",
+  "illustrator": "akagi",
+  "image": "https://assets.tcgdex.net/en/me/me05/077",
+  "localId": "077",
+  "name": "Gladion's Final Battle",
+  "rarity": "Uncommon",
+  "set": {
+    "cardCount": {
+      "official": 84,
+      "total": 120
+    },
+    "id": "me05",
+    "logo": "https://assets.tcgdex.net/en/me/me05/logo",
+    "name": "Pitch Black",
+    "symbol": "https://assets.tcgdex.net/univ/me/me05/symbol"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": false,
+    "normal": true,
+    "reverse": true,
+    "wPromo": false
+  },
+  "effect": "You can use this card only when it is the last card in your hand.\nDuring this turn, attacks used by your Pokémon that don't have a Rule Box do 80 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance). (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+  "trainerType": "Supporter",
+  "regulationMark": "J",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

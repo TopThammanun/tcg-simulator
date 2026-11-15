@@ -1,0 +1,92 @@
+// Pure helpers for the play screen: what a click on a card or Pokémon can do, Thai labels.
+import { legalActions } from '../engine/actions';
+import { def } from '../engine/db';
+import { keyOf, topDef } from '../engine/state';
+import type { Action, CardId, GameState, SlotId } from '../engine/types';
+
+export type CardActions = { kind: 'now'; action: Action } | { kind: 'target'; actions: Action[] };
+
+/** Legal actions for each card in hand: played directly, or needing a target Pokémon. */
+export function handActions(s: GameState): Map<CardId, CardActions> {
+  const out = new Map<CardId, CardActions>();
+  const legal = legalActions(s);
+  const hand = s.players[s.current].hand;
+  for (const card of hand) {
+    const k = keyOf(s, card);
+    // legalActions lists one card per name; any copy may be played.
+    const mine = legal.filter((a) => 'card' in a && keyOf(s, a.card) === k).map((a) => ({ ...a, card }) as Action);
+    if (mine.length === 0) continue;
+    const needsTarget = mine.some((a) => a.t === 'energy' || a.t === 'tool' || a.t === 'evolve');
+    out.set(card, needsTarget ? { kind: 'target', actions: mine } : { kind: 'now', action: mine[0]! });
+  }
+  return out;
+}
+
+export function targetOf(a: Action): SlotId | undefined {
+  return a.t === 'energy' || a.t === 'tool' || a.t === 'evolve' ? a.target : undefined;
+}
+
+export function actionLabel(s: GameState, a: Action): string {
+  switch (a.t) {
+    case 'bench':
+      return `ลง ${def(keyOf(s, a.card)).name} บน Bench`;
+    case 'evolve':
+      return `วิวัฒนาการเป็น ${def(keyOf(s, a.card)).name}`;
+    case 'energy':
+    case 'tool':
+      return `ติด ${def(keyOf(s, a.card)).name}`;
+    case 'trainer':
+      return `ใช้ ${def(keyOf(s, a.card)).name}`;
+    case 'ability':
+      return `Ability ${a.name}`;
+    case 'stadium':
+      return 'ใช้ Academy at Night';
+    case 'retreat':
+      return 'ถอย';
+    case 'attack':
+      return `โจมตี ${a.name}`;
+    case 'end':
+      return 'จบเทิร์น';
+    case 'choose':
+      return 'เลือก';
+    case 'setup':
+      return 'เริ่มเกม';
+  }
+}
+
+/** Like actionLabel, with the Pokémon the action goes to (drop hints, coach). */
+export function describeAction(s: GameState, a: Action): string {
+  switch (a.t) {
+    case 'energy':
+    case 'tool':
+      return `ติด ${def(keyOf(s, a.card)).name} ให้ ${slotTitle(s, a.target)}`;
+    case 'evolve':
+      return `วิวัฒนาการ ${slotTitle(s, a.target)} เป็น ${def(keyOf(s, a.card)).name}`;
+    case 'retreat': {
+      const act = s.players[s.current].active;
+      return `ถอย ${act ? topDef(s, act).name : ''} ให้ ${slotTitle(s, a.to)} ขึ้นมาแทน`;
+    }
+    default:
+      return actionLabel(s, a);
+  }
+}
+
+export function slotTitle(s: GameState, uid: SlotId): string {
+  for (const p of [0, 1] as const) {
+    const ps = s.players[p];
+    const sl = ps.active?.uid === uid ? ps.active : ps.bench.find((b) => b.uid === uid);
+    if (sl) return topDef(s, sl).name;
+  }
+  return '';
+}
+
+/** Pick a deck by meta share (PLAN.md: "สุ่มตาม meta share"). */
+export function pickByShare<T extends { metaShare?: number }>(decks: T[], r: number): T {
+  const total = decks.reduce((n, d) => n + (d.metaShare ?? 0), 0);
+  let x = r * total;
+  for (const d of decks) {
+    x -= d.metaShare ?? 0;
+    if (x <= 0) return d;
+  }
+  return decks[decks.length - 1]!;
+}

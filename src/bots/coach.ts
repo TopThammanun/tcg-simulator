@@ -1,0 +1,67 @@
+// Hint button (PLAN.md v2): the player-policy bot's top 3 options with reasons, plus warnings drawn
+// only from public information.
+import { def } from '../engine/db';
+import { hpLeft } from '../engine/rules';
+import { keyOf, opp, topDef } from '../engine/state';
+import type { Action, GameState, PlayerId } from '../engine/types';
+import { finishStep, rankDevelopment } from './core';
+import { BEFORE_ATTACK, explainAction, explainEnd, explainPlan } from './explain';
+import { planFinish } from './finisher';
+import type { DeckPlan } from './types';
+
+export interface Suggestion {
+  action: Action;
+  picks?: number[][];
+  title: string;
+  why: string;
+  facts: string[];
+  score: number;
+}
+
+export function suggest(s: GameState, me: PlayerId, plan: DeckPlan, seed = 1, n = 3): Suggestion[] {
+  const fin = planFinish(s, me, plan, seed);
+  const dev = rankDevelopment(s, me, plan).filter(
+    (r) =>
+      !(fin.usesSupporter && r.action.t === 'trainer' && def(keyOf(s, r.action.card)).category === 'trainer' && isSupporter(s, r.action)) &&
+      !(fin.usesEnergy && r.action.t === 'energy'),
+  );
+  const attackPlanned = fin.value > 0 && fin.steps.some((st) => st.action.t === 'attack');
+  const out: Suggestion[] = [];
+  const add = (x: Suggestion) => {
+    const key = JSON.stringify('card' in x.action ? { ...x.action, card: keyOf(s, x.action.card) } : x.action);
+    if (!out.some((o) => JSON.stringify('card' in o.action ? { ...o.action, card: keyOf(s, o.action.card) } : o.action) === key)) out.push(x);
+  };
+  for (const d of dev.slice(0, n)) {
+    const e = explainAction(s, me, d, plan, d.reason);
+    if (attackPlanned) e.facts.push(BEFORE_ATTACK);
+    add({ action: d.action, picks: d.picks, score: d.score, ...e });
+  }
+  const f = finishStep(s, fin);
+  if (f.action.t !== 'end' || out.length === 0) {
+    const e = f.action.t === 'end' ? explainEnd(s, me) : explainPlan(s, me, fin, plan);
+    add({ action: f.action, picks: f.picks, score: Math.max(f.score, 1), ...e });
+  }
+  return out.sort((a, b) => b.score - a.score).slice(0, n);
+}
+
+const isSupporter = (s: GameState, a: Action) => a.t === 'trainer' && (def(keyOf(s, a.card)) as { trainerType?: string }).trainerType === 'Supporter';
+
+/** Warnings about what the opponent could do next turn, from public information only. */
+export function warnings(s: GameState, me: PlayerId): string[] {
+  const o = s.players[opp(me)];
+  const out: string[] = [];
+  const mine = s.players[me].active;
+  const festival = [o.active, ...o.bench].some((sl) => sl && topDef(s, sl).abilities.some((a) => a.name === 'Festival Lead'));
+  const gladionsUsed = o.discard.filter((c) => keyOf(s, c) === 'gladions-final-battle').length;
+  if (festival && o.hand.length <= 2 && gladionsUsed < 3) {
+    out.push(`เขาเหลือ ${o.hand.length} ใบในมือ เสี่ยงโดน Gladion (+80 ต่อครั้ง)`);
+  }
+  if (festival && mine && hpLeft(s, mine) <= 180 && topDef(s, mine).prizes >= 2) {
+    out.push(`${topDef(s, mine).name} เหลือ ${hpLeft(s, mine)} HP: Festival ตี 2 ครั้งพร้อม Bangle ทำได้ถึง 180`);
+  }
+  if (o.bench.some((sl) => topDef(s, sl).name === 'Dragapult ex')) {
+    const weak = s.players[me].bench.filter((sl) => hpLeft(s, sl) <= 60);
+    if (weak.length) out.push(`Phantom Dive วางตัวนับ 6 ตัวบน Bench: ${weak.map((sl) => topDef(s, sl).name).join(', ')} โดนเก็บได้`);
+  }
+  return out;
+}

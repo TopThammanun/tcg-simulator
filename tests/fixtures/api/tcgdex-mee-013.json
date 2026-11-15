@@ -1,0 +1,28 @@
+{
+  "category": "Energy",
+  "id": "mee-013",
+  "illustrator": "YOSHIROTTEN",
+  "localId": "013",
+  "name": "Basic Psychic Energy",
+  "rarity": "Common",
+  "set": {
+    "cardCount": {
+      "official": 16,
+      "total": 16
+    },
+    "id": "mee",
+    "name": "Mega Evolution Energy"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": true,
+    "normal": false,
+    "reverse": false,
+    "wPromo": false
+  },
+  "energyType": "Normal",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

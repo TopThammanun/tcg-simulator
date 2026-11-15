@@ -1,0 +1,197 @@
+---
+// Card text in English as printed. Used for the detail view and as the image fallback frame.
+import type { CardDef, EnergyType } from '../data/cards';
+import EnergyText from './EnergyText.astro';
+
+interface Props {
+  card: CardDef;
+  compact?: boolean;
+}
+const { card, compact = false } = Astro.props;
+
+const SYMBOL: Record<EnergyType, string> = {
+  Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
+  Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
+};
+const STAGE: Record<string, string> = { Basic: 'Basic', Stage1: 'Stage 1', Stage2: 'Stage 2' };
+const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
+---
+
+<div class:list={['card-text', { compact }]}>
+  <div class="head">
+    <span class="name">{card.name}</span>
+    {card.category === 'pokemon' && <span class="hp mono">{card.hp} HP</span>}
+  </div>
+
+  {
+    card.category === 'pokemon' && (
+      <>
+        <div class="sub">
+          <span>{STAGE[card.stage]}</span>
+          {card.evolvesFrom && <span>จาก {card.evolvesFrom}</span>}
+          {card.types.map((t) => (
+            <span class="pip" style={typeVar(t)} title={t}>
+              {SYMBOL[t]}
+            </span>
+          ))}
+          {card.tera && <span class="tag">Tera</span>}
+          {card.prizes > 1 && <span class="tag">{card.prizes} prize</span>}
+        </div>
+        {card.abilities.map((a) => (
+          <p class="move">
+            <span class="ability">Ability</span> <strong>{a.name}</strong>
+            {!compact && (
+              <span class="effect">
+                <EnergyText text={a.effect} />
+              </span>
+            )}
+          </p>
+        ))}
+        {card.attacks.map((a) => (
+          <p class="move">
+            <span class="cost">
+              {a.cost.length === 0 && <span class="pip free">0</span>}
+              {a.cost.map((t) => (
+                <span class="pip" style={typeVar(t)} title={t}>
+                  {SYMBOL[t]}
+                </span>
+              ))}
+            </span>
+            <strong>{a.name}</strong>
+            {a.damage && <span class="dmg mono">{a.damage}</span>}
+            {!compact && a.effect && (
+              <span class="effect">
+                <EnergyText text={a.effect} />
+              </span>
+            )}
+          </p>
+        ))}
+        <p class="foot mono">
+          weak {card.weaknesses.map((w) => `${SYMBOL[w.type]}${w.value}`).join(' ') || '—'} · resist{' '}
+          {card.resistances.map((w) => `${SYMBOL[w.type]}${w.value}`).join(' ') || '—'} · retreat {card.retreat}
+        </p>
+      </>
+    )
+  }
+
+  {
+    card.category !== 'pokemon' && (
+      <>
+        <div class="sub">
+          <span>{card.category === 'trainer' ? card.trainerType : `${card.energyType} Energy`}</span>
+          {card.aceSpec && <span class="tag">ACE SPEC</span>}
+          {card.category === 'energy' && card.provides && (
+            <span class="pip" style={typeVar(card.provides)}>
+              {SYMBOL[card.provides]}
+            </span>
+          )}
+        </div>
+        {card.effect && !compact && (
+          <p class="effect solo">
+            <EnergyText text={card.effect} />
+          </p>
+        )}
+      </>
+    )
+  }
+</div>
+
+<style>
+  .card-text {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--ink);
+    text-align: left;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05em;
+    border-bottom: 1.5px solid var(--ink);
+    padding-bottom: 2px;
+    margin-bottom: 4px;
+  }
+  .hp {
+    font-size: 0.85em;
+    color: var(--stamp);
+    white-space: nowrap;
+  }
+  .sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-soft);
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    padding: 0 5px;
+    border: 1px solid var(--stamp);
+    color: var(--stamp);
+  }
+  .move {
+    margin: 0 0 6px;
+  }
+  .ability {
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    background: var(--stamp);
+    color: #fff;
+    padding: 1px 4px;
+  }
+  .cost {
+    display: inline-flex;
+    gap: 2px;
+    margin-right: 4px;
+    vertical-align: -2px;
+  }
+  .dmg {
+    float: right;
+    font-weight: 600;
+  }
+  .effect {
+    display: block;
+    color: var(--ink-soft);
+    font-size: 0.92em;
+  }
+  .effect.solo {
+    white-space: pre-line;
+    margin: 0;
+  }
+  .foot {
+    margin: 6px 0 0;
+    font-size: 0.75em;
+    color: var(--ink-soft);
+    border-top: 1px dashed var(--rule);
+    padding-top: 4px;
+  }
+  .pip {
+    display: inline-grid;
+    place-items: center;
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 50%;
+    background: var(--c);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    font-weight: 600;
+    box-shadow: inset 0 -1px 0 #0003;
+    vertical-align: middle;
+  }
+  .pip.free {
+    background: transparent;
+    color: var(--ink-soft);
+    box-shadow: inset 0 0 0 1px var(--rule);
+  }
+  .compact {
+    font-size: 0.72rem;
+  }
+</style>

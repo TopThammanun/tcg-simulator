@@ -1,0 +1,27 @@
+{
+  "category": "Energy",
+  "id": "mee-001",
+  "localId": "001",
+  "name": "Grass Energy",
+  "rarity": "Common",
+  "set": {
+    "cardCount": {
+      "official": 16,
+      "total": 16
+    },
+    "id": "mee",
+    "name": "Mega Evolution Energy"
+  },
+  "variants": {
+    "firstEdition": false,
+    "holo": false,
+    "normal": true,
+    "reverse": true,
+    "wPromo": false
+  },
+  "energyType": "Normal",
+  "legal": {
+    "standard": true,
+    "expanded": true
+  }
+}

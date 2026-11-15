@@ -1,0 +1,200 @@
+---
+import Base from '../../layouts/Base.astro';
+import { loadDecks, sectionCount } from '../../lib/decks';
+
+const decks = await loadDecks();
+const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
+// The deck's headline Pokémon: the one it is named after, then rule-box attackers, then most copies.
+// Drawn last so it sits on top of the fan.
+type Line = (typeof decks)[number]['lines'][number];
+const score = (deckName: string, l: Line) =>
+  (deckName.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) +
+  (l.card.category === 'pokemon' ? l.card.prizes * 10 : 0) +
+  l.entry.count;
+const thumbs = (d: (typeof decks)[number]) =>
+  d.lines
+    .filter((l) => l.entry.section === 'pokemon' && l.print.image.source !== 'none')
+    .sort((a, b) => score(d.meta.name, b) - score(d.meta.name, a))
+    .slice(0, 3)
+    .reverse();
+const imageCoverage = (d: (typeof decks)[number]) => {
+  const prints = d.lines.length;
+  return `${d.lines.filter((l) => l.print.image.source !== 'none').length}/${prints}`;
+};
+---
+
+<Base title="เด็คทั้งหมด">
+  <p class="eyebrow">เฟส 0 · decklist + ข้อมูลการ์ด</p>
+  <h1>เด็คทั้งหมด</h1>
+  <p class="lede">
+    เด็คของคุณ 1 เด็คกับเด็คบอท 6 archetype ตาม meta share บน Limitless (Festival Lead มี 2 list ให้เลือก)
+    กดเด็คเพื่อดูการ์ดทุกใบพร้อมรูปและข้อความ
+  </p>
+
+  <ol class="decks">
+    {
+      decks.map((d, i) => (
+        <li class:list={['deck rise', d.meta.side]} style={`--i:${i}`}>
+          <a href={`/decks/${d.slug}/`}>
+            <span class="rank">{d.meta.side === 'player' ? 'คุณ' : d.meta.rank}</span>
+            <span class="fan" aria-hidden="true">
+              {thumbs(d).map((l, j) => (
+                <img src={l.print.image.low} alt="" loading="lazy" width="245" height="342" style={`--j:${j}`} />
+              ))}
+            </span>
+            <span class="info">
+              <span class="name">
+                {d.meta.name}
+                {d.meta.optional && <span class="opt">เสริม</span>}
+              </span>
+              <span class="source">{d.meta.listSource}</span>
+              <span class="counts mono">
+                P {sectionCount(d, 'pokemon')} · T {sectionCount(d, 'trainer')} · E {sectionCount(d, 'energy')} · รูป{' '}
+                {imageCoverage(d)}
+              </span>
+            </span>
+            {d.meta.metaShare !== undefined && (
+              <span class="share">
+                <span class="bar" style={`--w:${(d.meta.metaShare / maxShare) * 100}%`} />
+                <span class="mono pct">{d.meta.metaShare.toFixed(2)}%</span>
+              </span>
+            )}
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</Base>
+
+<style>
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    margin: 0 0 8px;
+  }
+  .lede {
+    max-width: 60ch;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+  }
+  .decks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 2px solid var(--ink);
+  }
+  .deck a {
+    display: grid;
+    grid-template-columns: 3.2rem 7.5rem 1fr 11rem;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--rule);
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  .deck a:hover {
+    background: var(--paper-deep);
+  }
+  .deck.player a {
+    background: color-mix(in srgb, var(--stamp) 7%, transparent);
+    border-bottom: 2px solid var(--ink);
+  }
+  .rank {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.2rem;
+    line-height: 1;
+    text-align: center;
+  }
+  .player .rank {
+    font-size: 1.1rem;
+    color: var(--paper);
+    background: var(--stamp);
+    padding: 6px 0;
+    transform: rotate(-4deg);
+  }
+  .fan {
+    position: relative;
+    height: 5.6rem;
+  }
+  .fan img {
+    position: absolute;
+    top: 0;
+    left: calc(var(--j) * 1.6rem);
+    width: 4rem;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+    transform: rotate(calc((var(--j) - 1) * 7deg));
+    transform-origin: bottom center;
+    transition: transform 0.2s ease;
+  }
+  .deck a:hover .fan img {
+    transform: rotate(calc((var(--j) - 1) * 12deg)) translateY(-2px);
+  }
+  .info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  .opt {
+    margin-left: 8px;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 1px 6px;
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    vertical-align: middle;
+  }
+  .source {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+  .counts {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  .share {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bar {
+    flex: 1;
+    height: 10px;
+    background: linear-gradient(to right, var(--stamp) var(--w), var(--paper-deep) var(--w));
+    border: 1px solid var(--ink);
+  }
+  .pct {
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 4.2em;
+    text-align: right;
+  }
+  @media (max-width: 720px) {
+    .deck a {
+      grid-template-columns: 2.6rem 1fr;
+      grid-template-areas: 'rank info' 'rank share';
+      gap: 4px 12px;
+    }
+    .rank {
+      grid-area: rank;
+      font-size: 1.6rem;
+    }
+    .fan {
+      display: none;
+    }
+    .info {
+      grid-area: info;
+    }
+    .share {
+      grid-area: share;
+    }
+  }
+</style>

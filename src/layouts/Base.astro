@@ -1,0 +1,259 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'จำลอง matchup Pokémon TCG เด็คของคุณกับ top 5 meta' } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/', label: 'หน้าแรก' },
+  { href: '/play/', label: 'เล่น' },
+  { href: '/sim/', label: 'รันหลายเกม' },
+  { href: '/decks/', label: 'เด็ค' },
+];
+---
+
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+    <title>{title} · สนามซ้อม Matchup</title>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">◆</span>
+        สนามซ้อม <em>Matchup</em>
+      </a>
+      <nav aria-label="เมนูหลัก">
+        {
+          nav.map((n) => (
+            <a href={n.href} aria-current={path === n.href ? 'page' : undefined}>
+              {n.label}
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="colophon">
+      รูปและข้อความการ์ดเป็นของ The Pokémon Company · ดึงจาก TCGdex และ pokemontcg.io ตอนเปิดใช้ · เครื่องมือส่วนตัว ไม่หากำไร
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --paper: #f3eee2;
+    --paper-deep: #e9e2d1;
+    --ink: #1f1c16;
+    --ink-soft: #5d574b;
+    --rule: #cfc6b2;
+    --stamp: #c3352b;
+    --teal: #1d6b66;
+    --card-bg: #fbf8f1;
+    --shadow: 0 1px 0 #fff8 inset, 0 10px 24px -14px #3a2f1a55;
+    --font-display: 'Chakra Petch', 'Anuphan', sans-serif;
+    --font-body: 'Anuphan', 'Leelawadee UI', 'Noto Sans Thai', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    --t-grass: #3f8a3a;
+    --t-fire: #d24e2b;
+    --t-water: #2b7bbd;
+    --t-lightning: #e3b11f;
+    --t-psychic: #94509a;
+    --t-fighting: #b0612c;
+    --t-darkness: #2e3a3c;
+    --t-metal: #858d93;
+    --t-dragon: #a9842b;
+    --t-fairy: #d27aab;
+    --t-colorless: #c9c3b3;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17150f;
+      --paper-deep: #211e16;
+      --ink: #ece5d3;
+      --ink-soft: #a69e8b;
+      --rule: #3a3528;
+      --stamp: #e2574b;
+      --teal: #4fb3aa;
+      --card-bg: #221f17;
+      --shadow: 0 10px 24px -14px #000c;
+      color-scheme: dark;
+    }
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--paper);
+    /* faint paper grain */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  main {
+    flex: 1;
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--stamp);
+    outline-offset: 2px;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 18px 16px 14px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+
+  .brand em {
+    font-style: normal;
+    color: var(--stamp);
+  }
+
+  .brand-mark {
+    color: var(--stamp);
+    margin-right: 4px;
+  }
+
+  .masthead nav {
+    display: flex;
+    gap: 4px;
+  }
+
+  .masthead nav a {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-decoration: none;
+    padding: 4px 12px;
+    border: 1.5px solid transparent;
+  }
+
+  .masthead nav a:hover {
+    border-color: var(--rule);
+  }
+
+  .masthead nav a[aria-current='page'] {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .masthead nav a {
+    white-space: nowrap;
+  }
+
+  /* Phones: brand on its own line, the menu as one row underneath. */
+  @media (max-width: 560px) {
+    .masthead {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 12px 16px 0;
+    }
+    .masthead nav {
+      margin: 0 -16px;
+      padding: 0 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .masthead nav a {
+      flex: 1 0 auto;
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    main {
+      padding-top: 16px;
+    }
+  }
+
+  .colophon {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 16px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--stamp);
+    margin: 0 0 6px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation-delay: calc(var(--i, 0) * 40ms);
+    }
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
+  }
+</style>

@@ -1,0 +1,140 @@
+[
+  {
+    "id": "me1-104",
+    "name": "Mega Kangaskhan ex",
+    "supertype": "Pokémon",
+    "subtypes": [
+      "Basic",
+      "MEGA",
+      "ex"
+    ],
+    "hp": "300",
+    "types": [
+      "Colorless"
+    ],
+    "rules": [
+      "Mega Evolution ex Rule: When your Mega Evolution Pokémon ex is Knocked Out, your opponent takes 3 Prize cards."
+    ],
+    "abilities": [
+      {
+        "name": "Run Errand",
+        "text": "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw 2 cards. You can't use more than 1 Run Errand Ability each turn.",
+        "type": "Ability"
+      }
+    ],
+    "attacks": [
+      {
+        "name": "Rapid-Fire Combo",
+        "cost": [
+          "Colorless",
+          "Colorless",
+          "Colorless"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "200+",
+        "text": "Flip a coin until you get tails. This attack does 50 more damage for each heads."
+      }
+    ],
+    "weaknesses": [
+      {
+        "type": "Fighting",
+        "value": "×2"
+      }
+    ],
+    "retreatCost": [
+      "Colorless",
+      "Colorless",
+      "Colorless"
+    ],
+    "number": "104",
+    "images": {
+      "small": "https://images.pokemontcg.io/me1/104.png",
+      "large": "https://images.pokemontcg.io/me1/104_hires.png"
+    }
+  },
+  {
+    "id": "sv6-25",
+    "name": "Teal Mask Ogerpon ex",
+    "supertype": "Pokémon",
+    "subtypes": [
+      "Basic",
+      "Tera",
+      "ex"
+    ],
+    "hp": "210",
+    "types": [
+      "Grass"
+    ],
+    "rules": [
+      "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent's).",
+      "Pokémon ex rule: When your Pokémon ex is Knocked Out, your opponent takes 2 Prize cards.",
+      "Tera: As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent's)."
+    ],
+    "abilities": [
+      {
+        "name": "Teal Dance",
+        "text": "Once during your turn, you may attach a Basic Grass Energy card from your hand to this Pokémon. If you attached Energy to a Pokémon in this way, draw a card.",
+        "type": "Ability"
+      }
+    ],
+    "attacks": [
+      {
+        "name": "Myriad Leaf Shower",
+        "cost": [
+          "Grass",
+          "Grass",
+          "Grass"
+        ],
+        "convertedEnergyCost": 3,
+        "damage": "30+",
+        "text": "This attack does 30 more damage for each Energy attached to both Active Pokémon."
+      }
+    ],
+    "weaknesses": [
+      {
+        "type": "Fire",
+        "value": "×2"
+      }
+    ],
+    "retreatCost": [
+      "Colorless"
+    ],
+    "number": "25",
+    "images": {
+      "small": "https://images.pokemontcg.io/sv6/25.png",
+      "large": "https://images.pokemontcg.io/sv6/25_hires.png"
+    }
+  },
+  {
+    "id": "sv5-161",
+    "name": "Mist Energy",
+    "supertype": "Energy",
+    "subtypes": [
+      "Special"
+    ],
+    "rules": [
+      "As long as this card is attached to a Pokémon, it provides Colorless Energy.    Prevent all effects of attacks used by your opponent's Pokémon done to the Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)"
+    ],
+    "number": "161",
+    "images": {
+      "small": "https://images.pokemontcg.io/sv5/161.png",
+      "large": "https://images.pokemontcg.io/sv5/161_hires.png"
+    }
+  },
+  {
+    "id": "me5-77",
+    "name": "Gladion's Final Battle",
+    "supertype": "Trainer",
+    "subtypes": [
+      "Supporter"
+    ],
+    "rules": [
+      "You can use this card only when it is the last card in your hand.\nDuring this turn, attacks used by your Pokémon that don't have a Rule Box do 80 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance). (Pokémon ex, Pokémon V_atk, etc. have Rule Boxes.)"
+    ],
+    "number": "77",
+    "images": {
+      "small": "https://images.scrydex.com/pokemon/me5-77/small",
+      "large": "https://images.scrydex.com/pokemon/me5-77/large"
+    }
+  }
+]
