@@ -107,16 +107,22 @@
     drag && { drops: new Set(drag.drops.keys()), over: drag.over, label: drag.over ? drag.drops.get(drag.over)!.label : '' },
   );
 
-  // Phone layout: the hints move from the side column into the dock at the bottom of the screen.
+  // Narrow screens: the side column becomes a drawer and the hints move into the dock.
   let narrow = $state(false);
+  let sideOpen = $state(false);
   $effect(() => {
-    const mq = matchMedia('(max-width: 700px)');
+    const mq = matchMedia('(max-width: 980px)');
     narrow = mq.matches;
     const update = () => (narrow = mq.matches);
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   });
-  let mainEl: HTMLDivElement | undefined = $state();
+  // A game fills the screen: nothing behind it scrolls.
+  $effect(() => {
+    const on = !!shown;
+    document.documentElement.classList.toggle('playing', on);
+    return () => document.documentElement.classList.remove('playing');
+  });
 
   const cur = $derived(states[states.length - 1]);
   const shownRaw = $derived(viewing === null ? cur : (states.find((x) => x.steps > viewing!) ?? cur));
@@ -145,10 +151,16 @@
     return t;
   });
   // Setup: Basics in your hand are the options; drag them to the Active Spot / Bench or tap them.
+  const choiceKind = $derived(
+    req ? (req.options[0]?.slot !== undefined ? 'slot' : req.options[0]?.card !== undefined ? 'card' : 'label') : null,
+  );
   const setupReq = $derived(req && (req.purpose === 'setup-active' || req.purpose === 'setup-bench') ? req : null);
   const optionOf = (c: CardId) => setupReq?.options.find((o) => o.card === c);
   const handPlayable = $derived(
     setupReq ? new Set(setupReq.options.map((o) => o.card!)) : new Set<CardId>(hand.keys()),
+  );
+  const benchPicks = $derived(
+    setupReq?.purpose === 'setup-bench' ? picks.flatMap((v) => setupReq.options.filter((o) => o.value === v)) : [],
   );
   const marked = $derived(
     setupReq?.purpose === 'setup-bench'
@@ -219,10 +231,6 @@
         rules: { twinShotelsPiercesBenchShields: pierce },
       }),
     ];
-    // Bring the table into view when it doesn't fit below the page header.
-    requestAnimationFrame(() => {
-      if (mainEl && mainEl.getBoundingClientRect().bottom > innerHeight) mainEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    });
   }
 
   function step(a: Action) {
@@ -414,18 +422,6 @@
     press(e, topKey(shown, sl), drops);
   }
 
-  // While dragging near the top of the screen, scroll up so the whole board can be reached.
-  $effect(() => {
-    if (!dragging) return;
-    let raf = 0;
-    const tick = () => {
-      if (drag && drag.y < 70) window.scrollBy(0, -12);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  });
-
   /** "ทำตามนี้": the suggested move, then its planned choices (e.g. which Pokémon Boss's Orders brings up). */
   function follow(a: Action, planned: number[][] = []) {
     step(a);
@@ -515,8 +511,19 @@
     <button type="button" class="primary" onclick={start}>เริ่มเกม</button>
   </section>
 {:else if shown}
+  {#snippet choice()}
+    <ChoicePanel
+      s={cur!}
+      req={req!}
+      {picks}
+      onpick={pick}
+      onsubmit={() => step({ t: 'choose', picks })}
+      onclear={() => (picks = [])}
+      onzoom={(k) => (zoom = k)}
+    />
+  {/snippet}
   <div class="game" class:dragging>
-    <div class="main" bind:this={mainEl}>
+    <div class="main">
       <div class="status">
         {#if cur.winner !== null}
           <strong class="result">{cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · {cur.winReason}</strong>
@@ -530,8 +537,15 @@
           <strong>เทิร์น {cur.turn} · {actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}</strong>
           <span class="opp">คู่แข่ง: {botDeck?.name.replace(/ \(.*\)$/, '')}</span>
         {/if}
+        <span class="top-tools">
+          {#if narrow}
+            <button type="button" class="small" aria-expanded={sideOpen} onclick={() => (sideOpen = !sideOpen)}>ข้อมูล · log</button>
+            <button type="button" class="small" onclick={() => (states = [])}>เกมใหม่</button>
+          {/if}
+        </span>
       </div>
 
+      <div class="table">
       <Board
         s={shown}
         {targets}
@@ -539,7 +553,8 @@
         {abilities}
         drag={boardDrag}
         {grabbable}
-        ghostBench={[...marked].map((c) => keyOf(cur, c))}
+        ghostBench={benchPicks.map((o) => keyOf(cur, o.card!))}
+        onghost={(i) => (picks = picks.filter((v) => v !== benchPicks[i]!.value))}
         onslot={onSlot}
         onability={(slot, name) => step({ t: 'ability', slot, name })}
         onzoom={(k) => (zoom = k)}
@@ -549,25 +564,20 @@
         onstadium={() => step({ t: 'stadium' })}
       />
 
-      {#if req}
-        <ChoicePanel
-          s={cur}
-          {req}
-          {picks}
-          onpick={pick}
-          onsubmit={() => step({ t: 'choose', picks })}
-          onclear={() => (picks = [])}
-          onzoom={(k) => (zoom = k)}
-        />
+      <!-- Picking cards or an option covers the table; picking Pokémon on the table happens in the dock. -->
+      {#if req && !setupReq && choiceKind !== 'slot'}
+        <div class="choice-layer">{@render choice()}</div>
       {/if}
-
       {#if error}<p class="error">{error}</p>{/if}
+      </div>
 
       <div class="dock">
         {#if narrow && myTurn && !req && cur.phase === 'main'}
           <Coach s={cur} onapply={follow} compact />
         {/if}
-        {#if myTurn && !req}
+        {#if req && !setupReq && choiceKind === 'slot'}
+          {@render choice()}
+        {:else if myTurn && !req}
           <div class="bar">
             {#each attacks as a}
               {#if a.t === 'attack'}
@@ -586,7 +596,20 @@
             {#if selected !== null}<span class="hint">แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง</span>{/if}
           </div>
         {:else if setupReq}
-          <p class="hint">ลากการ์ดจากมือไปวาง{setupReq.purpose === 'setup-active' ? 'ที่ช่องตัวหลัก' : 'บน Bench'} หรือแตะเพื่อเลือก</p>
+          <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
+            {#if setupReq.purpose === 'setup-active'}
+              <span class="hint">ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด</span>
+            {:else}
+              <button type="button" class="primary" onclick={() => step({ t: 'choose', picks })}>
+                ยืนยัน{picks.length ? ` (ลง Bench ${picks.length} ตัว)` : ' (ไม่ลง Bench)'}
+              </button>
+              {#if picks.length}<button type="button" class="ghost" onclick={() => (picks = [])}>ล้าง</button>{/if}
+              <span class="hint">
+                {picks.length < setupReq.max ? `ลาก Basic ลง Bench ได้อีก ${setupReq.max - picks.length} ตัว` : 'ลง Bench ครบแล้ว'} · แตะตัวบน
+                Bench เพื่อเอาคืน
+              </span>
+            {/if}
+          </div>
         {/if}
 
         <HandView
@@ -602,7 +625,13 @@
       </div>
     </div>
 
-    <aside class="side">
+    {#if narrow && sideOpen}
+      <div class="side-backdrop" role="presentation" onclick={() => (sideOpen = false)}></div>
+    {/if}
+    <aside class="side" class:open={sideOpen}>
+      {#if narrow}
+        <button type="button" class="small close-side" onclick={() => (sideOpen = false)}>ปิด ✕</button>
+      {/if}
       {#if !narrow && myTurn && !req && cur.phase === 'main'}
         <Coach s={cur} onapply={follow} />
       {/if}
@@ -782,23 +811,68 @@
     background: #f2c94c;
     color: #1f1c16;
   }
+  /* A game fills the screen like the real game: status line, table, then your hand. Nothing scrolls
+     except the side column. */
+  :global(html.playing),
+  :global(html.playing body) {
+    overflow: hidden;
+  }
   .game {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 16px;
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 10px;
+    height: 100dvh;
+    padding: 8px 12px calc(6px + env(safe-area-inset-bottom));
+    background-color: var(--paper);
   }
   .main {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     min-width: 0;
+    min-height: 0;
   }
   .status {
+    flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 16px;
-    align-items: baseline;
+    gap: 4px 14px;
+    align-items: center;
+    font-size: 0.92rem;
+  }
+  .top-tools {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+  button.small {
+    padding: 3px 10px;
+    font-size: 0.82rem;
+  }
+  /* The table: card sizes come from this box (container query units in Board.svelte). */
+  .table {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    container-type: size;
+  }
+  .choice-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    border-radius: 14px;
+    background: #0b0a0799;
+  }
+  .choice-layer :global(.choice) {
+    width: min(780px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
   }
   .result {
     color: var(--stamp);
@@ -829,15 +903,12 @@
   }
   /* The hand and buttons stay on screen while the board scrolls, so a drag can always reach a target. */
   .dock {
-    position: sticky;
-    bottom: 0;
+    position: relative;
     z-index: 20;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-top: 6px;
-    background: var(--paper);
-    box-shadow: 0 -10px 12px -8px color-mix(in srgb, var(--ink) 25%, transparent);
+    gap: 4px;
   }
   .game.dragging {
     cursor: grabbing;
@@ -889,14 +960,34 @@
     font-weight: 600;
   }
   .error {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    z-index: 7;
+    transform: translateX(-50%);
     margin: 0;
+    padding: 4px 12px;
+    background: var(--card-bg);
     color: var(--stamp);
     font-size: 0.85rem;
+    box-shadow: 0 4px 12px -4px #000a;
   }
   .side {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .close-side {
+    align-self: flex-end;
+  }
+  .side-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: #0b0a0780;
   }
   .panel {
     padding: 10px 12px;
@@ -975,33 +1066,46 @@
   }
   @media (max-width: 980px) {
     .game {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* The side column slides in from the right. */
+    .side {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 36;
+      width: min(360px, 88vw);
+      padding: 12px;
+      background: var(--paper);
+      box-shadow: -12px 0 30px -12px #000c;
+      transform: translateX(105%);
+      transition: transform 0.25s ease;
+    }
+    .side.open {
+      transform: none;
     }
   }
   @media (max-width: 700px) {
+    .game {
+      padding: 6px 8px calc(4px + env(safe-area-inset-bottom));
+    }
     .main {
-      gap: 6px;
+      gap: 4px;
     }
     .status {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      gap: 2px 10px;
     }
-    .dock {
-      gap: 4px;
-      margin: 0 -16px;
-      padding: 6px 12px calc(4px + env(safe-area-inset-bottom));
-      background: var(--paper);
-      border-top: 1.5px solid var(--ink);
-      box-shadow: 0 -8px 18px color-mix(in srgb, var(--ink) 18%, transparent);
+    .opp {
+      display: none;
     }
     .bar {
       gap: 4px;
     }
     .bar button {
-      padding: 5px 10px;
-      font-size: 0.85rem;
-    }
-    .side {
-      margin-top: 8px;
+      padding: 4px 9px;
+      font-size: 0.82rem;
     }
   }
 </style>

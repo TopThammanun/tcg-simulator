@@ -166,17 +166,27 @@
     font-family: var(--font-mono);
   }
   .compact {
+    position: relative;
     padding: 0;
     border: 0;
     background: none;
   }
   .compact .ask {
-    padding: 5px;
+    padding: 4px;
   }
+  /* In the dock the hints open upwards over the table, so the table keeps its size. */
   .compact .body {
-    max-height: 42vh;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 6px);
+    z-index: 25;
+    max-height: 55dvh;
     overflow-y: auto;
-    padding: 0 2px 4px;
+    padding: 4px 10px 8px;
+    border: 1.5px solid var(--teal);
+    background: var(--card-bg);
+    box-shadow: 0 -12px 30px -12px #000b;
     overscroll-behavior: contain;
   }
 </style>

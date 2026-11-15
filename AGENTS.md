@@ -50,6 +50,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
 - `src/sim/` — bot-vs-bot runner, stats (Wilson CI, meta-weighted and paired-difference), Web Worker.
 - Pages: `/play/` (Game.svelte; `?watch=1&seed=…&opp=…` replays a simulator game), `/sim/`, `/decks/`.
+  A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
+  cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
+  Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
 
 ## Versions
 

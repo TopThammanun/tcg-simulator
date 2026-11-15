@@ -336,7 +336,7 @@ export class Fx {
     // The real card waits under the flying copy, then lands with a small bounce.
     if (dest) {
       this.anim(dest, [{ opacity: 0 }, { opacity: 0 }], { duration: t + dur, fill: 'none', easing: 'linear' });
-      this.anim(dest, [{ transform: 'scale(1.12)' }, { transform: 'scale(0.97)', offset: 0.6 }, { transform: 'none' }], {
+      this.anim(dest, [{ scale: '1.12' }, { scale: '0.97', offset: 0.6 }, { scale: '1' }], {
         duration: 240 * k,
         delay: t + dur,
         fill: 'none',
@@ -610,7 +610,7 @@ export class Fx {
       const now = c.after.cards.get(id);
       if (!was || !now || moved.has(id)) continue;
       const dx = was.left - now.left;
-      if (Math.abs(dx) >= 2) this.anim(card, [{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 260 * k, fill: 'none' });
+      if (Math.abs(dx) >= 2) this.anim(card, [{ translate: `${dx}px 0` }, { translate: '0 0' }], { duration: 260 * k, fill: 'none' });
     }
   }
 }

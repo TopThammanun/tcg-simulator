@@ -30,6 +30,7 @@
     grabbable = new Set(),
     ghostActive,
     ghostBench = [],
+    onghost,
     onslot,
     onability,
     onzoom,
@@ -48,6 +49,8 @@
     /** Setup: the Basic dropped on your Active Spot / Bench, not placed yet. */
     ghostActive?: string;
     ghostBench?: string[];
+    /** Take a Basic placed during setup back to the hand. */
+    onghost?: (i: number) => void;
     onslot: (uid: SlotId) => void;
     onability: (uid: SlotId, name: string) => void;
     onzoom: (key: string) => void;
@@ -140,7 +143,7 @@
         {@render slotCard(p, b, false)}
       {/each}
       {#each ghosts as k, i (i)}
-        <div class="ghost-card"><CardFace cardKey={k} /></div>
+        <button type="button" class="ghost-card" title="แตะเพื่อเอาคืน" onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
       {/each}
       {#each { length: open } as _, i}
         {#if mine && i === 0 && accepts('bench')}
@@ -221,23 +224,25 @@
     --line: #ffffff26;
     --pad: 14px;
     --row-gap: 14px;
-    --mid: 6px;
-    /* Card sizes follow the screen height so the whole table and your hand fit on screen together. */
-    --active-w: clamp(72px, calc(16.5vh - 46px), 116px);
+    /* Card sizes come from the space the table has (its container, .table in Game.svelte): the table
+       always fits the screen. The height left over goes between the two Active Spots. */
+    --active-w: clamp(56px, min(calc((100cqh - 108px) / 5.2), calc((100cqw - 100px) / 5.6)), 150px);
     --slot-w: calc(var(--active-w) * 0.72);
     --prize-w: calc(var(--active-w) * 0.37);
     --pile-w: calc(var(--active-w) * 0.57);
     --stadium-w: calc(var(--active-w) * 0.6);
     --fan-w: calc(var(--active-w) * 0.37);
-    --side-col: 100px;
+    --side-col: max(84px, calc(var(--active-w) * 0.95));
     position: relative;
     display: grid;
+    height: 100%;
     grid-template-columns: var(--side-col) minmax(0, 1fr) var(--active-w) minmax(0, 1fr) var(--side-col);
-    grid-template-rows: auto auto auto var(--mid) auto auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) minmax(0, 1fr) auto auto;
     grid-template-areas:
       'ohand  ohand   ohand   ohand  ohand'
       'opile  obench  obench  obench oprize'
       'opile  stadium oactive turn   oprize'
+      '.      stadium .       turn   .'
       '.      stadium .       turn   .'
       'mprize stadium mactive turn   mpile'
       'mprize mbench  mbench  mbench mpile';
@@ -287,14 +292,14 @@
 
   /* The bot's half of the mat is a shade darker; a line and a mark divide the table. */
   .their-half {
-    grid-row: 1 / 4;
+    grid-row: 1 / 5;
     grid-column: 1 / -1;
-    margin: 0 calc(-1 * var(--pad)) calc(-1 * (var(--row-gap) + var(--mid) / 2));
+    margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--row-gap) / 2);
     background: linear-gradient(#0000002e, #00000014);
     pointer-events: none;
   }
   .midline {
-    grid-row: 4;
+    grid-row: 4 / 6;
     grid-column: 1 / -1;
     align-self: center;
     position: relative;
@@ -538,10 +543,25 @@
     transform: scale(1.06);
   }
   .ghost-card {
-    opacity: 0.7;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0.85;
     outline: 2px dashed #f2c94c;
     outline-offset: 2px;
     border-radius: 7px;
+    cursor: pointer;
+    animation: ghost-in 0.22s ease-out;
+  }
+  .ghost-card:hover {
+    opacity: 0.6;
+  }
+  @keyframes ghost-in {
+    from {
+      transform: translateY(14px) scale(1.08);
+      opacity: 0;
+    }
   }
 
   /* The bot's hand peeks in from the top edge of the mat. */
@@ -674,18 +694,18 @@
     .board {
       --pad: 8px;
       --row-gap: 10px;
-      --mid: 4px;
-      --active-w: 78px;
-      --slot-w: 58px;
-      --prize-w: 18px;
-      --pile-w: 34px;
-      --side-col: 44px;
-      --stadium-w: 46px;
+      --active-w: clamp(44px, min(calc((100cqh - 100px) / 4.9), calc((100cqw - 40px) / 3.7)), 86px);
+      --slot-w: calc(var(--active-w) * 0.74);
+      --prize-w: calc(var(--active-w) * 0.23);
+      --pile-w: calc(var(--active-w) * 0.44);
+      --side-col: max(40px, calc(var(--active-w) * 0.56));
+      --stadium-w: calc(var(--active-w) * 0.6);
       --fan-w: 24px;
       grid-template-areas:
         'ohand  ohand   ohand   ohand  ohand'
         'obench obench  obench  obench obench'
         'opile  stadium oactive turn   oprize'
+        '.      stadium .       turn   .'
         '.      stadium .       turn   .'
         'mprize stadium mactive turn   mpile'
         'mbench mbench  mbench  mbench mbench';

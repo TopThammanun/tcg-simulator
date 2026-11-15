@@ -67,17 +67,7 @@ test('you can set up, attach Energy and end the turn; the bot then plays', async
   await page.locator('input[type=number]').fill('101');
   await page.getByRole('button', { name: 'เริ่มเกม' }).click();
 
-  // Setup choices: Active (if asked), then Bench.
-  for (let i = 0; i < 3; i++) {
-    const choice = page.locator('.choice');
-    if (!(await choice.isVisible())) break;
-    const head = await choice.locator('.head').innerText();
-    if (head.includes('ตัวหลัก')) await choice.locator('.opt').first().click();
-    else if (head.includes('Bench')) await choice.locator('.go').click();
-    else await choice.locator('button').first().click();
-    await page.waitForTimeout(300);
-  }
-  await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
+  await setUp(page);
   const before = await engineState(page);
 
   // Attach an Energy card if one is playable.
@@ -94,22 +84,39 @@ test('you can set up, attach Energy and end the turn; the bot then plays', async
   expect(shownActive).toBeTruthy();
 });
 
-/** Start a seeded game vs Basic Box and go through setup by tapping (Active = first option, no Bench). */
+/**
+ * Set up on the table like a player: answer the coin toss / mulligan boxes with their first option, tap
+ * the first Basic in the hand for the Active Spot, then confirm the Bench without adding any.
+ */
+async function setUp(page: Page) {
+  for (let i = 0; i < 8; i++) {
+    if (await page.locator('.bar:not(.setup-bar)').isVisible()) break;
+    const choice = page.locator('.choice');
+    const setup = page.locator('.setup-bar');
+    if (await choice.isVisible()) await choice.locator('button').first().click();
+    else if (await setup.isVisible()) {
+      if ((await setup.getAttribute('data-step')) === 'active') await page.locator('.hcard.grab').first().click();
+      else await setup.getByRole('button', { name: /ยืนยัน/ }).click();
+    }
+    await page.waitForTimeout(300);
+  }
+  await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
+}
+
+/** Start a seeded game vs Basic Box and set up (Active = first Basic, no Bench). */
 async function startGame(page: Page, seed: number) {
   await page.goto('/play/?test=1');
   await page.locator('select').first().selectOption('basic-box');
   await page.locator('input[type=number]').fill(String(seed));
   await page.getByRole('button', { name: 'เริ่มเกม' }).click();
-  for (let i = 0; i < 4; i++) {
-    const choice = page.locator('.choice');
-    if (!(await choice.isVisible())) break;
-    const head = await choice.locator('.head').innerText();
-    if (head.includes('ตัวหลัก')) await choice.locator('.opt').first().click();
-    else if (head.includes('Bench')) await choice.locator('.go').click();
-    else await choice.locator('button').first().click();
-    await page.waitForTimeout(300);
-  }
-  await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
+  await setUp(page);
+}
+
+/** A card on the table once it has turned face up (setup ends with both sides flipping their Pokémon). */
+async function faceUp(page: Page, selector: string) {
+  const card = page.locator(selector);
+  await expect.poll(async () => (await card.boundingBox())?.width ?? 0).toBeGreaterThan(20);
+  return (await card.boundingBox())!;
 }
 
 const energyOnActive = (page: Page) =>
@@ -121,12 +128,11 @@ const energyOnActive = (page: Page) =>
 test('drag an Energy from your hand onto your Active Pokémon (mouse)', async ({ page }) => {
   await startGame(page, 101);
   const card = page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first();
-  const target = page.locator('.side.mine .slot.active .card');
   const a = (await card.boundingBox())!;
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
   await page.mouse.move(a.x + a.width / 2, a.y - 30, { steps: 4 });
-  const b = (await target.boundingBox())!;
+  const b = await faceUp(page, '.side.mine .slot.active .card');
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
   await expect(page.locator('.ghost-label')).toContainText('ติด Grass Energy ให้');
   await page.mouse.up();
@@ -181,28 +187,27 @@ test('the hint button explains each suggestion', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-  test('swipe a card up from the hand onto a Pokémon; swipe sideways to scroll the hand', async ({ page }) => {
+  test('the game fits the screen with every card in hand showing; swipe one up onto a Pokémon', async ({ page }) => {
     await startGame(page, 101);
     const cdp = await page.context().newCDPSession(page);
     const touch = (type: string, x = 0, y = 0) =>
       cdp.send('Input.dispatchTouchEvent', { type: type as 'touchStart', touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
-    await page.locator('.main').evaluate((el) => el.scrollIntoView({ block: 'start' }));
 
-    // The dock (hand + buttons) stays on screen.
+    // Nothing scrolls: the table, the buttons and the whole hand are on screen.
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(844);
     const dock = (await page.locator('.dock').boundingBox())!;
     expect(dock.y + dock.height).toBeLessThanOrEqual(844 + 1);
+    expect(await page.locator('.hand').evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+    const cards = await page.locator('.hcard .cardbox').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()));
+    expect(cards.length).toBeGreaterThan(5);
+    for (const c of cards) {
+      expect(c.left).toBeGreaterThanOrEqual(0);
+      expect(c.right).toBeLessThanOrEqual(390);
+      expect(c.bottom).toBeLessThanOrEqual(844);
+    }
 
-    const hand = (await page.locator('.hand').boundingBox())!;
-    const hy = hand.y + hand.height / 2;
-    await touch('touchStart', hand.x + hand.width - 40, hy);
-    for (let i = 1; i <= 8; i++) await touch('touchMove', hand.x + hand.width - 40 - i * 25, hy);
-    await touch('touchEnd');
-    await expect.poll(() => page.locator('.hand').evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-    expect(await energyOnActive(page)).toBe(0);
-
-    await page.locator('.hand').evaluate((el) => (el.scrollLeft = 0));
     const a = (await page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first().boundingBox())!;
-    const b = (await page.locator('.side.mine .slot.active .card').boundingBox())!;
+    const b = await faceUp(page, '.side.mine .slot.active .card');
     const [sx, sy, tx, ty] = [a.x + a.width / 2, a.y + a.height / 2, b.x + b.width / 2, b.y + b.height / 2 + 10];
     await touch('touchStart', sx, sy);
     for (let i = 1; i <= 12; i++) await touch('touchMove', sx + ((tx - sx) * i) / 12, sy + ((ty - sy) * i) / 12);
@@ -213,8 +218,7 @@ test.describe('on a phone', () => {
   test('long press shows the card', async ({ page }) => {
     await startGame(page, 101);
     const cdp = await page.context().newCDPSession(page);
-    await page.locator('.main').evaluate((el) => el.scrollIntoView({ block: 'start' }));
-    const b = (await page.locator('.side.theirs .slot.active .card').boundingBox())!;
+    const b = await faceUp(page, '.side.theirs .slot.active .card');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: b.x + b.width / 2, y: b.y + b.height / 2 }] });
     await page.waitForTimeout(650);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
