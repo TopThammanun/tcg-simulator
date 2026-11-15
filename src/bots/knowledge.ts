@@ -5,6 +5,7 @@ import { def, hasRuleBox } from '../engine/db';
 import { attackCost, canPay, energyOf, hpLeft } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef, topKey } from '../engine/state';
 import type { GameState, PlayerId, Slot } from '../engine/types';
+import { P } from './params';
 import type { DeckPlan } from './types';
 
 /** Energy types still missing to pay `cost` with `have`. */
@@ -56,11 +57,11 @@ export function attackerScore(s: GameState, me: PlayerId, slot: Slot, plan: Deck
   let best = -1000;
   for (const a of d.attacks) {
     const miss = missingFor(have, attackCost(s, slot, a));
-    best = Math.max(best, roughDamage(s, slot, a) - 45 * miss);
+    best = Math.max(best, roughDamage(s, slot, a) - P.missingEnergy * miss);
   }
   const rank = plan.attackers.indexOf(topKey(s, slot));
-  const bias = (rank >= 0 ? 40 - rank * 8 : 0) + (plan.attackerBias?.(s, me, slot) ?? 0);
-  return best + bias + Math.min(hpLeft(s, slot), 300) / 10;
+  const bias = (rank >= 0 ? P.attackerRank - rank * P.attackerRankStep : 0) + (plan.attackerBias?.(s, me, slot) ?? 0);
+  return best + bias + Math.min(hpLeft(s, slot), 300) / P.attackerHpDiv;
 }
 
 /** Can the Pokémon pay for one of its attacks now? */

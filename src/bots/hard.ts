@@ -1,6 +1,8 @@
 // "ยาก": Monte Carlo at key decisions (PLAN.md v3). The normal bot proposes a few candidates; each is
 // played forward on several determinized states (unknown cards re-dealt) with normal bots on both sides
 // until the end of the opponent's next turn, and the candidate with the best average outcome is taken.
+// The search is shared: "ยาก" scores the end position with evaluate() below, "โปร" (pro.ts) with the
+// value network trained from self-play.
 import { actor, apply, legalActions } from '../engine/actions';
 import { def, isTrainerType } from '../engine/db';
 import { hpLeft, maxHp } from '../engine/rules';
@@ -8,13 +10,33 @@ import { keyOf, opp, slotsOf, topDef } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { determinize } from '../engine/view';
 import { choosePicks } from './choose';
-import { decide, finishStep, makeBot, rankDevelopment } from './core';
+import { decide, finishStep, makeBot, rankDevelopment, type Scored } from './core';
 import { planFinish, runStep } from './finisher';
 import { makeRand } from './random';
 import type { Bot, DeckPlan } from './types';
 
-const SAMPLES = 4;
 const MAX_ROLLOUT_ACTIONS = 160;
+
+export interface SearchOptions {
+  seed?: number;
+  /** Value of a position from `me`'s side, higher is better. */
+  value: (s: GameState, me: PlayerId) => number;
+  /** Score for a line that broke while being played out (below any real position). */
+  failValue: number;
+  /** Determinized deals per candidate. */
+  samples?: number;
+  /** How many of the best development moves to try besides the normal choice and the attack plan. */
+  breadth?: number;
+  /**
+   * Where a line is scored: after the opponent's reply (start of my next turn, default) or as soon as
+   * my turn ends (needs a value that foresees the reply, like the network).
+   */
+  horizon?: 'reply' | 'turn';
+  /** Extra deals for the two best candidates after the first round (0 = one round only). */
+  refine?: number;
+  /** Stop adding deals after this many ms (at least two deals each), so slow devices don't wait long. */
+  deadlineMs?: number;
+}
 
 /** Static evaluation from `me`'s side: prizes, board health, resources. */
 export function evaluate(s: GameState, me: PlayerId): number {
@@ -47,6 +69,12 @@ function isKey(s: GameState, a: Action): boolean {
 }
 
 export function makeHardBot(plan: DeckPlan, oppPlan: DeckPlan, opts: { seed?: number } = {}): Bot {
+  return makeSearchBot(plan, oppPlan, { seed: opts.seed, value: evaluate, failValue: -1e4 });
+}
+
+export function makeSearchBot(plan: DeckPlan, oppPlan: DeckPlan, opts: SearchOptions): Bot {
+  const samples = opts.samples ?? 4;
+  const breadth = opts.breadth ?? 2;
   const normal = makeBot(plan, { level: 'normal', seed: opts.seed });
   const rand = makeRand((opts.seed ?? 1) ^ 0x68e31da4);
   let queue: number[][] = [];
@@ -70,7 +98,7 @@ export function makeHardBot(plan: DeckPlan, oppPlan: DeckPlan, opts: { seed?: nu
       }
       // Candidates: the normal choice, the planner's line, the best development moves, and ending the turn.
       const fin = planFinish(s, me, plan, Math.floor(rand() * 2 ** 31));
-      const cands = [first, finishStep(s, fin), ...rankDevelopment(s, me, plan).slice(0, 2), { action: { t: 'end' } as Action, score: 0, reason: '' }];
+      const cands = [first, finishStep(s, fin), ...rankDevelopment(s, me, plan).slice(0, breadth), { action: { t: 'end' } as Action, score: 0, reason: '' }];
       const seen = new Set<string>();
       const unique = cands.filter((c) => {
         const k = JSON.stringify('card' in c.action ? { ...c.action, card: keyOf(s, c.action.card) } : c.action);
@@ -82,34 +110,57 @@ export function makeHardBot(plan: DeckPlan, oppPlan: DeckPlan, opts: { seed?: nu
         queue = first.picks?.slice() ?? [];
         return first.action;
       }
-      let best = unique[0]!;
-      let bestValue = -Infinity;
-      const seeds = Array.from({ length: SAMPLES }, () => Math.floor(rand() * 2 ** 31));
-      for (const c of unique) {
-        let total = 0;
-        for (const seed of seeds) total += rollout(s, me, c.action, c.picks, seed, plan, oppPlan);
-        const v = total / seeds.length;
-        if (v > bestValue) {
-          bestValue = v;
-          best = c;
+      // Every candidate on the same deals; then, with `refine`, more deals for the two best only
+      // (the close calls are where more samples change the answer).
+      const deals = (n: number) => Array.from({ length: n }, () => Math.floor(rand() * 2 ** 31));
+      const score = (c: Scored, seeds: number[]) => seeds.reduce((t, seed) => t + rollout(s, me, c.action, c.picks, seed, plan, oppPlan, opts), 0);
+      const rated = unique.map((c) => ({ c, total: 0, n: 0 }));
+      const started = performance.now();
+      for (const seed of deals(samples)) {
+        for (const r of rated) {
+          r.total += score(r.c, [seed]);
+          r.n++;
         }
+        if (opts.deadlineMs && rated[0]!.n >= 2 && performance.now() - started > opts.deadlineMs) break;
       }
+      rated.sort((a, b) => b.total - a.total);
+      const refine = opts.refine ?? 0;
+      if (refine > 0 && rated.length > 1) {
+        const more = deals(refine);
+        for (const r of rated.slice(0, 2)) {
+          r.total += score(r.c, more);
+          r.n += refine;
+        }
+        rated.sort((a, b) => b.total / b.n - a.total / a.n);
+      }
+      const best = rated[0]!.c;
       queue = best.picks?.slice() ?? [];
       return best.action;
     },
   };
 }
 
-function rollout(s: GameState, me: PlayerId, action: Action, picks: number[][] | undefined, seed: number, plan: DeckPlan, oppPlan: DeckPlan): number {
+function rollout(
+  s: GameState,
+  me: PlayerId,
+  action: Action,
+  picks: number[][] | undefined,
+  seed: number,
+  plan: DeckPlan,
+  oppPlan: DeckPlan,
+  opts: SearchOptions,
+): number {
   const mineBot = makeBot(plan, { seed: seed + 1 });
   const theirBot = makeBot(oppPlan, { seed: seed + 2 });
   let st: GameState;
   try {
     st = runStep(determinize(s, me, seed), { action, picks }, plan);
-    // Finish this turn and the opponent's next one; stop when it is our turn again.
+    // Finish this turn and the opponent's next one; stop when it is our turn again (or, with the
+    // 'turn' horizon, when the opponent's turn starts).
     let n = 0;
     while (st.winner === null && n++ < MAX_ROLLOUT_ACTIONS) {
       if (!st.pending && st.current === me && st.turn > s.turn) break;
+      if (opts.horizon === 'turn' && !st.pending && st.current !== me) break;
       const p = actor(st);
       const a: Action = st.pending
         ? { t: 'choose', picks: choosePicks(st, st.pending.request, p === me ? plan : oppPlan) }
@@ -117,7 +168,7 @@ function rollout(s: GameState, me: PlayerId, action: Action, picks: number[][] |
       st = apply(st, a, { trusted: true });
     }
   } catch {
-    return -1e4;
+    return opts.failValue;
   }
-  return evaluate(st, me);
+  return opts.value(st, me);
 }

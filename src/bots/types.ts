@@ -5,7 +5,7 @@ export interface Bot {
   act(s: GameState): Action;
 }
 
-export type Level = 'easy' | 'normal' | 'hard';
+export type Level = 'easy' | 'normal' | 'hard' | 'pro';
 
 /**
  * Deck-specific knowledge layered on the shared bot core. Every hook is optional; the core has

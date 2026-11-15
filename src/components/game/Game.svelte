@@ -11,7 +11,7 @@
   import type { Action, CardId, GameState, PlayerId, SlotId } from '../../engine/types';
   import { viewFor } from '../../engine/view';
   import { makeBot } from '../../bots/core';
-  import { createBot } from '../../bots';
+  import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot, Level } from '../../bots/types';
   import { describeAction, handActions, pickByShare, targetOf } from '../../ui/play';
@@ -78,7 +78,9 @@
   let states = $state.raw<GameState[]>([]);
   let history = $state.raw<Action[]>([]);
   let botSlug = $state('');
-  let bot: Bot | null = null;
+  /** The opponent thinks in a Web Worker (src/bots/worker.ts) so its search never freezes the page. */
+  let bot: RemoteBot | null = null;
+  $effect(() => () => bot?.dispose());
   let viewing = $state<number | null>(null);
   let selected = $state<CardId | null>(null);
   /** The pop-up for one of your Pokémon (attacks, Abilities, retreat), opened by tapping it. */
@@ -221,7 +223,8 @@
     } catch {
       /* default policy */
     }
-    bot = createBot(planFor(pick.slug), level, seed ^ 0x2545f491, planFor('player', policy));
+    bot?.dispose();
+    bot = remoteBot({ slug: pick.slug, oppSlug: 'player', level, seed: seed ^ 0x2545f491, policy });
     if (watch) meBot = makeBot(planFor('player', policy), { level: 'normal', seed: seed ^ 0x1b873593 });
     error = '';
     viewing = null;
@@ -323,11 +326,25 @@
   $effect(() => {
     const s = cur;
     if (!s || !live) return;
-    const who = actor(s) === 1 ? bot : meBot;
-    if (!who) return;
+    const p = actor(s);
+    const opponent = bot;
+    const mine = meBot;
+    if (p === 1 ? !opponent : !mine) return;
     const delay = Math.max(s.pending ? Math.min(speed, 250) : speed, busyUntil - performance.now());
-    const t = setTimeout(() => step(who.act(s)), delay);
-    return () => clearTimeout(t);
+    let stale = false;
+    const t = setTimeout(async () => {
+      try {
+        const a = p === 1 ? await opponent!.act(s) : mine!.act(s);
+        // Ignore an answer for a position that is gone (undo, new game).
+        if (!stale && cur === s) step(a);
+      } catch (e) {
+        if (!stale) error = `บอทผิดพลาด: ${(e as Error).message}`;
+      }
+    }, delay);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
   });
 
   // Test hook: Playwright reads the engine state to compare with the screen.
@@ -460,7 +477,8 @@
       if (s.winner === null && !s.pending && actor(s) === 0 && s.phase === 'main') {
         states = states.slice(0, i + 1);
         history = history.slice(0, i);
-        bot = createBot(planFor(botSlug), level, seed ^ 0x2545f491 ^ i, planFor('player'));
+        bot?.dispose();
+        bot = remoteBot({ slug: botSlug, oppSlug: 'player', level, seed: seed ^ 0x2545f491 ^ i, policy: DEFAULT_POLICY });
         viewing = null;
         return;
       }

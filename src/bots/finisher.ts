@@ -10,6 +10,7 @@ import { determinize } from '../engine/view';
 import { choosePicks } from './choose';
 import { attackerScore, missingFor, roughDamage } from './knowledge';
 import type { DeckPlan } from './types';
+import { P } from './params';
 
 export interface Step {
   action: Action;
@@ -48,8 +49,8 @@ export function outcome(before: GameState, after: GameState, me: PlayerId): numb
   if (after.winner === 'draw') return 0;
   const o = opp(me);
   let v = 0;
-  v += 160 * (before.players[me].prizes.length - after.players[me].prizes.length);
-  v -= 160 * (before.players[o].prizes.length - after.players[o].prizes.length);
+  v += P.prize * (before.players[me].prizes.length - after.players[me].prizes.length);
+  v -= P.prize * (before.players[o].prizes.length - after.players[o].prizes.length);
   const beforeSlots = new Map<number, Slot>();
   for (const p of [0, 1] as const) for (const sl of slotsOf(before.players[p])) beforeSlots.set(sl.uid, sl);
   for (const sl of slotsOf(after.players[o])) {
@@ -58,19 +59,19 @@ export function outcome(before: GameState, after: GameState, me: PlayerId): numb
     if (dmg <= 0) continue;
     const prizes = topDef(after, sl).prizes;
     const left = hpLeft(after, sl);
-    v += dmg * 0.32 * (1 + 0.3 * (prizes - 1)) + (left <= 60 ? 12 : 0);
+    v += dmg * P.damage * (1 + P.ruleBoxDamage * (prizes - 1)) + (left <= 60 ? P.nearKo : 0);
   }
   for (const sl of slotsOf(after.players[me])) {
     const prev = beforeSlots.get(sl.uid);
-    if (prev) v -= Math.max(0, sl.damage - prev.damage) * 0.3;
+    if (prev) v -= Math.max(0, sl.damage - prev.damage) * P.selfDamage;
   }
   const energyOnBoard = (st: GameState, p: PlayerId) => slotsOf(st.players[p]).reduce((n, sl) => n + sl.energy.length, 0);
   const energyDiscarded = (st: GameState, p: PlayerId) =>
     st.players[p].discard.filter((c) => keyOf(st, c).endsWith('-energy')).length;
-  v += 9 * Math.max(0, energyDiscarded(after, o) - energyDiscarded(before, o));
-  v -= 8 * Math.max(0, energyDiscarded(after, me) - energyDiscarded(before, me));
-  v += 0.5 * (energyOnBoard(after, me) - energyOnBoard(before, me));
-  v += 3.5 * (after.players[me].hand.length - before.players[me].hand.length);
+  v += P.discardTheirEnergy * Math.max(0, energyDiscarded(after, o) - energyDiscarded(before, o));
+  v -= P.discardMyEnergy * Math.max(0, energyDiscarded(after, me) - energyDiscarded(before, me));
+  v += P.energyOnBoard * (energyOnBoard(after, me) - energyOnBoard(before, me));
+  v += P.handCard * (after.players[me].hand.length - before.players[me].hand.length);
   return v;
 }
 

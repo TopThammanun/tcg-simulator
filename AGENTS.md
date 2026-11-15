@@ -15,7 +15,9 @@ npm run test:e2e   # Playwright against the production build (plays seeded games
 npm run check      # astro check + svelte-check
 npm run fuzz -- --games 10000         # Phase 1 gate: random legal moves, invariants after every action
 npm run sim -- --games 1000 [--check] # your list vs each bot deck; --exp all runs the 5 experiments
-npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (mirror matches)
+npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (mirror matches); --bot pro --vs hard
+npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA self-play tuning of src/bots/params.ts
+npx tsx scripts/train.ts --generations 4 --games 1600 --gate 480   # value-network self-play training (~10 min/generation)
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed]   # read one bot game's log
 npm run dev        # dev server on :4321
 npm run build      # static site in dist/
@@ -37,7 +39,12 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   passive Abilities, Tools and Stadiums are read where they apply in `rules.ts` / `combat.ts`.
   `tests/engine/coverage.test.ts` fails if a card with effect text has no implementation.
 - `src/bots/` — `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) +
-  `choose.ts` (pending choices) + `plans/<deck>.ts`; `hard.ts` adds Monte Carlo; `coach.ts` = hint button,
+  `choose.ts` (pending choices) + `plans/<deck>.ts`; `params.ts` holds the main weights, tuned by self-play
+  (`scripts/tune.ts`, SPSA); `hard.ts` adds Monte Carlo; `pro.ts` = the same search
+  scored by a value network (`learn/`: `features.ts`, `net.ts`, `weights.json`) trained AlphaZero-style by
+  `scripts/train.ts` (self-play → fit → a gate match; a network is kept only if it wins significantly;
+  `data/training-log.md`). On the play screen the opponent bot runs in a Web Worker (`worker.ts`,
+  `remote.ts`). `coach.ts` = hint button,
   `explain.ts` = its reasons (read from the position + the move played out on a determinized copy).
   Bots plan on `determinize()` so they never see hidden cards.
 - `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
