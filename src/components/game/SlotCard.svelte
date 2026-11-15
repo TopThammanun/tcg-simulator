@@ -1,6 +1,7 @@
 <script lang="ts">
   // One Pokémon in play, drawn as on the table: HP and damage on the card, attached Energy peeking out
-  // below it, the Tool peeking out above it, conditions and ability buttons on top.
+  // below it, the Tool peeking out above it, conditions on top. Tapping it opens its pop-up
+  // (PokemonMenu); `ready` makes it glow when it has an attack or Ability to use.
   // The container sets the width (Active Spot or a Bench cell).
   import { maxHp, provides, toolKey } from '../../engine/rules';
   import { keyOf, topKey } from '../../engine/state';
@@ -15,10 +16,10 @@
     target = false,
     picked = 0,
     abilities = [],
+    ready = false,
     over = false,
     grab = false,
     onclick,
-    onability,
     onzoom,
     onpress,
   }: {
@@ -27,13 +28,14 @@
     active?: boolean;
     target?: boolean;
     picked?: number;
+    /** Abilities it can use now (shown as a badge; used from the pop-up). */
     abilities?: string[];
+    ready?: boolean;
     /** A dragged card is over this Pokémon and can be dropped here. */
     over?: boolean;
     /** This Pokémon can be dragged (to retreat). */
     grab?: boolean;
     onclick?: () => void;
-    onability?: (name: string) => void;
     onzoom?: (key: string) => void;
     onpress?: (e: PointerEvent) => void;
   } = $props();
@@ -56,6 +58,7 @@
   class:target
   class:over
   class:grab
+  class:ready
   class:picked={picked > 0}
   data-drop={`slot:${slot.uid}`}
   data-slot={slot.uid}
@@ -90,13 +93,7 @@
       {/each}
     </span>
   {/if}
-  {#if abilities.length}
-    <span class="abilities">
-      {#each abilities as name}
-        <button type="button" class="ability" onclick={() => onability?.(name)}>✦ {name}</button>
-      {/each}
-    </span>
-  {/if}
+  {#if abilities.length}<span class="ability-badge" title={abilities.join(', ')}>✦ Ability</span>{/if}
 </div>
 
 <style>
@@ -289,43 +286,35 @@
     box-shadow: 0 1px 2px #000a;
     pointer-events: auto;
   }
-  .abilities {
+  /* Something to do here (an attack or an Ability): a slow gold glow; tap for the pop-up. */
+  .ready .card {
+    animation: ready 1.8s ease-in-out infinite;
+  }
+  @keyframes ready {
+    0%,
+    100% {
+      box-shadow: 0 0 0 2px #f2c94c88, 0 0 10px #f2c94c44;
+    }
+    50% {
+      box-shadow: 0 0 0 3px #f2c94ccc, 0 0 22px #f2c94c88;
+    }
+  }
+  .ability-badge {
     position: absolute;
     left: 50%;
-    top: 50%;
+    top: 46%;
     z-index: 3;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    width: max-content;
-    max-width: 140%;
     transform: translate(-50%, -50%);
-  }
-  .ability {
-    padding: 3px 8px;
+    padding: 2px 8px;
     border: 1.5px solid #fff6d6;
     border-radius: 999px;
     background: linear-gradient(#e0ad2c, #b9831a);
     color: #1c1508;
-    font: inherit;
-    font-size: 0.66rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    line-height: 1.2;
-    cursor: pointer;
-    box-shadow:
-      0 0 0 3px #f2c94c44,
-      0 3px 8px #000b;
-    animation: glow 1.6s ease-in-out infinite;
-  }
-  .ability:hover {
-    background: linear-gradient(#f2c94c, #cf961f);
-  }
-  @keyframes glow {
-    50% {
-      box-shadow:
-        0 0 0 6px #f2c94c22,
-        0 3px 8px #000b;
-    }
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 3px 8px #000b;
   }
   .mono {
     font-family: var(--font-mono);
@@ -349,9 +338,9 @@
       font-size: 0.5rem;
       padding: 0 4px;
     }
-    .ability {
-      padding: 2px 6px;
-      font-size: 0.58rem;
+    .ability-badge {
+      padding: 1px 5px;
+      font-size: 0.52rem;
     }
   }
 </style>

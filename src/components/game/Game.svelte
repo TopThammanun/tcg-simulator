@@ -6,6 +6,7 @@
   import { fade, scale } from 'svelte/transition';
   import { actor, apply, createGame, legalActions } from '../../engine/actions';
   import { def } from '../../engine/db';
+  import { maxHp } from '../../engine/rules';
   import { keyOf, slotsOf, topKey } from '../../engine/state';
   import type { Action, CardId, GameState, PlayerId, SlotId } from '../../engine/types';
   import { viewFor } from '../../engine/view';
@@ -13,9 +14,10 @@
   import { createBot } from '../../bots';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot, Level } from '../../bots/types';
-  import { actionLabel, describeAction, handActions, pickByShare, targetOf } from '../../ui/play';
+  import { describeAction, handActions, pickByShare, targetOf } from '../../ui/play';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
   import { trackPress } from '../../ui/press';
+  import { slotMenu } from '../../ui/menu';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
@@ -29,6 +31,7 @@
   import HandView from './HandView.svelte';
   import LogPanel from './LogPanel.svelte';
   import Coach from './Coach.svelte';
+  import PokemonMenu from './PokemonMenu.svelte';
   import FxLayer from './FxLayer.svelte';
   import GameOver from './GameOver.svelte';
 
@@ -78,7 +81,9 @@
   let bot: Bot | null = null;
   let viewing = $state<number | null>(null);
   let selected = $state<CardId | null>(null);
-  let retreatMode = $state(false);
+  /** The pop-up for one of your Pokémon (attacks, Abilities, retreat), opened by tapping it. */
+  let menuFor = $state<SlotId | null>(null);
+  let menuAnchor = $state<DOMRect | null>(null);
   let picks = $state<number[]>([]);
   let zoom = $state<string | null>(null);
   let discardOf = $state<PlayerId | null>(null);
@@ -132,8 +137,16 @@
   const req = $derived(myTurn && cur!.pending ? cur!.pending.request : null);
   const legal = $derived(myTurn && !cur!.pending ? legalActions(cur!) : []);
   const hand = $derived(myTurn && !cur!.pending ? handActions(cur!) : new Map());
-  const attacks = $derived(legal.filter((a) => a.t === 'attack'));
-  const retreats = $derived(legal.filter((a) => a.t === 'retreat'));
+  const menu = $derived(menuFor !== null && myTurn && !cur!.pending ? slotMenu(cur!, legal, menuFor) : null);
+  /** Your Pokémon with something to do now (an attack or an Ability): they glow on the table. */
+  const ready = $derived.by(() => {
+    const r = new Set<SlotId>();
+    for (const a of legal) {
+      if (a.t === 'ability') r.add(a.slot);
+      if (a.t === 'attack' && cur?.players[0].active) r.add(cur.players[0].active.uid);
+    }
+    return r;
+  });
   const canStadium = $derived(legal.some((a) => a.t === 'stadium'));
   const abilities = $derived.by(() => {
     const m = new Map<SlotId, string[]>();
@@ -147,7 +160,6 @@
       const ca = hand.get(selected);
       if (ca?.kind === 'target') for (const a of ca.actions) t.add(targetOf(a)!);
     }
-    if (retreatMode) for (const a of retreats) if (a.t === 'retreat') t.add(a.to);
     return t;
   });
   // Setup: Basics in your hand are the options; drag them to the Active Spot / Bench or tap them.
@@ -245,7 +257,7 @@
       error = (e as Error).message;
     }
     selected = null;
-    retreatMode = false;
+    menuFor = null;
     picks = [];
   }
 
@@ -332,7 +344,7 @@
       selected = null;
       return;
     }
-    retreatMode = false;
+    menuFor = null;
     const ca = hand.get(c);
     if (!ca) return;
     if (ca.kind === 'now') step(ca.action);
@@ -351,7 +363,14 @@
       if (a) step(a);
       return;
     }
-    if (retreatMode) step({ t: 'retreat', to: uid });
+    // Your Pokémon: its pop-up. The other side's: the card, large.
+    if (myTurn && cur!.players[0].active && slotMenu(cur!, legal, uid)) {
+      menuFor = uid;
+      menuAnchor = document.querySelector(`[data-slot="${uid}"] .card`)?.getBoundingClientRect() ?? null;
+      return;
+    }
+    const sl = shown && [0, 1].flatMap((p) => slotsOf(shown!.players[p as PlayerId])).find((x) => x.uid === uid);
+    if (sl) zoom = topKey(shown!, sl);
   }
 
   function pick(v: number) {
@@ -376,7 +395,7 @@
       onDragStart: (x, y) => {
         fx?.finish();
         selected = null;
-        retreatMode = false;
+        menuFor = null;
         drag = { key, card, drops, x, y, over: null, touch: e.pointerType !== 'mouse', tilt: 0 };
       },
       onDragMove: (x, y) => {
@@ -556,7 +575,7 @@
         ghostBench={benchPicks.map((o) => keyOf(cur, o.card!))}
         onghost={(i) => (picks = picks.filter((v) => v !== benchPicks[i]!.value))}
         onslot={onSlot}
-        onability={(slot, name) => step({ t: 'ability', slot, name })}
+        {ready}
         onzoom={(k) => (zoom = k)}
         ondiscard={(p) => (discardOf = p)}
         onpress={onSlotPress}
@@ -579,21 +598,11 @@
           {@render choice()}
         {:else if myTurn && !req}
           <div class="bar">
-            {#each attacks as a}
-              {#if a.t === 'attack'}
-                <button type="button" class="attack" onclick={() => step(a)}>
-                  {actionLabel(cur, a)}{a.from !== undefined ? ' (Memory Helix)' : ''}
-                </button>
-              {/if}
-            {/each}
-            {#if retreats.length}
-              <button type="button" class:on={retreatMode} onclick={() => ((retreatMode = !retreatMode), (selected = null))}>
-                {retreatMode ? 'เลือกตัวที่จะขึ้นมา…' : 'ถอย'}
-              </button>
-            {/if}
             <button type="button" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
             <button type="button" class="ghost" onclick={undo} disabled={history.length === 0}>ย้อน</button>
-            {#if selected !== null}<span class="hint">แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง</span>{/if}
+            <span class="hint">
+              {selected !== null ? 'แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง' : 'แตะ Pokémon ของคุณเพื่อโจมตี · ถอย · ใช้ Ability'}
+            </span>
           </div>
         {:else if setupReq}
           <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
@@ -674,6 +683,18 @@
     botHref={`/decks/${botSlug}/`}
     onnew={() => ((states = []), (showOver = false))}
     onclose={() => (showOver = false)}
+  />
+{/if}
+
+{#if menu}
+  {@const sl = slotsOf(cur!.players[0]).find((x) => x.uid === menu.uid)}
+  <PokemonMenu
+    {menu}
+    anchor={menuAnchor}
+    hp={{ left: sl ? Math.max(0, maxHp(cur!, sl) - sl.damage) : 0, max: sl ? maxHp(cur!, sl) : 0 }}
+    onact={(a) => ((menuFor = null), step(a))}
+    onzoom={(k) => (zoom = k)}
+    onclose={() => (menuFor = null)}
   />
 {/if}
 
@@ -770,46 +791,14 @@
     opacity: 0.4;
     cursor: default;
   }
-  .primary,
-  .attack {
+  .primary {
     background: var(--ink);
     color: var(--paper);
     font-family: var(--font-display);
     font-weight: 600;
   }
-  .attack {
-    position: relative;
-    overflow: hidden;
-    background: var(--stamp);
-    border-color: var(--stamp);
-    color: #fff;
-  }
-  /* An attack you can use shines now and then. */
-  .attack::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(110deg, transparent 35%, #ffffff66 50%, transparent 65%) no-repeat;
-    background-size: 250% 100%;
-    background-position: 130% 0;
-    pointer-events: none;
-    animation: attack-sheen 2.8s ease-in-out infinite;
-  }
-  @keyframes attack-sheen {
-    0%,
-    55% {
-      background-position: 130% 0;
-    }
-    100% {
-      background-position: -30% 0;
-    }
-  }
   .ghost {
     background: transparent;
-  }
-  button.on {
-    background: #f2c94c;
-    color: #1f1c16;
   }
   /* A game fills the screen like the real game: status line, table, then your hand. Nothing scrolls
      except the side column. */

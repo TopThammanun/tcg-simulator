@@ -31,8 +31,8 @@
     ghostActive,
     ghostBench = [],
     onghost,
+    ready = new Set(),
     onslot,
-    onability,
     onzoom,
     ondiscard,
     onpress,
@@ -51,8 +51,9 @@
     ghostBench?: string[];
     /** Take a Basic placed during setup back to the hand. */
     onghost?: (i: number) => void;
+    /** Your Pokémon with an attack or Ability to use now (tap them for the pop-up). */
+    ready?: Set<SlotId>;
     onslot: (uid: SlotId) => void;
-    onability: (uid: SlotId, name: string) => void;
     onzoom: (key: string) => void;
     ondiscard: (p: PlayerId) => void;
     onpress?: (uid: SlotId, e: PointerEvent) => void;
@@ -82,8 +83,8 @@
     grab={p === 0 && grabbable.has(sl.uid)}
     picked={picks.get(sl.uid) ?? 0}
     abilities={abilities.get(sl.uid) ?? []}
+    ready={p === 0 && ready.has(sl.uid)}
     onclick={() => onslot(sl.uid)}
-    onability={(n) => onability(sl.uid, n)}
     onpress={(e) => onpress?.(sl.uid, e)}
     {onzoom}
   />

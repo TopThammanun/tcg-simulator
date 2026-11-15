@@ -22,7 +22,7 @@ const playerList = formatDecklist((await loadDecks()).find((d) => d.meta.side ==
   <h1>เล่นกับบอท</h1>
   <p class="how">
     ลากการ์ดจากมือไปวางบนสนาม: พลังงาน / Tool / วิวัฒนาการวางบน Pokémon, Basic วางบน Bench, Item / Supporter / Stadium
-    วางตรงไหนก็ได้บนสนาม · ลากตัวหลักไปทับตัวบน Bench เพื่อถอย · หรือแตะการ์ดแล้วแตะเป้าหมายก็ได้ · คลิกขวา
+    วางตรงไหนก็ได้บนสนาม · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability · หรือแตะการ์ดแล้วแตะเป้าหมายก็ได้ · คลิกขวา
     (หรือกดค้างบนมือถือ) เพื่อดูการ์ดใหญ่ · กดบรรทัดใน log เพื่อย้อนดูสนาม
   </p>
   <Game client:only="svelte" {decks} {playerList} />

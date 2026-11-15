@@ -42,7 +42,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Bots plan on `determinize()` so they never see hidden cards.
 - `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
-  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails).
+  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`
+  (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
+  rendered by `PokemonMenu.svelte` — attacking and retreating happen there, not in the dock).
 - `src/ui/anim/` — animations (plan and research: `ANIMATION-PLAN.md`). `events.ts` reads what happened
   from the state before/after an action (pure, tested); `fx.ts` plays it with the Web Animations API on
   the overlay in `FxLayer.svelte`, finding things by `data-card` / `data-slot` / `data-zone`. The state

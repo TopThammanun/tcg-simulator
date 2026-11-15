@@ -175,6 +175,21 @@ test('animations can be turned off', async ({ page }) => {
   await expect(page.locator('.fx-layer > *')).toHaveCount(0);
 });
 
+test('tapping your Active opens a pop-up with its attacks and retreating', async ({ page }) => {
+  await startGame(page, 101);
+  await faceUp(page, '.side.mine .slot.active .card');
+  await page.locator('.side.mine .slot.active .card').click();
+  const menu = page.getByRole('dialog').filter({ has: page.locator('.attacks') });
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.attack').first()).toBeVisible();
+  // Nothing attached yet: the attack is greyed out with the reason; no Bench, so no retreat.
+  await expect(menu.locator('.attack').first()).toBeDisabled();
+  await expect(menu.locator('.attack .why').first()).not.toBeEmpty();
+  await expect(menu.locator('.retreat')).toContainText('ไม่มี Pokémon บน Bench');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+});
+
 test('the hint button explains each suggestion', async ({ page }) => {
   await startGame(page, 101);
   await page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' }).click();
