@@ -20,7 +20,8 @@ npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA se
 npx tsx scripts/train.ts --generations 4 --games 1600 --gate 480   # value-network self-play training (~10 min/generation)
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed]   # read one bot game's log
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
-npx tsx scripts/threat-gate.ts --fit --games 1600   # refit src/analysis/calibration.json (after changing bots or decks)
+npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
+npx tsx scripts/review-gate.ts --games 330 --stability 160   # phase 8 gate: review win% vs results, same verdicts on another seed, time
 npm run dev        # dev server on :4321
 npm run build      # static site in dist/
 ```
@@ -55,7 +56,14 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   per opponent deck by `calibration.ts` (Platt scaling fitted by `scripts/threat-gate.ts --fit`, because uniform
   re-deals give the opponent better hands than they hold). `counts.ts` = their Trainers by the reference list vs
   seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`); shown by `ThreatPanel.svelte` and
-  the KO badges on `SlotCard.svelte`.
+  the KO badges on `SlotCard.svelte`. `winrate.ts` = win% by playing the game out (normal bots, re-dealt hidden
+  cards). `review.ts` = one of your turns reviewed: win% after it, clear mistakes (`sureLine`: the attack planner's
+  line, fixed seeds, checked on several re-deals), the hard bot's turn on the real cards compared on the same deals;
+  run on several workers by `review-remote.ts` / `review-worker.ts`.
+- `src/review/` — `record.ts` (a finished game: seed + lists + actions; `replay()`, `turnsOf()`), `store.ts`
+  (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
+  game; `/review/` (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
+  `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.
 - `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`
@@ -67,7 +75,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   changes at once; animations only show it, the bot waits for them, any input of yours skips them.
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
 - `src/sim/` — bot-vs-bot runner, stats (Wilson CI, meta-weighted and paired-difference), Web Worker.
-- Pages: `/play/` (Game.svelte; `?watch=1&seed=…&opp=…` replays a simulator game), `/sim/`, `/decks/`.
+- Pages: `/play/` (Game.svelte; `?watch=1&seed=…&opp=…` replays a simulator game, `&save=1` saves it), `/review/`,
+  `/sim/`, `/decks/`.
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.

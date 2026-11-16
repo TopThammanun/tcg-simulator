@@ -10,6 +10,7 @@
     reason,
     botDeck,
     botHref,
+    reviewHref = null,
     onnew,
     onclose,
   }: {
@@ -17,6 +18,8 @@
     reason: string;
     botDeck: string;
     botHref: string;
+    /** The saved game's review page (null until it is saved). */
+    reviewHref?: string | null;
     onnew: () => void;
     onclose: () => void;
   } = $props();
@@ -49,6 +52,7 @@
       <button type="button" class="primary" onclick={onnew}>เกมใหม่</button>
       <button type="button" onclick={onclose}>ดูสนาม</button>
     </div>
+    {#if reviewHref}<a class="review" href={reviewHref}>วิจารณ์เกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}
     <a href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
   </div>
 </div>
@@ -152,5 +156,11 @@
   a {
     font-size: 0.85rem;
     color: var(--teal);
+  }
+  a.review {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 </style>

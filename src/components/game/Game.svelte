@@ -25,6 +25,8 @@
   import { canAnalyse, type ThreatReport } from '../../analysis/threat';
   import { threatClient, type ThreatClient } from '../../analysis/remote';
   import { trainerCounts } from '../../analysis/counts';
+  import { replay, type SavedGame } from '../../review/record';
+  import { getGame, saveGame } from '../../review/store';
   import DeckEditor from '../DeckEditor.svelte';
   import Board, { type BoardDrag } from './Board.svelte';
   import CardFace from './CardFace.svelte';
@@ -63,7 +65,9 @@
   }
   const saved = loadSettings();
   // ?watch=1&seed=…&opp=…&level=…&speed=…&policy=<json> plays your deck with the player-policy bot
-  // (replays from the simulator, and the Playwright end-to-end test).
+  // (replays from the simulator, and the Playwright end-to-end test; &save=1 saves it like a game of yours).
+  // ?resume=<saved game id>&at=<state index> picks a saved game up at that point (the review page's
+  // "ลองเล่นใหม่จากตรงนี้"): the same cards, from there on yours to play.
   const params = new URLSearchParams(location.search);
   const watch = params.has('watch');
   let opponent = $state(params.get('opp') ?? (saved.opponent as string) ?? 'random');
@@ -80,6 +84,11 @@
   const effectiveAnim = $derived<AnimLevel>(watch && speed === 0 ? 'off' : animLevel);
   let meBot: Bot | null = null;
   let myPolicy = DEFAULT_POLICY;
+  /** This game's lists (card keys), for saving it. */
+  let gameDecks: [string[], string[]] = [[], []];
+  /** The saved game's id once it is over (the review link), and the game picked up from, if any. */
+  let savedId = $state<number | null>(null);
+  let resumedFrom = $state<{ id: number; turn: number } | null>(null);
 
   let states = $state.raw<GameState[]>([]);
   let history = $state.raw<Action[]>([]);
@@ -248,6 +257,8 @@
     }
     myPolicy = policy;
     threat = null;
+    savedId = null;
+    resumedFrom = null;
     bot?.dispose();
     bot = remoteBot({ slug: pick.slug, oppSlug: 'player', level, seed: seed ^ 0x2545f491, policy });
     if (watch) meBot = makeBot(planFor('player', policy), { level: 'normal', seed: seed ^ 0x1b873593 });
@@ -260,6 +271,7 @@
     } catch (e) {
       error = `แก้ list ไม่ได้: ${(e as Error).message}`;
     }
+    gameDecks = [myCards, pick.cards];
     states = [
       createGame({
         seed,
@@ -272,6 +284,59 @@
       }),
     ];
   }
+
+  /** Pick a saved game up at state `at` (your turn): the same seed, lists and moves up to there. */
+  async function resume(id: number, at: number) {
+    const g = await getGame(id);
+    if (!g) {
+      error = 'ไม่พบเกมที่บันทึกไว้';
+      return;
+    }
+    const all = replay(g);
+    const upto = Math.max(0, Math.min(at, g.actions.length));
+    seed = g.seed;
+    level = g.level;
+    pierce = !!g.rules.twinShotelsPiercesBenchShields;
+    botSlug = g.opponent;
+    myPolicy = g.policy;
+    gameDecks = g.decks;
+    threat = null;
+    savedId = null;
+    showOver = false;
+    error = '';
+    viewing = null;
+    resumedFrom = { id, turn: all[upto]!.turn };
+    bot?.dispose();
+    bot = remoteBot({ slug: g.opponent, oppSlug: 'player', level: g.level, seed: g.seed ^ 0x2545f491 ^ upto, policy: g.policy });
+    history = g.actions.slice(0, upto);
+    states = all.slice(0, upto + 1);
+  }
+
+  // A finished game of yours is saved for the review page (watch-mode games only with &save=1).
+  let saving = false;
+  $effect(() => {
+    const s = cur;
+    if (!s || s.winner === null || savedId !== null || saving || (watch && !params.has('save'))) return;
+    saving = true;
+    const g: SavedGame = {
+      savedAt: Date.now(),
+      seed,
+      opponent: botSlug,
+      opponentName: botDeck?.name ?? botSlug,
+      level,
+      rules: { twinShotelsPiercesBenchShields: pierce },
+      policy: { ...myPolicy },
+      decks: [gameDecks[0].slice(), gameDecks[1].slice()],
+      actions: history.slice(),
+      winner: s.winner,
+      reason: s.winReason,
+      turns: s.turn,
+    };
+    saveGame(g)
+      .then((id) => (savedId = id))
+      .catch(() => (error = 'บันทึกเกมไม่ได้'))
+      .finally(() => (saving = false));
+  });
 
   function step(a: Action) {
     fx?.finish();
@@ -375,6 +440,7 @@
   // Test hook: Playwright reads the engine state to compare with the screen.
   if (params.has('test')) (window as unknown as { __tcg: unknown }).__tcg = { state: () => cur, history: () => history };
   if (watch) start();
+  else if (params.has('resume')) void resume(Number(params.get('resume')), Number(params.get('at') ?? 0));
 
   function onHand(c: CardId) {
     if (setupReq) {
@@ -592,6 +658,7 @@
       <div class="status">
         {#if cur.winner !== null}
           <strong class="result">{cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · {cur.winReason}</strong>
+          {#if savedId !== null}<a href={`/review/?id=${savedId}`}>วิจารณ์เกมนี้ →</a>{/if}
           <a href={`/decks/${botSlug}/`}>ดู list ที่บอทใช้ ({botDeck?.name}) →</a>
         {:else if viewing !== null}
           <strong>กำลังดูสนามย้อนหลัง</strong>
@@ -601,6 +668,7 @@
         {:else}
           <strong>เทิร์น {cur.turn} · {actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}</strong>
           <span class="opp">คู่แข่ง: {botDeck?.name.replace(/ \(.*\)$/, '')}</span>
+          {#if resumedFrom}<span class="opp">เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น {resumedFrom.turn})</span>{/if}
         {/if}
         <span class="top-tools">
           {#if narrow}
@@ -745,6 +813,7 @@
     reason={cur.winReason}
     botDeck={botDeck?.name ?? ''}
     botHref={`/decks/${botSlug}/`}
+    reviewHref={savedId !== null ? `/review/?id=${savedId}` : null}
     onnew={() => ((states = []), (showOver = false))}
     onclose={() => (showOver = false)}
   />

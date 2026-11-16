@@ -215,6 +215,53 @@ test('the threat panel shows what the opponent can do next turn, and goes away w
   await expect(panel).toHaveCount(0);
 });
 
+test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {
+  // A seeded game (your deck played by the bot) saved like one of yours.
+  await page.goto('/play/?watch=1&test=1&speed=0&seed=7&opp=dragapult-ex&save=1');
+  await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
+  // The game-over dialog covers the table; its link opens the review.
+  const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /วิจารณ์เกมนี้/ });
+  await expect(link).toBeVisible();
+  const started = Date.now();
+  await link.click();
+
+  // Every turn of yours reviewed on the workers.
+  await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 30_000 });
+  const seconds = (Date.now() - started) / 1000;
+  console.log(`review of a ${await page.locator('.turns > li').count()}-turn game: ${seconds.toFixed(1)} s`);
+  expect(seconds).toBeLessThan(30);
+  const turns = page.locator('.turns > li');
+  expect(await turns.count()).toBeGreaterThan(2);
+  await expect(page.locator('figure.chart svg path.line')).toBeVisible();
+  await expect(turns.first().locator('.badge')).toBeVisible();
+
+  // The board of a turn with every hidden card shown.
+  await turns.first().getByRole('button', { name: 'ดูสนาม' }).click();
+  const viewer = page.locator('.viewer');
+  await expect(viewer.locator('.board')).toBeVisible();
+  await expect(viewer.locator('h4', { hasText: 'Prize ของบอท' })).toBeVisible();
+  expect(await viewer.locator('.cards').nth(1).locator('button').count()).toBeGreaterThan(0);
+
+  // Reopening the review is instant (stored with the game).
+  await page.reload();
+  await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 3_000 });
+
+  // Play on from the second turn of yours: the same position, and it is your move.
+  const second = page.locator('.turns > li').nth(1);
+  const turnNo = Number((await second.locator('strong').first().innerText()).replace(/\D/g, ''));
+  const href = await second.getByRole('link', { name: /ลองเล่นใหม่จากตรงนี้/ }).getAttribute('href');
+  await page.goto(`${href}&test=1`);
+  await expect(page.locator('.status')).toContainText('เล่นต่อจากเกมที่บันทึกไว้');
+  await expect(page.locator('.status')).toContainText('ตาคุณ');
+  const s = await engineState(page);
+  expect(s.turn).toBe(turnNo);
+  expect(s.winner).toBeNull();
+
+  // The game list has it.
+  await page.goto('/review/');
+  await expect(page.locator('table.games tbody tr').first()).toContainText('Dragapult ex');
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

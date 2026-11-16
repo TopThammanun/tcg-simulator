@@ -19,7 +19,7 @@ const phases = [
   { n: 6, name: 'บอทยาก + แก้ list', gate: 'บอทยากชนะบอทปกติ 59.8% ใน 1,000 เกม', done: true },
   // แผนรุ่นต่อไป (PLAN.md): v2 รู้ว่าพลาดตรงไหน … v6 วัดว่าเก่งขึ้นจริง
   { n: 7, name: 'ภัยเทิร์นหน้า + นับการ์ดคู่แข่ง', gate: 'v2 · โอกาสโดน KO ที่ทายตรงกับผลจริงใน 2,400 เกม', done: true },
-  { n: 8, name: 'เก็บเกม + หน้าวิจารณ์', gate: 'v2 · ป้ายพลาดชัดมี test, คำตัดสินคงที่ ≥90%', done: false },
+  { n: 8, name: 'เก็บเกม + หน้าวิจารณ์', gate: 'v2 · คำตัดสินคงที่ 98%, win% ตรงกับผลจริงใน 2,045 สนาม', done: true },
   { n: 9, name: 'โหมดฝึก/จริง, เล่นได้ทุกเด็ค', gate: 'v2 · ย้อนแล้วสับใหม่, เล่นจบได้ทุกเด็ค', done: false },
   { n: 10, name: 'คลังโจทย์', gate: 'v3 · ทุกโจทย์มีคำตอบเดียว, matchup ละ 20 ข้อ', done: false },
   { n: 11, name: 'ฝึกเปิดเกม + prize check', gate: 'v3 · อันดับทางเลือกคงที่ ≥90%', done: false },
@@ -41,6 +41,7 @@ const phases = [
     </p>
     <span class="ctas">
       <a class="cta" href="/play/">เล่นกับบอท →</a>
+      <a class="cta alt" href="/review/">วิจารณ์เกม</a>
       <a class="cta alt" href="/sim/">รันหลายพันเกม</a>
       <a class="cta alt" href="/decks/">ดูเด็คทั้งหมด</a>
     </span>

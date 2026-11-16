@@ -1,10 +1,8 @@
 // Phase 7 gate: is "ภัยเทิร์นหน้า" calibrated? Your deck (normal bot) plays every bot deck; at the end of
 // each of your turns the threat report predicts, for each of your Pokémon, the chance it is Knocked Out
 // on the opponent's next turn. The game then goes on and we see whether it was. Predictions are grouped
-// by chance (0–10%, 10–20%, …); the gate passes when every group's predicted mean lies inside the interval
-// of how often it happened. Predictions from one game go together (the same Pokémon turn after turn), so
-// the interval is a bootstrap over games; ten groups are tested at once, so each gets a 99.5% interval
-// (Bonferroni), which a perfectly calibrated model passes 95% of the time. The 95% interval is shown too.
+// by chance and checked against what happened (scripts/lib/calibration-table.ts: bootstrap over games,
+// Bonferroni over the ten groups).
 //   npx tsx scripts/threat-gate.ts --games 800              check the corrected chances (seeds from 70000)
 //   npx tsx scripts/threat-gate.ts --fit --games 1600       measure raw chances on other games (seeds from
 //                                                           400000) and write src/analysis/calibration.json
@@ -23,6 +21,7 @@ import { deckKeys } from '../src/engine/db';
 import { opp, slotsOf } from '../src/engine/state';
 import type { Action, GameState, PlayerId, SlotId } from '../src/engine/types';
 import { determinize } from '../src/engine/view';
+import { calibrationTable, mean, pct } from './lib/calibration-table';
 import { loadDeckFiles } from './lib/decks';
 import { runTsWorker } from './lib/workers';
 
@@ -138,42 +137,6 @@ function close(o: Open, now: GameState, out: Result, deck: string, game: number)
   out.prizes.push([o.prizes, o.base.players[1].prizes.length - now.players[1].prizes.length]);
 }
 
-const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
-
-/** Intervals of the share of hits in `xs` (95% and 99.5%), resampling whole games (seeded, so the gate is repeatable). */
-function bootstrap(xs: Pair[], reps = 4000): { ci95: [number, number]; ci995: [number, number] } {
-  const byGame = new Map<number, [number, number]>();
-  for (const [, y, , , g] of xs) {
-    const t = byGame.get(g) ?? [0, 0];
-    t[0] += y;
-    t[1] += 1;
-    byGame.set(g, t);
-  }
-  const games = [...byGame.values()];
-  let r = 0x2545f491;
-  const rand = () => {
-    r ^= r << 13;
-    r ^= r >>> 17;
-    r ^= r << 5;
-    return (r >>> 0) / 4294967296;
-  };
-  const shares: number[] = [];
-  for (let k = 0; k < reps; k++) {
-    let hits = 0;
-    let n = 0;
-    for (let j = 0; j < games.length; j++) {
-      const [h, m] = games[Math.floor(rand() * games.length)]!;
-      hits += h;
-      n += m;
-    }
-    shares.push(hits / n);
-  }
-  shares.sort((a, b) => a - b);
-  const at = (q: number) => shares[Math.min(reps - 1, Math.floor(reps * q))]!;
-  return { ci95: [at(0.025), at(0.975)], ci995: [at(0.0025), at(0.9975)] };
-}
-const mean = (xs: number[]) => xs.reduce((t, x) => t + x, 0) / Math.max(1, xs.length);
-
 if (!isMainThread) {
   parentPort!.postMessage(run(workerData as Job));
 } else {
@@ -212,20 +175,7 @@ if (!isMainThread) {
     writeFileSync('src/analysis/calibration.json', `${JSON.stringify(table, null, 2)}\n`);
     console.log(`wrote src/analysis/calibration.json · ${((Date.now() - started) / 1000).toFixed(1)}s`);
   } else {
-    console.log('chance     n      predicted  happened (95% CI; 99.5% CI)');
-    let failed = 0;
-    for (let b = 0; b < 10; b++) {
-      const inB = pairs.filter(([p]) => (b === 9 ? p >= 0.9 : p >= b / 10 && p < (b + 1) / 10));
-      if (!inB.length) continue;
-      const pred = mean(inB.map(([p]) => p));
-      const hits = inB.reduce((t, [, y]) => t + y, 0);
-      const { ci95, ci995 } = bootstrap(inB);
-      const [lo, hi] = ci995;
-      const ok = inB.length < 50 || (pred >= lo && pred <= hi);
-      if (!ok) failed++;
-      const label = `${b * 10}–${b * 10 + 10}%`.padEnd(10);
-      console.log(`${label} ${String(inB.length).padEnd(6)} ${pct(pred).padStart(8)}  ${pct(hits / inB.length).padStart(7)} (${pct(ci95[0])}–${pct(ci95[1])}; ${pct(lo)}–${pct(hi)})${inB.length < 50 ? ' few' : ok ? '' : '  ✗'}`);
-    }
+    const failed = calibrationTable(pairs.map(([p, y, , , game]) => ({ p, y, game })));
     // Per deck and per kind of turn end, over the uncertain predictions (10–90%).
     const mid = (f: (x: Pair) => boolean) => {
       const xs = pairs.filter((x) => f(x) && x[0] >= 0.1 && x[0] < 0.9);
@@ -233,9 +183,6 @@ if (!isMainThread) {
     };
     for (const d of opponents) console.log(`  ${d.padEnd(24)} 10–90%: ${mid((x) => x[2] === d)}`);
     for (const e of ['end', 'attack'] as const) console.log(`  turns ending by ${e.padEnd(8)} 10–90%: ${mid((x) => x[3] === e)}`);
-    const brier = mean(pairs.map(([p, y]) => (p - y) ** 2));
-    const avg = mean(pairs.map(([, y]) => y));
-    console.log(`Brier ${brier.toFixed(4)} (always guessing the average: ${mean(pairs.map(([, y]) => (avg - y) ** 2)).toFixed(4)})`);
     console.log(`Prizes per opponent turn: predicted ${mean(prizes.map(([p]) => p)).toFixed(3)}, happened ${mean(prizes.map(([, r]) => r)).toFixed(3)}`);
     console.log(failed ? `FAIL: ${failed} group(s) with n >= 50 predict outside the 99.5% interval of what happened` : 'PASS: every group with n >= 50 predicts inside the 99.5% interval of what happened (95% overall)');
   }
