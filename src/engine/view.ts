@@ -30,13 +30,15 @@ export function viewFor(s: GameState, viewer: PlayerId): GameState {
 /**
  * A full game state consistent with what `viewer` knows: viewer's deck and prizes are re-shuffled
  * together, the opponent's hand, deck and prizes are re-dealt, and coin flips/shuffles are reseeded.
+ * Two states that differ only in where the hidden cards are give the same result for the same seed.
  */
 export function determinize(s: GameState, viewer: PlayerId, seed: number): GameState {
   if (s.pending) throw new Error('determinize a state without a pending choice');
   const d = cloneState(s);
   let r = derive(seed, 7);
   const redeal = (zones: CardId[][]) => {
-    const pool = zones.flat();
+    // Sorted first, so the deal depends only on which cards are hidden, not on where they really are.
+    const pool = zones.flat().sort((a, b) => a - b);
     r = shuffleInPlace(pool, r);
     let i = 0;
     for (const z of zones) for (let j = 0; j < z.length; j++) z[j] = pool[i++]!;

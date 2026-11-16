@@ -5,7 +5,6 @@
   import { untrack } from 'svelte';
   import { fade, scale } from 'svelte/transition';
   import { actor, apply, createGame, legalActions } from '../../engine/actions';
-  import { def } from '../../engine/db';
   import { maxHp } from '../../engine/rules';
   import { keyOf, slotsOf, topKey } from '../../engine/state';
   import type { Action, CardId, GameState, PlayerId, SlotId } from '../../engine/types';
@@ -23,6 +22,9 @@
   import { motion, setAnimLevel } from '../../ui/anim/motion';
   import { applyEdit } from '../../sim/experiments';
   import { myCards as savedCards } from '../../ui/my-list';
+  import { canAnalyse, type ThreatReport } from '../../analysis/threat';
+  import { threatClient, type ThreatClient } from '../../analysis/remote';
+  import { trainerCounts } from '../../analysis/counts';
   import DeckEditor from '../DeckEditor.svelte';
   import Board, { type BoardDrag } from './Board.svelte';
   import CardFace from './CardFace.svelte';
@@ -32,6 +34,7 @@
   import LogPanel from './LogPanel.svelte';
   import Coach from './Coach.svelte';
   import PokemonMenu from './PokemonMenu.svelte';
+  import ThreatPanel from './ThreatPanel.svelte';
   import FxLayer from './FxLayer.svelte';
   import GameOver from './GameOver.svelte';
 
@@ -69,11 +72,14 @@
   let seed = $state(params.has('seed') ? Number(params.get('seed')) : Math.floor(Math.random() * 1e9));
   let pierce = $state(params.get('pierce') === '1' || ((saved.pierce as boolean) ?? false));
   let includeFestival = $state((saved.includeFestival as boolean) ?? true);
+  /** "ภัยเทิร์นหน้า": the chance each of your Pokémon is Knocked Out next turn, on the table and in the side column. */
+  let showThreat = $state(params.get('threat') !== '0' && ((saved.threat as boolean) ?? true));
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animLevel = $state<AnimLevel>((params.get('anim') as AnimLevel) ?? (saved.anim as AnimLevel) ?? (reducedMotion ? 'off' : 'full'));
   // Replays at full bot speed (and the end-to-end games) skip animations.
   const effectiveAnim = $derived<AnimLevel>(watch && speed === 0 ? 'off' : animLevel);
   let meBot: Bot | null = null;
+  let myPolicy = DEFAULT_POLICY;
 
   let states = $state.raw<GameState[]>([]);
   let history = $state.raw<Action[]>([]);
@@ -193,19 +199,36 @@
       : new Map<SlotId, number>(),
   );
   const botDeck = $derived(decks.find((d) => d.slug === botSlug));
-  const oppUsed = $derived.by(() => {
-    if (!cur) return [];
-    const counts = new Map<string, number>();
-    for (const c of cur.players[1].discard) {
-      const d = def(keyOf(cur, c));
-      if (d.category === 'trainer' && d.trainerType !== 'Item') counts.set(d.name, (counts.get(d.name) ?? 0) + 1);
+  /** The opponent's Trainers by their archetype's reference list: seen so far / in the list. */
+  const oppCounts = $derived(cur && botDeck ? trainerCounts(cur, 1, botDeck.cards) : []);
+
+  // "ภัยเทิร์นหน้า" is sampled in a Web Worker (src/analysis/worker.ts) after every move on your turn.
+  // Each turn uses the same deals, so the numbers change with your moves, not with the luck of the draw.
+  const THREAT_SAMPLES = 64;
+  let threatWorker: ThreatClient | null = null;
+  let threat = $state.raw<{ report: ThreatReport; done: boolean; state: GameState } | null>(null);
+  $effect(() => () => threatWorker?.dispose());
+  const analysable = $derived(showThreat && !watch && live && !!cur && canAnalyse(cur, 0));
+  $effect(() => {
+    const s = cur;
+    if (!analysable || !s) {
+      threatWorker?.stop();
+      return;
     }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    threatWorker ??= threatClient((report, done, state) => (threat = { report, done, state }));
+    untrack(() =>
+      threatWorker!.ask({ state: s, me: 0, mine: 'player', theirs: botSlug, policy: myPolicy, samples: THREAT_SAMPLES, seed: seed + s.turn }),
+    );
   });
+  /** The report on show: this position's, or (dimmed) the one for your previous move this turn. */
+  const threatShown = $derived(analysable && threat && threat.state.turn === cur!.turn && threat.state.seed === cur!.seed ? threat : null);
+  const threatStale = $derived(!!threatShown && threatShown.state !== cur);
+  const danger = $derived(new Map<SlotId, number>(threatShown?.report.slots.map((x) => [x.uid, x.chance]) ?? []));
+  const expectedPrizes = $derived(threatShown?.report.expected ?? 0);
 
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, level, speed, pierce, includeFestival, anim: animLevel }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, level, speed, pierce, includeFestival, anim: animLevel, threat: showThreat }));
     } catch {
       /* ignore */
     }
@@ -223,6 +246,8 @@
     } catch {
       /* default policy */
     }
+    myPolicy = policy;
+    threat = null;
     bot?.dispose();
     bot = remoteBot({ slug: pick.slug, oppSlug: 'player', level, seed: seed ^ 0x2545f491, policy });
     if (watch) meBot = makeBot(planFor('player', policy), { level: 'normal', seed: seed ^ 0x1b873593 });
@@ -542,6 +567,9 @@
       </span>
     </label>
     <label class="check">
+      <input type="checkbox" bind:checked={showThreat} /> แสดงภัยเทิร์นหน้า: โอกาสที่ Pokémon ของคุณแต่ละตัวโดน KO ถ้าจบเทิร์นตอนนั้น
+    </label>
+    <label class="check">
       <input type="checkbox" bind:checked={pierce} /> Twin Shotels ทะลุ Rabsca/Shaymin (ruling ยังไม่ยืนยัน, ค่าเริ่มต้น: ไม่ทะลุ)
     </label>
     <DeckEditor defaultList={playerList} />
@@ -594,6 +622,8 @@
         onghost={(i) => (picks = picks.filter((v) => v !== benchPicks[i]!.value))}
         onslot={onSlot}
         {ready}
+        {danger}
+        dangerStale={threatStale}
         onzoom={(k) => (zoom = k)}
         ondiscard={(p) => (discardOf = p)}
         onpress={onSlotPress}
@@ -618,6 +648,11 @@
           <div class="bar">
             <button type="button" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
             <button type="button" class="ghost" onclick={undo} disabled={history.length === 0}>ย้อน</button>
+            {#if narrow && threatShown}
+              <button type="button" class="small threat-chip" class:hot={expectedPrizes >= 1} onclick={() => (sideOpen = true)}>
+                ภัยเทิร์นหน้า ~{expectedPrizes.toFixed(1)} Prize
+              </button>
+            {/if}
             <span class="hint">
               {selected !== null ? 'แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง' : 'แตะ Pokémon ของคุณเพื่อโจมตี · ถอย · ใช้ Ability'}
             </span>
@@ -662,16 +697,24 @@
       {#if !narrow && myTurn && !req && cur.phase === 'main'}
         <Coach s={cur} onapply={follow} />
       {/if}
+      {#if analysable}
+        <ThreatPanel report={threatShown?.report ?? null} done={threatShown?.done ?? false} stale={threatStale} />
+      {/if}
       <section class="panel">
         <h3>ข้อมูลคู่แข่ง</h3>
-        <p>มือบอท {cur.players[1].hand.length} ใบ · เด็ค {cur.players[1].deck.length} ใบ</p>
-        {#if oppUsed.length}
-          <p class="muted">Supporter / Stadium ในกองทิ้งบอท (ใช้ไปแล้วหรือถูกทิ้ง)</p>
-          <ul class="used">
-            {#each oppUsed as [name, n]}<li><span>{name}</span><span class="mono">{n}</span></li>{/each}
-          </ul>
-        {:else}
-          <p class="muted">ยังไม่มี Supporter/Stadium ในกองทิ้งบอท</p>
+        <p>มือบอท {cur.players[1].hand.length} ใบ · เด็ค {cur.players[1].deck.length} ใบ · Prize {cur.players[1].prizes.length} ใบ</p>
+        {#if oppCounts.length}
+          <details class="counts" open>
+            <summary>Trainer ของเขา: เห็นแล้ว / ใน list อ้างอิง</summary>
+            <p class="muted">เห็นแล้ว = ในกองทิ้งหรือบนสนาม ที่เหลืออยู่ในมือ เด็ค หรือ Prize ของเขา</p>
+            <ul class="used">
+              {#each oppCounts as c (c.key)}
+                <li class:gone={c.seen >= c.total}>
+                  <span>{c.name}</span><span class="mono">{c.seen}/{c.total}{c.seen < c.total ? ` · เหลือ ${c.total - c.seen}` : ''}</span>
+                </li>
+              {/each}
+            </ul>
+          </details>
         {/if}
       </section>
       <LogPanel log={cur.log} {viewing} onview={(st) => (viewing = st)} />
@@ -686,6 +729,9 @@
           </select>
         </label>
         <button type="button" onclick={copyReplay}>{copied ? 'คัดลอกแล้ว' : 'คัดลอก replay (JSON)'}</button>
+        <label class="check threat-pick">
+          <input type="checkbox" bind:checked={showThreat} onchange={saveSettings} /> ภัยเทิร์นหน้า
+        </label>
       </div>
     </aside>
   </div>
@@ -1017,7 +1063,27 @@
   .used li {
     display: flex;
     justify-content: space-between;
+    gap: 8px;
     border-bottom: 1px dashed var(--rule);
+  }
+  .counts summary {
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .used li.gone {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+  }
+  .threat-pick {
+    font-size: 0.85rem;
+  }
+  .threat-chip {
+    border-color: var(--stamp);
+    color: var(--stamp);
+  }
+  .threat-chip.hot {
+    background: var(--stamp);
+    color: #fff;
   }
   .muted {
     color: var(--ink-soft);

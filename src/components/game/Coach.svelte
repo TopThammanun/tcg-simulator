@@ -1,8 +1,8 @@
 <script lang="ts">
-  // ปุ่มแนะนำ: 3 options for your deck, each with why, and warnings about the opponent's next turn.
-  // `compact` is the phone layout (inside the bottom dock, scrolls on its own).
+  // ปุ่มแนะนำ: 3 options for your deck, each with why. What the opponent can do next turn is the
+  // threat panel's job (ThreatPanel.svelte). `compact` is the phone layout (inside the bottom dock, scrolls on its own).
   import { fly, slide } from 'svelte/transition';
-  import { suggest, warnings, type Suggestion } from '../../bots/coach';
+  import { suggest, type Suggestion } from '../../bots/coach';
   import { motion } from '../../ui/anim/motion';
   import { planFor, DEFAULT_POLICY, type PlayerPolicy } from '../../bots/plans';
   import type { Action, GameState } from '../../engine/types';
@@ -23,11 +23,9 @@
 
   let open = $state(false);
   let tips = $state<Suggestion[]>([]);
-  let warns = $state<string[]>([]);
 
   function ask() {
     tips = suggest(s, 0, planFor('player', policy), s.turn);
-    warns = warnings(s, 0);
     open = true;
   }
   $effect(() => {
@@ -43,11 +41,6 @@
   </button>
   {#if open}
     <div class="body" transition:slide={{ duration: motion(220) }}>
-      {#if warns.length}
-        <ul class="warn">
-          {#each warns as w}<li>⚠ {w}</li>{/each}
-        </ul>
-      {/if}
       <ol class="tips">
         {#each tips as t, i}
           <li in:fly={{ y: 10, delay: motion(80 + i * 70), duration: motion(240) }}>
@@ -149,13 +142,6 @@
   .go:hover {
     background: var(--ink);
     color: var(--paper);
-  }
-  .warn {
-    margin: 8px 0 0;
-    padding: 6px 8px;
-    list-style: none;
-    background: color-mix(in srgb, var(--stamp) 12%, transparent);
-    color: var(--ink);
   }
   .note {
     margin: 8px 0 0;

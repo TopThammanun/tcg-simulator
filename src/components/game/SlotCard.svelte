@@ -19,6 +19,8 @@
     ready = false,
     over = false,
     grab = false,
+    danger,
+    dangerStale = false,
     onclick,
     onzoom,
     onpress,
@@ -35,6 +37,10 @@
     over?: boolean;
     /** This Pokémon can be dragged (to retreat). */
     grab?: boolean;
+    /** Chance (0–1) it is Knocked Out on the opponent's next turn ("ภัยเทิร์นหน้า"); shown from 5%. */
+    danger?: number;
+    /** The chance is for your previous move (a new one is on its way). */
+    dangerStale?: boolean;
     onclick?: () => void;
     onzoom?: (key: string) => void;
     onpress?: (e: PointerEvent) => void;
@@ -94,6 +100,15 @@
     </span>
   {/if}
   {#if abilities.length}<span class="ability-badge" title={abilities.join(', ')}>✦ Ability</span>{/if}
+  {#if danger !== undefined && danger >= 0.05}
+    <span
+      class="danger"
+      class:high={danger >= 0.5}
+      class:mid={danger >= 0.15 && danger < 0.5}
+      class:stale={dangerStale}
+      title="โอกาสโดน KO เทิร์นหน้า ถ้าจบเทิร์นตอนนี้">KO {Math.round(danger * 100)}%</span
+    >
+  {/if}
 </div>
 
 <style>
@@ -316,10 +331,44 @@
     pointer-events: none;
     box-shadow: 0 3px 8px #000b;
   }
+  /* "ภัยเทิร์นหน้า": chance of a Knock Out next turn, on the right edge above the HP bar. */
+  .danger {
+    position: absolute;
+    right: -8px;
+    bottom: 19%;
+    z-index: 3;
+    padding: 1px 6px;
+    border: 1.5px solid #fff;
+    border-radius: 999px;
+    background: #3a3f3c;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 5px #000a;
+    transition: opacity 0.15s ease;
+  }
+  .danger.mid {
+    background: #c8941f;
+    color: #1c1508;
+  }
+  .danger.high {
+    background: #c3352b;
+  }
+  .danger.stale {
+    opacity: 0.45;
+  }
   .mono {
     font-family: var(--font-mono);
   }
   @media (max-width: 700px) {
+    .danger {
+      padding: 0 4px;
+      font-size: 0.52rem;
+    }
     .hp {
       font-size: 0.56rem;
     }

@@ -1,8 +1,7 @@
-// Hint button (PLAN.md v2): the player-policy bot's top 3 options with reasons, plus warnings drawn
-// only from public information.
+// Hint button (PLAN.md v2): the player-policy bot's top 3 options with reasons. What the opponent can
+// do next turn is src/analysis/threat.ts.
 import { def } from '../engine/db';
-import { hpLeft } from '../engine/rules';
-import { keyOf, opp, topDef } from '../engine/state';
+import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { finishStep, rankDevelopment } from './core';
 import { BEFORE_ATTACK, explainAction, explainEnd, explainPlan } from './explain';
@@ -45,23 +44,3 @@ export function suggest(s: GameState, me: PlayerId, plan: DeckPlan, seed = 1, n 
 }
 
 const isSupporter = (s: GameState, a: Action) => a.t === 'trainer' && (def(keyOf(s, a.card)) as { trainerType?: string }).trainerType === 'Supporter';
-
-/** Warnings about what the opponent could do next turn, from public information only. */
-export function warnings(s: GameState, me: PlayerId): string[] {
-  const o = s.players[opp(me)];
-  const out: string[] = [];
-  const mine = s.players[me].active;
-  const festival = [o.active, ...o.bench].some((sl) => sl && topDef(s, sl).abilities.some((a) => a.name === 'Festival Lead'));
-  const gladionsUsed = o.discard.filter((c) => keyOf(s, c) === 'gladions-final-battle').length;
-  if (festival && o.hand.length <= 2 && gladionsUsed < 3) {
-    out.push(`เขาเหลือ ${o.hand.length} ใบในมือ เสี่ยงโดน Gladion (+80 ต่อครั้ง)`);
-  }
-  if (festival && mine && hpLeft(s, mine) <= 180 && topDef(s, mine).prizes >= 2) {
-    out.push(`${topDef(s, mine).name} เหลือ ${hpLeft(s, mine)} HP: Festival ตี 2 ครั้งพร้อม Bangle ทำได้ถึง 180`);
-  }
-  if (o.bench.some((sl) => topDef(s, sl).name === 'Dragapult ex')) {
-    const weak = s.players[me].bench.filter((sl) => hpLeft(s, sl) <= 60);
-    if (weak.length) out.push(`Phantom Dive วางตัวนับ 6 ตัวบน Bench: ${weak.map((sl) => topDef(s, sl).name).join(', ')} โดนเก็บได้`);
-  }
-  return out;
-}

@@ -15,8 +15,19 @@ const phases = [
   { n: 2, name: 'หน้าเล่นเอง + บอท Basic Box', gate: 'v1 · เล่นจบเกมได้, บอทคิดไม่ถึง 20 ms ต่อเทิร์น', done: true },
   { n: 3, name: 'บอท Dragapult ex', gate: 'v1.1 · 1,000 เกม invariant ไม่พัง', done: true },
   { n: 4, name: 'Slowking, N’s Zoroark, Alakazam, Festival', gate: 'v1.2 · เด็คละ 1,000 เกม ไม่พัง', done: true },
-  { n: 5, name: 'ปุ่มแนะนำ + รันหลายพันเกม', gate: 'v2 · 600 เกมใน 2.5 วินาที, การทดลองครบ 5 ข้อ', done: true },
-  { n: 6, name: 'บอทยาก + แก้ list', gate: 'v3 · บอทยากชนะบอทปกติ 59.8% ใน 1,000 เกม', done: true },
+  { n: 5, name: 'ปุ่มแนะนำ + รันหลายพันเกม', gate: '600 เกมใน 2.5 วินาที, การทดลองครบ 5 ข้อ', done: true },
+  { n: 6, name: 'บอทยาก + แก้ list', gate: 'บอทยากชนะบอทปกติ 59.8% ใน 1,000 เกม', done: true },
+  // แผนรุ่นต่อไป (PLAN.md): v2 รู้ว่าพลาดตรงไหน … v6 วัดว่าเก่งขึ้นจริง
+  { n: 7, name: 'ภัยเทิร์นหน้า + นับการ์ดคู่แข่ง', gate: 'v2 · โอกาสโดน KO ที่ทายตรงกับผลจริงใน 2,400 เกม', done: true },
+  { n: 8, name: 'เก็บเกม + หน้าวิจารณ์', gate: 'v2 · ป้ายพลาดชัดมี test, คำตัดสินคงที่ ≥90%', done: false },
+  { n: 9, name: 'โหมดฝึก/จริง, เล่นได้ทุกเด็ค', gate: 'v2 · ย้อนแล้วสับใหม่, เล่นจบได้ทุกเด็ค', done: false },
+  { n: 10, name: 'คลังโจทย์', gate: 'v3 · ทุกโจทย์มีคำตอบเดียว, matchup ละ 20 ข้อ', done: false },
+  { n: 11, name: 'ฝึกเปิดเกม + prize check', gate: 'v3 · อันดับทางเลือกคงที่ ≥90%', done: false },
+  { n: 12, name: 'เทียบกับ matchup จริง + tech สุ่ม', gate: 'v4 · ห่างจาก Limitless ไม่เกิน ~8 จุด', done: false },
+  { n: 13, name: 'search ที่ลึกขึ้น', gate: 'v4 · ยากใหม่ชนะยากเดิม ≥55%', done: false },
+  { n: 14, name: 'template เอฟเฟกต์ + import list', gate: 'v5 · การ์ดใหม่ ≥60% ใช้ template', done: false },
+  { n: 15, name: 'ขั้นตอนเพิ่มชุดใหม่', gate: 'v5 · เด็คใหม่ใน 1 วัน', done: false },
+  { n: 16, name: 'สถิติพัฒนาการ + Bo3', gate: 'v6', done: false },
 ];
 ---
 

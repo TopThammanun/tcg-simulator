@@ -19,6 +19,8 @@ npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (m
 npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA self-play tuning of src/bots/params.ts
 npx tsx scripts/train.ts --generations 4 --games 1600 --gate 480   # value-network self-play training (~10 min/generation)
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed]   # read one bot game's log
+npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
+npx tsx scripts/threat-gate.ts --fit --games 1600   # refit src/analysis/calibration.json (after changing bots or decks)
 npm run dev        # dev server on :4321
 npm run build      # static site in dist/
 ```
@@ -46,7 +48,14 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `data/training-log.md`). On the play screen the opponent bot runs in a Web Worker (`worker.ts`,
   `remote.ts`). `coach.ts` = hint button,
   `explain.ts` = its reasons (read from the position + the move played out on a determinized copy).
-  Bots plan on `determinize()` so they never see hidden cards.
+  Bots plan on `determinize()` so they never see hidden cards (it deals from the sorted hidden cards, so the
+  result depends only on public information).
+- `src/analysis/` — the analyser (PLAN.md, แผนรุ่นต่อไป). `threat.ts` = "ภัยเทิร์นหน้า": re-deal what you can't see,
+  end your turn, let a normal bot play theirs; the share of samples where each Pokémon is Knocked Out, corrected
+  per opponent deck by `calibration.ts` (Platt scaling fitted by `scripts/threat-gate.ts --fit`, because uniform
+  re-deals give the opponent better hands than they hold). `counts.ts` = their Trainers by the reference list vs
+  seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`); shown by `ThreatPanel.svelte` and
+  the KO badges on `SlotCard.svelte`.
 - `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`

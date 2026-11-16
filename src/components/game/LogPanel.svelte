@@ -32,6 +32,8 @@
 
 <style>
   .log {
+    /* Keeps its height in the side column (which scrolls instead), however much sits above it. */
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     max-height: 420px;

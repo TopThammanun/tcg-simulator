@@ -199,6 +199,22 @@ test('the hint button explains each suggestion', async ({ page }) => {
   expect((await tips.first().locator('.why').innerText()).length).toBeGreaterThan(12);
 });
 
+test('the threat panel shows what the opponent can do next turn, and goes away when turned off', async ({ page }) => {
+  await startGame(page, 101);
+  const panel = page.locator('.threat');
+  await expect(panel).toContainText('ภัยเทิร์นหน้า');
+  // 64 samples in the worker, reported a batch at a time; the last report says it is done.
+  await expect(panel.locator('.note')).toContainText('จำลอง 64 แบบ ', { timeout: 30_000 });
+  const rows = await panel.locator('.rows li').count();
+  const mine = await page.evaluate(() => {
+    const s = (window as unknown as { __tcg: { state: () => any } }).__tcg.state();
+    return 1 + s.players[0].bench.length;
+  });
+  expect(rows).toBe(mine);
+  await page.locator('.threat-pick input').uncheck();
+  await expect(panel).toHaveCount(0);
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

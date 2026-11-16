@@ -32,6 +32,8 @@
     ghostBench = [],
     onghost,
     ready = new Set(),
+    danger = new Map(),
+    dangerStale = false,
     onslot,
     onzoom,
     ondiscard,
@@ -53,6 +55,9 @@
     onghost?: (i: number) => void;
     /** Your Pokémon with an attack or Ability to use now (tap them for the pop-up). */
     ready?: Set<SlotId>;
+    /** Chance each of your Pokémon is Knocked Out next turn ("ภัยเทิร์นหน้า"); stale = for your previous move. */
+    danger?: Map<SlotId, number>;
+    dangerStale?: boolean;
     onslot: (uid: SlotId) => void;
     onzoom: (key: string) => void;
     ondiscard: (p: PlayerId) => void;
@@ -84,6 +89,8 @@
     picked={picks.get(sl.uid) ?? 0}
     abilities={abilities.get(sl.uid) ?? []}
     ready={p === 0 && ready.has(sl.uid)}
+    danger={p === 0 ? (danger.get(sl.uid) ?? 0) : undefined}
+    {dangerStale}
     onclick={() => onslot(sl.uid)}
     onpress={(e) => onpress?.(sl.uid, e)}
     {onzoom}

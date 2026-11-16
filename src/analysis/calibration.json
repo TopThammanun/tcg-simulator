@@ -1,0 +1,33 @@
+{
+  "samples": 64,
+  "decks": {
+    "alakazam": [
+      -0.1349,
+      0.8608
+    ],
+    "basic-box": [
+      -0.1088,
+      0.947
+    ],
+    "dragapult-ex": [
+      0.0773,
+      0.9929
+    ],
+    "festival-lead-dipplin": [
+      -0.5064,
+      0.9349
+    ],
+    "festival-lead-seaking": [
+      -0.3331,
+      0.9296
+    ],
+    "ns-zoroark-ex": [
+      -0.0504,
+      0.948
+    ],
+    "slowking": [
+      -0.2314,
+      0.8165
+    ]
+  }
+}
