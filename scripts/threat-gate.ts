@@ -6,7 +6,8 @@
 //   npx tsx scripts/threat-gate.ts --games 800              check the corrected chances (seeds from 70000)
 //   npx tsx scripts/threat-gate.ts --fit --games 1600       measure raw chances on other games (seeds from
 //                                                           400000) and write src/analysis/calibration.json
-// Options: --samples 64, --vs hard (a better opponent than the model), --raw (no correction),
+// The opponent is the bot the play screen uses (bots/index.ts createBot); --vs normal / hard for the
+// rule-based bots. Options: --samples 64, --vs, --raw (no correction),
 // --peek (diagnostic only: keep the opponent's real hand instead of re-dealing it), --seed N.
 import { writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
@@ -15,6 +16,7 @@ import { calibration, fitPlatt } from '../src/analysis/calibration';
 import { collectKOs, threats, type Deal } from '../src/analysis/threat';
 import { makeBot } from '../src/bots/core';
 import { makeHardBot } from '../src/bots/hard';
+import { createBot } from '../src/bots/index';
 import { planFor } from '../src/bots/plans';
 import { actor, apply, createGame } from '../src/engine/actions';
 import { deckKeys } from '../src/engine/db';
@@ -29,7 +31,7 @@ interface Job {
   from: number;
   to: number;
   samples: number;
-  vs: 'normal' | 'hard';
+  vs: 'bot' | 'normal' | 'hard';
   base: number;
   /** Use the correction (calibration.json). */
   correct: boolean;
@@ -79,7 +81,11 @@ function run(job: Job): Result {
     const plans = { mine: planFor('player'), theirs: planFor(oppSlug) };
     const bots = [
       makeBot(plans.mine, { seed: seed + 1 }),
-      job.vs === 'hard' ? makeHardBot(plans.theirs, plans.mine, { seed: seed + 2 }) : makeBot(plans.theirs, { seed: seed + 2 }),
+      job.vs === 'bot'
+        ? createBot(plans.theirs, seed + 2, plans.mine)
+        : job.vs === 'hard'
+          ? makeHardBot(plans.theirs, plans.mine, { seed: seed + 2 })
+          : makeBot(plans.theirs, { seed: seed + 2 }),
     ];
     let s = createGame({ seed, decks: [spec('player'), spec(oppSlug)], quiet: true });
     // The last position where you were free to act, and what you did from there.
@@ -148,7 +154,7 @@ if (!isMainThread) {
   const fit = flag('fit');
   const games = Number(opt('games') ?? (fit ? 1600 : 800));
   const samples = Number(opt('samples') ?? 64);
-  const vs = (opt('vs') ?? 'normal') as Job['vs'];
+  const vs = (opt('vs') ?? 'bot') as Job['vs'];
   const base = Number(opt('seed') ?? (fit ? 400000 : 70000));
   const peek = flag('peek');
   const correct = !fit && !peek && !flag('raw');

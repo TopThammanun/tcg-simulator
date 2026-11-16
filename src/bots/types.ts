@@ -5,8 +5,6 @@ export interface Bot {
   act(s: GameState): Action;
 }
 
-export type Level = 'easy' | 'normal' | 'hard' | 'pro';
-
 /**
  * Deck-specific knowledge layered on the shared bot core. Every hook is optional; the core has
  * generic defaults. Scores are on the scale used by core.ts (roughly 0–100).

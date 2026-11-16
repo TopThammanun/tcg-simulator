@@ -63,7 +63,7 @@ test('the decklist editor rejects unsupported cards and accepts your list', asyn
 test('you can set up, attach Energy and end the turn; the bot then plays', async ({ page }) => {
   await page.goto('/play/?test=1');
   await page.locator('select').first().selectOption('basic-box');
-  await page.locator('select').nth(2).selectOption('150');
+  await page.getByLabel('ความเร็วบอท').selectOption('150');
   await page.locator('input[type=number]').fill('101');
   await page.getByRole('button', { name: 'เริ่มเกม' }).click();
 

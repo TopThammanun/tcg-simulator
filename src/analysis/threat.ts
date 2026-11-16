@@ -1,6 +1,8 @@
 // "ภัยเทิร์นหน้า": what the opponent can do on their next turn if you end yours now. Each sample re-deals
 // every card you can't see (determinize: their hand, both decks, both prize piles, coin flips), ends your
-// turn, and lets a normal bot play their turn with that hand. Counting over the samples gives the chance
+// turn, and lets the rule-based bot (core.ts: it plans exact Knock Out lines, and is quick) play their turn
+// with that hand. The real opponent is the network bot (bots/index.ts); calibration.ts maps the chances
+// onto what it actually did. Counting over the samples gives the chance
 // each of your Pokémon is Knocked Out, the Prizes they take, and how (the cards and attack they used).
 // Dealt uniformly, their hand holds more cards they could use than real hands do, so the counted chances
 // run high; calibration.ts corrects them per opponent deck from what happened in bot games.
@@ -15,6 +17,7 @@ import { makeBot } from '../bots/core';
 import type { Step } from '../bots/finisher';
 import type { DeckPlan } from '../bots/types';
 import { calibration } from './calibration';
+import { canAnalyse } from './can-analyse';
 
 const MAX_ACTIONS = 200;
 /** Items and Abilities that set up a Knock Out (moving the attacker in, moving damage, evolving); draw and search are left out. */
@@ -83,10 +86,7 @@ export interface ThreatReport {
   calibrated: boolean;
 }
 
-/** Can the threat be read in this position (your main phase, nothing pending, game on)? */
-export function canAnalyse(s: GameState, me: PlayerId): boolean {
-  return s.winner === null && !s.pending && s.phase === 'main' && s.current === me;
-}
+export { canAnalyse };
 
 /** Re-deals the cards `me` can't see (determinize by default). */
 export type Deal = (s: GameState, me: PlayerId, seed: number) => GameState;
@@ -104,7 +104,7 @@ export function sampleNextTurn(
   deal: Deal = determinize,
 ): TurnSample {
   const o = opp(me);
-  const bot = makeBot(plans.theirs, { level: 'normal', seed: seed ^ 0x5bd1e995 });
+  const bot = makeBot(plans.theirs, { seed: seed ^ 0x5bd1e995 });
   const ko: SlotId[] = [];
   const trail: string[] = [];
   const forced = (ending.picks ?? []).slice();

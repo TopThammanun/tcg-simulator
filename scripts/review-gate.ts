@@ -50,7 +50,6 @@ function run(job: Job): Result {
       seed,
       opponent: opp,
       opponentName: opp,
-      level: 'normal',
       rules: {},
       policy: DEFAULT_POLICY,
       decks: [spec('player').cards, spec(opp).cards],

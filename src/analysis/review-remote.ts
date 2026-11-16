@@ -1,8 +1,9 @@
 // The review page's side of review-worker.ts: every turn of a game reviewed on a few workers at once,
-// each turn reported as soon as it is done. Without Worker support the turns run in the page, one per frame.
+// each turn reported as soon as it is done. Without Worker support the turns run in the page, one per frame
+// (review.ts and the bot's network are then loaded on first use, so they stay out of the page bundle).
 import { planFor } from '../bots/plans';
 import { replay, type SavedGame, type TurnSpan } from '../review/record';
-import { reviewTurn, type ReviewOptions, type TurnReview } from './review';
+import type { ReviewOptions, TurnReview } from './review';
 import type { FromReview, ToReview } from './review-worker';
 
 export interface ReviewRun {
@@ -34,9 +35,11 @@ export function reviewGame(
   if (typeof Worker === 'undefined') {
     const states = replay(game);
     const plans = { mine: planFor('player', game.policy), theirs: planFor(game.opponent) };
-    const step = () => {
+    const loaded = import('./review');
+    const step = async () => {
       const span = queue.shift();
       if (!span || stopped) return;
+      const { reviewTurn } = await loaded;
       try {
         onturn(reviewTurn(states, game.actions, span, plans, { ...opts, theirDeck: game.opponent }));
       } catch (e) {

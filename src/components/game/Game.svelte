@@ -12,7 +12,7 @@
   import { makeBot } from '../../bots/core';
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
-  import type { Bot, Level } from '../../bots/types';
+  import type { Bot } from '../../bots/types';
   import { describeAction, handActions, pickByShare, targetOf } from '../../ui/play';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
   import { trackPress } from '../../ui/press';
@@ -22,7 +22,8 @@
   import { motion, setAnimLevel } from '../../ui/anim/motion';
   import { applyEdit } from '../../sim/experiments';
   import { myCards as savedCards } from '../../ui/my-list';
-  import { canAnalyse, type ThreatReport } from '../../analysis/threat';
+  import { canAnalyse } from '../../analysis/can-analyse';
+  import type { ThreatReport } from '../../analysis/threat';
   import { threatClient, type ThreatClient } from '../../analysis/remote';
   import { trainerCounts } from '../../analysis/counts';
   import { replay, type SavedGame } from '../../review/record';
@@ -64,14 +65,13 @@
     }
   }
   const saved = loadSettings();
-  // ?watch=1&seed=…&opp=…&level=…&speed=…&policy=<json> plays your deck with the player-policy bot
+  // ?watch=1&seed=…&opp=…&speed=…&policy=<json> plays your deck with the player-policy bot
   // (replays from the simulator, and the Playwright end-to-end test; &save=1 saves it like a game of yours).
   // ?resume=<saved game id>&at=<state index> picks a saved game up at that point (the review page's
   // "ลองเล่นใหม่จากตรงนี้"): the same cards, from there on yours to play.
   const params = new URLSearchParams(location.search);
   const watch = params.has('watch');
   let opponent = $state(params.get('opp') ?? (saved.opponent as string) ?? 'random');
-  let level = $state<Level>((params.get('level') as Level) ?? (saved.level as Level) ?? 'normal');
   let speed = $state(params.has('speed') ? Number(params.get('speed')) : ((saved.speed as number) ?? 500));
   let seed = $state(params.has('seed') ? Number(params.get('seed')) : Math.floor(Math.random() * 1e9));
   let pierce = $state(params.get('pierce') === '1' || ((saved.pierce as boolean) ?? false));
@@ -237,7 +237,7 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, level, speed, pierce, includeFestival, anim: animLevel, threat: showThreat }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, pierce, includeFestival, anim: animLevel, threat: showThreat }));
     } catch {
       /* ignore */
     }
@@ -260,8 +260,9 @@
     savedId = null;
     resumedFrom = null;
     bot?.dispose();
-    bot = remoteBot({ slug: pick.slug, oppSlug: 'player', level, seed: seed ^ 0x2545f491, policy });
-    if (watch) meBot = makeBot(planFor('player', policy), { level: 'normal', seed: seed ^ 0x1b873593 });
+    // Watching a simulator game replays it with the bots the simulator used (the bot without look-ahead).
+    bot = remoteBot({ slug: pick.slug, oppSlug: 'player', seed: seed ^ 0x2545f491, policy, fast: watch });
+    if (watch) meBot = makeBot(planFor('player', policy), { seed: seed ^ 0x1b873593 });
     error = '';
     viewing = null;
     history = [];
@@ -295,7 +296,6 @@
     const all = replay(g);
     const upto = Math.max(0, Math.min(at, g.actions.length));
     seed = g.seed;
-    level = g.level;
     pierce = !!g.rules.twinShotelsPiercesBenchShields;
     botSlug = g.opponent;
     myPolicy = g.policy;
@@ -307,7 +307,7 @@
     viewing = null;
     resumedFrom = { id, turn: all[upto]!.turn };
     bot?.dispose();
-    bot = remoteBot({ slug: g.opponent, oppSlug: 'player', level: g.level, seed: g.seed ^ 0x2545f491 ^ upto, policy: g.policy });
+    bot = remoteBot({ slug: g.opponent, oppSlug: 'player', seed: g.seed ^ 0x2545f491 ^ upto, policy: g.policy });
     history = g.actions.slice(0, upto);
     states = all.slice(0, upto + 1);
   }
@@ -323,7 +323,6 @@
       seed,
       opponent: botSlug,
       opponentName: botDeck?.name ?? botSlug,
-      level,
       rules: { twinShotelsPiercesBenchShields: pierce },
       policy: { ...myPolicy },
       decks: [gameDecks[0].slice(), gameDecks[1].slice()],
@@ -569,7 +568,7 @@
         states = states.slice(0, i + 1);
         history = history.slice(0, i);
         bot?.dispose();
-        bot = remoteBot({ slug: botSlug, oppSlug: 'player', level, seed: seed ^ 0x2545f491 ^ i, policy: DEFAULT_POLICY });
+        bot = remoteBot({ slug: botSlug, oppSlug: 'player', seed: seed ^ 0x2545f491 ^ i, policy: DEFAULT_POLICY });
         viewing = null;
         return;
       }
@@ -577,7 +576,7 @@
   }
 
   async function copyReplay() {
-    const replay = { seed, opponent: botSlug, level, rules: { twinShotelsPiercesBenchShields: pierce }, actions: history };
+    const replay = { seed, opponent: botSlug, rules: { twinShotelsPiercesBenchShields: pierce }, actions: history };
     try {
       await navigator.clipboard.writeText(JSON.stringify(replay));
       copied = true;
@@ -601,14 +600,6 @@
       </select>
     </label>
     <label class="check"><input type="checkbox" bind:checked={includeFestival} /> รวม Festival Lead ตอนสุ่ม</label>
-    <label>
-      ระดับบอท
-      <select bind:value={level}>
-        <option value="easy">ง่าย</option>
-        <option value="normal">ปกติ</option>
-        <option value="hard">ยาก</option>
-      </select>
-    </label>
     <label>
       ความเร็วบอท
       <select bind:value={speed}>
@@ -708,7 +699,7 @@
 
       <div class="dock">
         {#if narrow && myTurn && !req && cur.phase === 'main'}
-          <Coach s={cur} onapply={follow} compact />
+          <Coach s={cur} onapply={follow} botPlan={planFor(botSlug).name} compact />
         {/if}
         {#if req && !setupReq && choiceKind === 'slot'}
           {@render choice()}
@@ -763,7 +754,7 @@
         <button type="button" class="small close-side" onclick={() => (sideOpen = false)}>ปิด ✕</button>
       {/if}
       {#if !narrow && myTurn && !req && cur.phase === 'main'}
-        <Coach s={cur} onapply={follow} />
+        <Coach s={cur} onapply={follow} botPlan={planFor(botSlug).name} />
       {/if}
       {#if analysable}
         <ThreatPanel report={threatShown?.report ?? null} done={threatShown?.done ?? false} stale={threatStale} />

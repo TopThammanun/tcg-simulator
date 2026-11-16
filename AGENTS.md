@@ -15,9 +15,14 @@ npm run test:e2e   # Playwright against the production build (plays seeded games
 npm run check      # astro check + svelte-check
 npm run fuzz -- --games 10000         # Phase 1 gate: random legal moves, invariants after every action
 npm run sim -- --games 1000 [--check] # your list vs each bot deck; --exp all runs the 5 experiments
-npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (mirror matches); --bot pro --vs hard
+npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (mirror matches)
 npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA self-play tuning of src/bots/params.ts
-npx tsx scripts/train.ts --generations 4 --games 1600 --gate 480   # value-network self-play training (~10 min/generation)
+# The bot's network (BOT-RESEARCH.md). Python lives in ml/.venv (PyTorch CUDA build for the RTX 5060 Ti); run from the repo root.
+npx tsx scripts/learn/gen.ts <config.json>   # bot games on every CPU thread -> training shards (format in scripts/learn/shard.ts)
+ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn/bc.json   # imitation of the recorded bot
+ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn/ppo   # self-play PPO; resumes; log.jsonl
+ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats
+npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/parity.py <net.json> <dir>   # TS = PyTorch
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed]   # read one bot game's log
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
@@ -41,25 +46,31 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Card effects: `effects/attacks.ts` (by attack name), `abilities.ts`, `trainers.ts`, `energy.ts`;
   passive Abilities, Tools and Stadiums are read where they apply in `rules.ts` / `combat.ts`.
   `tests/engine/coverage.test.ts` fails if a card with effect text has no implementation.
-- `src/bots/` — `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) +
-  `choose.ts` (pending choices) + `plans/<deck>.ts`; `params.ts` holds the main weights, tuned by self-play
-  (`scripts/tune.ts`, SPSA); `hard.ts` adds Monte Carlo; `pro.ts` = the same search
-  scored by a value network (`learn/`: `features.ts`, `net.ts`, `weights.json`) trained AlphaZero-style by
-  `scripts/train.ts` (self-play → fit → a gate match; a network is kept only if it wins significantly;
-  `data/training-log.md`). On the play screen the opponent bot runs in a Web Worker (`worker.ts`,
-  `remote.ts`). `coach.ts` = hint button,
-  `explain.ts` = its reasons (read from the position + the move played out on a determinized copy).
-  Bots plan on `determinize()` so they never see hidden cards (it deals from the sorted hidden cards, so the
-  result depends only on public information). Research for a stronger bot (policy + value network, self-play RL,
-  search; not built yet): `BOT-RESEARCH.md`.
+- `src/bots/` — the one bot (there are no difficulty levels): `index.ts` `createBot()` is always the strongest
+  version measured: the policy/value network (`learn/weights.json`) with look-ahead (`learn/search.ts`: the
+  policy's best few options plus the attack planner's line, played out on determinized deals and scored by the
+  value head), or the hard bot when no network is bundled; `{ fast: true }` is the network alone (the simulator
+  and its replays, the review's comparison turn).
+  `learn/`: `encode.ts` (what the network sees: a token per Pokémon in play, card-count bags, globals, one row
+  per legal action or pick; hidden zones only as combined counts), `model.ts` (forward pass; same layers as
+  `ml/common.py`), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
+  into training rows). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
+  `scripts/learn/gen.ts`). The rule-based bots stay as teachers, sparring partners and quick internal models:
+  `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) + `choose.ts` (pending
+  choices) + `plans/<deck>.ts`; `params.ts` holds their weights, tuned by SPSA (`scripts/tune.ts`);
+  `hard.ts` adds Monte Carlo. On the play screen the bot runs in a Web Worker (`worker.ts`, `remote.ts`).
+  `coach.ts` = hint button (the network's best three when bundled), `explain.ts` = its reasons (read from the
+  position + the move played out on a determinized copy). Bots plan on `determinize()` so they never see hidden
+  cards (it deals from the sorted hidden cards, so the result depends only on public information).
 - `src/analysis/` — the analyser (PLAN.md, แผนรุ่นต่อไป). `threat.ts` = "ภัยเทิร์นหน้า": re-deal what you can't see,
-  end your turn, let a normal bot play theirs; the share of samples where each Pokémon is Knocked Out, corrected
-  per opponent deck by `calibration.ts` (Platt scaling fitted by `scripts/threat-gate.ts --fit`, because uniform
-  re-deals give the opponent better hands than they hold). `counts.ts` = their Trainers by the reference list vs
+  end your turn, let the rule-based bot play theirs (quick, and it plans exact Knock Out lines); the share of
+  samples where each Pokémon is Knocked Out, corrected per opponent deck by `calibration.ts` (Platt scaling fitted
+  by `scripts/threat-gate.ts --fit` against the real bot, because uniform re-deals give the opponent better hands
+  than they hold, and the real bot plays differently). `counts.ts` = their Trainers by the reference list vs
   seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`); shown by `ThreatPanel.svelte` and
-  the KO badges on `SlotCard.svelte`. `winrate.ts` = win% by playing the game out (normal bots, re-dealt hidden
-  cards). `review.ts` = one of your turns reviewed: win% after it, clear mistakes (`sureLine`: the attack planner's
-  line, fixed seeds, checked on several re-deals), the hard bot's turn on the real cards compared on the same deals;
+  the KO badges on `SlotCard.svelte`. `winrate.ts` = win% by playing the game out (rule-based bots, quick; re-dealt
+  hidden cards). `review.ts` = one of your turns reviewed: win% after it, clear mistakes (`sureLine`: the attack planner's
+  line, fixed seeds, checked on several re-deals), the bot's turn on the real cards compared on the same deals;
   run on several workers by `review-remote.ts` / `review-worker.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions; `replay()`, `turnsOf()`), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished

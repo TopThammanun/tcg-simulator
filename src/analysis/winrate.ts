@@ -1,5 +1,6 @@
 // Chance to win from a position, as `me` sees it: re-deal what `me` can't see (determinize), play the rest
-// of the game with normal bots on both sides, count the wins (a draw is half). The review page's win%.
+// of the game with the rule-based bot (core.ts, quick) on both sides, count the wins (a draw is half).
+// The review page's win%.
 import { actor, apply } from '../engine/actions';
 import type { GameState, PlayerId } from '../engine/types';
 import { determinize } from '../engine/view';

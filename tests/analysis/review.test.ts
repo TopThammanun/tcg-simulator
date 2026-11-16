@@ -111,7 +111,6 @@ describe('saved games (record.ts)', () => {
       seed: 5,
       opponent: slug,
       opponentName: 'Dragapult ex',
-      level: 'normal',
       rules: {},
       policy: DEFAULT_POLICY,
       decks: [deck('player').cards, deck(slug).cards],

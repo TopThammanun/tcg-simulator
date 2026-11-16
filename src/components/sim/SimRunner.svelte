@@ -2,7 +2,8 @@
   // โหมดรันหลายพันเกม: your deck (configurable strategy) vs every bot deck, on Web Workers.
   import { DEFAULT_POLICY, type PlayerPolicy } from '../../bots/plans';
   import { EXPERIMENTS, type PlayerConfig } from '../../sim/experiments';
-  import { seedsFor, type BatchJob } from '../../sim/runner';
+  import type { BatchJob } from '../../sim/runner';
+  import { seedsFor } from '../../sim/seeds';
   import { metaWeighted, pairedDiff, summarize, toCsv, type GameRecord, type Matchup } from '../../sim/stats';
   import type { FromWorker, ToWorker } from '../../sim/worker';
   import { myCards } from '../../ui/my-list';
@@ -177,7 +178,7 @@
   }
 
   function replayUrl(r: GameRecord, config: PlayerConfig): string {
-    const p = new URLSearchParams({ watch: '1', seed: String(r.seed), opp: r.opp, level: 'normal', speed: '500', policy: JSON.stringify(config.policy) });
+    const p = new URLSearchParams({ watch: '1', seed: String(r.seed), opp: r.opp, speed: '500', policy: JSON.stringify(config.policy) });
     if (config.edit) p.set('edit', JSON.stringify(config.edit));
     return `/play/?${p}`;
   }

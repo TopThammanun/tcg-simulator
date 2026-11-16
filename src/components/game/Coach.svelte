@@ -2,7 +2,7 @@
   // ปุ่มแนะนำ: 3 options for your deck, each with why. What the opponent can do next turn is the
   // threat panel's job (ThreatPanel.svelte). `compact` is the phone layout (inside the bottom dock, scrolls on its own).
   import { fly, slide } from 'svelte/transition';
-  import { suggest, type Suggestion } from '../../bots/coach';
+  import { suggest, suggestNet, type Suggestion } from '../../bots/coach';
   import { motion } from '../../ui/anim/motion';
   import { planFor, DEFAULT_POLICY, type PlayerPolicy } from '../../bots/plans';
   import type { Action, GameState } from '../../engine/types';
@@ -10,8 +10,15 @@
   let {
     s,
     onapply,
+    botPlan,
     compact = false,
-  }: { s: GameState; onapply: (a: Action, picks?: number[][]) => void; compact?: boolean } = $props();
+  }: {
+    s: GameState;
+    onapply: (a: Action, picks?: number[][]) => void;
+    /** The opponent's deck plan name (what the network is told it plays against). */
+    botPlan: string;
+    compact?: boolean;
+  } = $props();
 
   const POLICY_KEY = 'tcg-sim:policy';
   let policy: PlayerPolicy = DEFAULT_POLICY;
@@ -24,8 +31,11 @@
   let open = $state(false);
   let tips = $state<Suggestion[]>([]);
 
-  function ask() {
-    tips = suggest(s, 0, planFor('player', policy), s.turn);
+  async function ask() {
+    const plan = planFor('player', policy);
+    // The network (and its weights) load only when a hint is first asked for.
+    const { MODEL } = await import('../../bots/index');
+    tips = MODEL && s.current === 0 && !s.pending ? suggestNet(s, 0, MODEL, [plan.name, botPlan], plan) : suggest(s, 0, plan, s.turn);
     open = true;
   }
   $effect(() => {

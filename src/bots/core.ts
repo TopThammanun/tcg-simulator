@@ -9,8 +9,8 @@ import { choosePicks } from './choose';
 import { planFinish, type Finish } from './finisher';
 import { attackerScore, cardValue, energyTarget } from './knowledge';
 import { P } from './params';
-import { makeRand, randomAction, type Rand } from './random';
-import type { Bot, DeckPlan, Level } from './types';
+import { makeRand, type Rand } from './random';
+import type { Bot, DeckPlan } from './types';
 
 export interface Scored {
   action: Action;
@@ -24,8 +24,7 @@ const DRAW_SUPPORTERS = new Set(['lillies-determination', 'judge', 'surfer']);
 const FINISHER_ONLY = new Set(['energy-switch', 'switch']);
 const MAX_ACTIONS_PER_TURN = 60;
 
-export function makeBot(plan: DeckPlan, opts: { level?: Level; seed?: number } = {}): Bot {
-  const level = opts.level ?? 'normal';
+export function makeBot(plan: DeckPlan, opts: { seed?: number } = {}): Bot {
   const rand = makeRand(opts.seed ?? 1);
   let queue: number[][] = [];
   let turn = -1;
@@ -48,7 +47,6 @@ export function makeBot(plan: DeckPlan, opts: { level?: Level; seed?: number } =
         actionsThisTurn = 0;
       }
       if (++actionsThisTurn > MAX_ACTIONS_PER_TURN) return { t: 'end' };
-      if (level === 'easy' && rand() < 0.4) return randomAction(s, rand);
       const choice = decide(s, me, plan, rand);
       queue = choice.picks ? choice.picks.slice() : [];
       return choice.action;

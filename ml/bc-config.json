@@ -1,0 +1,8 @@
+{
+  "out": ".cache/learn/bc",
+  "games": 12000,
+  "base": 1000000,
+  "threads": 15,
+  "players": { "hard": { "kind": "hard", "record": true } },
+  "pairs": [{ "a": "hard", "b": "hard", "share": 1 }]
+}

@@ -75,7 +75,7 @@ export function makeHardBot(plan: DeckPlan, oppPlan: DeckPlan, opts: { seed?: nu
 export function makeSearchBot(plan: DeckPlan, oppPlan: DeckPlan, opts: SearchOptions): Bot {
   const samples = opts.samples ?? 4;
   const breadth = opts.breadth ?? 2;
-  const normal = makeBot(plan, { level: 'normal', seed: opts.seed });
+  const normal = makeBot(plan, { seed: opts.seed });
   const rand = makeRand((opts.seed ?? 1) ^ 0x68e31da4);
   let queue: number[][] = [];
 

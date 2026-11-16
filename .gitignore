@@ -32,3 +32,7 @@ pnpm-debug.log*
 sim-results/
 test-results/
 playwright-report/
+
+# Python training environment (ml/, see BOT-RESEARCH.md)
+ml/.venv*/
+__pycache__/

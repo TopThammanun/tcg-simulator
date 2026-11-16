@@ -2,7 +2,6 @@
 // engine replays it exactly (src/engine is deterministic from the seed). Kept in IndexedDB by store.ts.
 import { actor, apply, createGame } from '../engine/actions';
 import type { PlayerPolicy } from '../bots/plans';
-import type { Level } from '../bots/types';
 import type { Action, GameState, PlayerId, Rules } from '../engine/types';
 
 export interface SavedGame {
@@ -13,7 +12,8 @@ export interface SavedGame {
   /** Bot deck slug (src/content/decks) and its name. */
   opponent: string;
   opponentName: string;
-  level: Level;
+  /** Bot difficulty of games saved before there was only one bot (unused). */
+  level?: string;
   rules: Partial<Rules>;
   /** Your strategy (the plan your side is reviewed with). */
   policy: PlayerPolicy;

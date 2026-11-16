@@ -1,8 +1,9 @@
 // The play screen's side of src/analysis/worker.ts: ask for the threat report of a position and get it
 // back a batch at a time. Only the newest position matters; reports for older ones are dropped.
-// Without Worker support the samples run in the page, in small batches between frames.
+// Without Worker support the samples run in the page, in small batches between frames (threat.ts and the
+// bot's network are then loaded on first use, so they stay out of the page bundle otherwise).
 import { planFor } from '../bots/plans';
-import { ThreatSampler, type ThreatReport } from './threat';
+import type { ThreatReport } from './threat';
 import type { FromThreat, ThreatAsk, ToThreat } from './worker';
 
 export interface ThreatClient {
@@ -23,8 +24,9 @@ export function threatClient(onreport: (r: ThreatReport, done: boolean, state: T
         clearTimeout(timer);
         const ask = (current = { ...a, id: next++ });
         const plans = { mine: planFor(ask.mine, ask.policy), theirs: planFor(ask.theirs) };
-        const sampler = new ThreatSampler({ state: ask.state, me: ask.me, plans, theirDeck: ask.theirs }, ask.seed);
-        const batch = () => {
+        const made = import('./threat').then(({ ThreatSampler }) => new ThreatSampler({ state: ask.state, me: ask.me, plans, theirDeck: ask.theirs }, ask.seed));
+        const batch = async () => {
+          const sampler = await made;
           if (current !== ask) return;
           sampler.add(Math.min(4, ask.samples - sampler.samples.length));
           const done = sampler.samples.length >= ask.samples;

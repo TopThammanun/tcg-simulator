@@ -1,16 +1,14 @@
 // PLAN.md v3 gate: the hard bot beats the normal bot more than 50% of the time.
 // Mirror matches (same deck both sides) over every deck, the tested bot alternating seats.
 //   npx tsx scripts/hard-gate.ts --games 1000
-//   npx tsx scripts/hard-gate.ts --games 1000 --bot pro --vs hard   (any of normal / hard / pro)
-// Experiments on the tested bot: --samples N --breadth N (hard, pro), --blend W --net file.json (pro).
+//   npx tsx scripts/hard-gate.ts --games 1000 --bot hard --vs normal   (normal or hard)
+// Experiments on the hard bot: --samples N --breadth N --refine N. The network bot is measured with
+// scripts/learn/gen.ts instead.
 import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { makeBot } from '../src/bots/core';
-import { readFileSync } from 'node:fs';
 import { evaluate, makeHardBot, makeSearchBot } from '../src/bots/hard';
-import { fromJson } from '../src/bots/learn/net';
 import { planFor } from '../src/bots/plans';
-import { makeProBot } from '../src/bots/pro';
 import type { Bot, DeckPlan } from '../src/bots/types';
 import { deckKeys } from '../src/engine/db';
 import { playGame } from '../src/sim/game';
@@ -18,13 +16,10 @@ import { wilson } from '../src/sim/stats';
 import { loadDeckFiles } from './lib/decks';
 import { runTsWorker } from './lib/workers';
 
-type Kind = 'normal' | 'hard' | 'pro';
+type Kind = 'normal' | 'hard';
 interface Tweaks {
   samples?: number;
   breadth?: number;
-  blend?: number;
-  net?: string;
-  horizon?: 'reply' | 'turn';
   refine?: number;
 }
 interface Job {
@@ -38,10 +33,6 @@ interface Job {
 }
 
 function make(kind: Kind, plan: DeckPlan, seed: number, t: Tweaks = {}): Bot {
-  if (kind === 'pro') {
-    const net = t.net ? fromJson(JSON.parse(readFileSync(t.net, 'utf8'))) : undefined;
-    return makeProBot(plan, plan, { seed, net, samples: t.samples, breadth: t.breadth, blend: t.blend, horizon: t.horizon });
-  }
   if (kind === 'hard') {
     if (t.samples || t.breadth || t.refine) {
       return makeSearchBot(plan, plan, { seed, value: evaluate, failValue: -1e4, samples: t.samples, breadth: t.breadth, refine: t.refine });
@@ -99,9 +90,6 @@ if (!isMainThread) {
   const tweaks: Tweaks = {
     samples: num('samples'),
     breadth: num('breadth'),
-    blend: num('blend'),
-    net: opt('net'),
-    horizon: opt('horizon') as Tweaks['horizon'],
     refine: num('refine'),
   };
   const threads = cpus().length;

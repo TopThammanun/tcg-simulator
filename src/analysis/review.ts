@@ -3,7 +3,7 @@
 // - a check for clear mistakes: at the moment you chose how to end the turn (and at its start), the attack
 //   planner finds a line that wins or takes more Prizes than you took, on every re-deal of what you couldn't
 //   see ("พลาดชัด": engine-checked with fixed seeds, so it doesn't depend on luck or on how well bots play),
-// - the hard bot's turn from the same position, played on the real cards, and both turns' outcomes
+// - the bot's turn (bots/index.ts) from the same position, played on the real cards, and both turns' outcomes
 //   compared on the same deals ("น่าจะดีกว่า": an estimate, shown with its error; close calls get three
 //   times the games before they are decided),
 // - "ภัยเทิร์นหน้า" after your turn and after the bot's (threat.ts), so exposure shows in numbers.
@@ -13,7 +13,7 @@ import type { Action, GameState, PlayerId } from '../engine/types';
 import { determinize } from '../engine/view';
 import { choosePicks } from '../bots/choose';
 import { planFinish, runStep, type Step } from '../bots/finisher';
-import { makeHardBot } from '../bots/hard';
+import { createBot } from '../bots/index';
 import { describeAction } from '../ui/play';
 import { isFree, type TurnSpan } from '../review/record';
 import { threats, type Plans } from './threat';
@@ -41,7 +41,7 @@ export interface TurnReview {
   win: { p: number; se: number };
   /** Prizes the opponent is expected to take next turn after your turn (threat.ts). */
   exposure: number;
-  /** The hard bot's turn from the same start, when it played differently. */
+  /** The bot's turn from the same start, when it played differently. */
   alt?: {
     played: string[];
     win: { p: number; se: number };
@@ -71,7 +71,7 @@ export const BETTER_BY = 0.08;
 export const BETTER_SE = 2.5;
 /** The attack planner searches with these seeds (several, as its search is cut short), the same for every review. */
 const SEARCH_SEEDS = [1, 2, 3];
-/** The hard bot's seed for the suggested turn (plus the turn number). */
+/** The bot's seed for the suggested turn (plus the turn number). */
 const ALT_SEED = 7331;
 
 /** Labels of `me`'s own actions (not answers to choices) between two state indices. */
@@ -112,9 +112,12 @@ export function sureLine(s: GameState, me: PlayerId, plans: Plans, checks: numbe
   return best;
 }
 
-/** The hard bot plays `me`'s turn from `s` on the real cards (the opponent answers its own choices); the state once the turn has passed. */
+/**
+ * The bot (bots/index.ts, without look-ahead so a whole game's review stays quick) plays `me`'s turn from `s`
+ * on the real cards (the opponent answers its own choices); the state once the turn has passed.
+ */
 export function botTurn(s: GameState, me: PlayerId, plans: Plans, seed: number): { end: GameState; states: GameState[]; actions: Action[] } {
-  const bot = makeHardBot(plans.mine, plans.theirs, { seed });
+  const bot = createBot(plans.mine, seed, plans.theirs, { fast: true });
   const states = [s];
   const actions: Action[] = [];
   let st = s;
@@ -174,7 +177,7 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
   let mine = estimateWin(end, me, plans, { samples, seed });
   const exposure = end.winner === null ? exposureOf(states, actions, span.last, span.end) : 0;
 
-  // The hard bot's turn from the same start. Its seed is fixed, so a position always gets the same suggestion.
+  // The bot's turn from the same start. Its seed is fixed, so a position always gets the same suggestion.
   let alt: TurnReview['alt'];
   const bot = botTurn(start, me, plans, ALT_SEED + span.turn);
   if (!sameMoves(states.slice(span.start, span.end), actions.slice(span.start, span.end), bot.states, bot.actions, me)) {

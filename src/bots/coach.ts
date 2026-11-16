@@ -1,11 +1,14 @@
-// Hint button (PLAN.md v2): the player-policy bot's top 3 options with reasons. What the opponent can
-// do next turn is src/analysis/threat.ts.
+// Hint button (PLAN.md v2): the bot's top 3 options with reasons. With the network (bots/index.ts) the
+// options are the policy's best three; without it, the player-policy bot's. What the opponent can do
+// next turn is src/analysis/threat.ts.
 import { def } from '../engine/db';
 import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { finishStep, rankDevelopment } from './core';
 import { BEFORE_ATTACK, explainAction, explainEnd, explainPlan } from './explain';
 import { planFinish } from './finisher';
+import { encode, type OptionRef } from './learn/encode';
+import { run, softmax, type Model } from './learn/model';
 import type { DeckPlan } from './types';
 
 export interface Suggestion {
@@ -44,3 +47,17 @@ export function suggest(s: GameState, me: PlayerId, plan: DeckPlan, seed = 1, n 
 }
 
 const isSupporter = (s: GameState, a: Action) => a.t === 'trainer' && (def(keyOf(s, a.card)) as { trainerType?: string }).trainerType === 'Supporter';
+
+/** The network's best `n` options (main phase), each with the policy's share and the coach's reasons. */
+export function suggestNet(s: GameState, me: PlayerId, model: Model, decks: readonly [string, string], plan: DeckPlan, n = 3): Suggestion[] {
+  const enc = encode(s, { decks });
+  const p = softmax(run(model, enc).logits);
+  return Array.from(p.keys())
+    .sort((a, b) => p[b]! - p[a]!)
+    .slice(0, n)
+    .map((i) => {
+      const action = (enc.refs[i] as Extract<OptionRef, { t: 'action' }>).action;
+      const e = action.t === 'end' ? explainEnd(s, me) : explainAction(s, me, { action }, plan);
+      return { action, score: p[i]!, ...e, facts: [`บอทเลือกทางนี้ ${Math.round(p[i]! * 100)}%`, ...e.facts] };
+    });
+}
