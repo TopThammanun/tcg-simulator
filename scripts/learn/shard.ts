@@ -71,6 +71,7 @@ export class ShardWriter {
   private chosen = new Grow((n) => new Int16Array(n));
   private logp = new Grow((n) => new Float32Array(n));
   private value = new Grow((n) => new Float32Array(n));
+  private searched = new Grow((n) => new Uint8Array(n));
   private game = new Grow((n) => new Int32Array(n));
   private player = new Grow((n) => new Uint8Array(n));
   private outcome = new Grow((n) => new Float32Array(n));
@@ -98,6 +99,7 @@ export class ShardWriter {
     this.chosen.push(d.chosen);
     this.logp.push(d.logp);
     this.value.push(d.value);
+    this.searched.push(d.searched ? 1 : 0);
     this.game.push(this.open?.game ?? -1);
     this.player.push(d.player);
     this.outcome.push(0.5);
@@ -130,7 +132,7 @@ export class ShardWriter {
     this.slotCards.n = rows * SLOTS * 2;
     this.bags.n = rows * BAGS * VOCAB;
     this.glob.n = rows * GLOB_F;
-    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.game, this.player, this.outcome]) g.n = rows;
+    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome]) g.n = rows;
     this.optX.n = optFrom * OPT_F;
     this.optCard.n = optFrom;
     this.optSlot.n = optFrom;
@@ -150,6 +152,7 @@ export class ShardWriter {
       ['chosen', 'i2', [n], this.chosen.view()],
       ['logp', 'f4', [n], this.logp.view()],
       ['value', 'f4', [n], this.value.view()],
+      ['searched', 'u1', [n], this.searched.view()],
       ['game', 'i4', [n], this.game.view()],
       ['player', 'u1', [n], this.player.view()],
       ['outcome', 'f4', [n], this.outcome.view()],

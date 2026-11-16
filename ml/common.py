@@ -73,6 +73,8 @@ class Data:
         self.chosen = t(cat("chosen"), torch.long)
         self.logp = t(cat("logp"))
         self.value = t(cat("value"))
+        # Rows the recorded bot searched (look-ahead); shards written before the flag existed have none.
+        self.searched = t(np.concatenate([p["searched"] if "searched" in p else np.zeros(p["slots"].shape[0], np.uint8) for p in parts]), torch.bool)
         self.game = t(np.concatenate(games))
         self.player = t(cat("player"), torch.long)
         self.outcome = t(cat("outcome"))

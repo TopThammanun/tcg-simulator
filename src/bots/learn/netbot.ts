@@ -20,6 +20,13 @@ export interface Decision {
   logp: number;
   /** The network's value estimate (NaN for a recorded bot). */
   value: number;
+  /** The recorded bot searched this decision (look-ahead), rather than playing its first instinct. */
+  searched?: boolean;
+}
+
+/** A bot that can say whether its last main-phase move came out of a search (search.ts). */
+export interface SearchingBot extends Bot {
+  lastSearched?: boolean;
 }
 
 export interface NetBotOptions {
@@ -106,7 +113,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
  * Wrap a bot so each of its decisions is also written as rows (`onDecision`), as if the network had
  * chosen the same options. Picks are split the way makeNetBot makes them.
  */
-export function recordBot(bot: Bot, decks: readonly [string, string], onDecision: (d: Decision) => void): Bot {
+export function recordBot(bot: SearchingBot, decks: readonly [string, string], onDecision: (d: Decision) => void): Bot {
   const count = turnCounter();
   return {
     act(s: GameState): Action {
@@ -130,7 +137,7 @@ export function recordBot(bot: Bot, decks: readonly [string, string], onDecision
       if (enc.refs.length > 1) {
         const k = actionKey(s, a);
         const i = enc.refs.findIndex((r) => r.t === 'action' && actionKey(s, r.action) === k);
-        if (i >= 0) onDecision({ enc, player: me, chosen: i, logp: 0, value: NaN });
+        if (i >= 0) onDecision({ enc, player: me, chosen: i, logp: 0, value: NaN, searched: bot.lastSearched === true });
       }
       return a;
     },

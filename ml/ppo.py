@@ -113,12 +113,16 @@ def main():
     ap.add_argument("--kl", type=float, default=0.05, help="KL to the imitation network at the start (decays to 0)")
     ap.add_argument("--kl-iters", type=int, default=60)
     ap.add_argument("--mix", default="self:0.5,old:0.15,normal:0.1,hard:0.25")
+    ap.add_argument("--frozen", help="a fixed network to play as 'frozen' in --mix (best move, no sampling): train an exploiter against it")
+    ap.add_argument("--eval-vs", default="hard", choices=["hard", "frozen"], help="who the greedy network is measured against")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=480)
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)
     a.init = os.path.abspath(a.init)
+    if a.frozen:
+        a.frozen = os.path.abspath(a.frozen)
 
     os.makedirs(a.dir, exist_ok=True)
     state_path = os.path.join(a.dir, "state.json")
@@ -149,6 +153,8 @@ def main():
             "normal": {"kind": "normal"},
             "hard": {"kind": "hard"},
         }
+        if a.frozen:
+            players["frozen"] = {"kind": "net", "weights": a.frozen, "temperature": 0}
         pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v} for k, v in mix.items() if v > 0]
         out = os.path.join(a.dir, "games")
         shutil.rmtree(out, ignore_errors=True)
@@ -179,12 +185,16 @@ def main():
                 "games": a.eval_games,
                 "base": 90_000_000,
                 "threads": a.threads,
-                "players": {"net": {"kind": "net", "weights": cur_path, "temperature": 0}, "hard": {"kind": "hard"}},
-                "pairs": [{"a": "net", "b": "hard", "share": 1}],
+                "players": {
+                    "net": {"kind": "net", "weights": cur_path, "temperature": 0},
+                    "hard": {"kind": "hard"},
+                    **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
+                },
+                "pairs": [{"a": "net", "b": a.eval_vs, "share": 1}],
             }
             er = run_gen(ecfg, os.path.join(a.dir, "eval.json"))
-            sc = er["scores"]["net vs hard"]
-            row["eval_vs_hard"] = round(sc["score"] / sc["n"], 4)
+            sc = er["scores"][f"net vs {a.eval_vs}"]
+            row[f"eval_vs_{a.eval_vs}"] = round(sc["score"] / sc["n"], 4)
             row["eval_n"] = sc["n"]
             shutil.copy(cur_path, os.path.join(a.dir, f"eval-{it}.json"))
         state["iter"] = it

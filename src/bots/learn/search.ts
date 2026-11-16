@@ -12,10 +12,10 @@ import { determinize } from '../../engine/view';
 import { planFinish, runStep, type Step } from '../finisher';
 import { P } from '../params';
 import { makeRand } from '../random';
-import type { Bot, DeckPlan } from '../types';
+import type { DeckPlan } from '../types';
 import { encode, type OptionRef } from './encode';
 import { run, softmax, type Model } from './model';
-import { actionKey, makeNetBot, MAX_ACTIONS_PER_TURN, turnCounter } from './netbot';
+import { actionKey, makeNetBot, MAX_ACTIONS_PER_TURN, turnCounter, type SearchingBot } from './netbot';
 
 export interface NetSearchOptions {
   /** Plan names [mine, theirs]. */
@@ -39,7 +39,7 @@ export interface NetSearchOptions {
 
 const MAX_ROLLOUT_ACTIONS = 200;
 
-export function makeSearchNetBot(model: Model, o: NetSearchOptions): Bot {
+export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBot {
   const width = o.width ?? 4;
   const samples = o.samples ?? 6;
   const confident = o.confident ?? 0.9;
@@ -72,8 +72,9 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): Bot {
     return who === me ? v : 1 - v;
   };
 
-  return {
+  const bot: SearchingBot = {
     act(s: GameState): Action {
+      bot.lastSearched = false;
       if (s.pending) {
         const req = s.pending.request;
         const f = queue.shift();
@@ -111,6 +112,7 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): Bot {
       const sure = p[order[0]!]! >= confident && !(urgent && tactic >= 0 && tactic !== order[0]);
       if (sure || cands.length === 1) return action(order[0]!);
       const stepOf = (i: number): Step => ({ action: action(i), picks: i === tactic ? tacticPicks : undefined });
+      bot.lastSearched = true;
       const total = cands.map(() => 0);
       const started = performance.now();
       const late = () => !!o.deadlineMs && performance.now() - started > o.deadlineMs;
@@ -142,4 +144,5 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): Bot {
       return action(cands[best]!);
     },
   };
+  return bot;
 }
