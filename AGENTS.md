@@ -50,7 +50,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `remote.ts`). `coach.ts` = hint button,
   `explain.ts` = its reasons (read from the position + the move played out on a determinized copy).
   Bots plan on `determinize()` so they never see hidden cards (it deals from the sorted hidden cards, so the
-  result depends only on public information).
+  result depends only on public information). Research for a stronger bot (policy + value network, self-play RL,
+  search; not built yet): `BOT-RESEARCH.md`.
 - `src/analysis/` — the analyser (PLAN.md, แผนรุ่นต่อไป). `threat.ts` = "ภัยเทิร์นหน้า": re-deal what you can't see,
   end your turn, let a normal bot play theirs; the share of samples where each Pokémon is Knocked Out, corrected
   per opponent deck by `calibration.ts` (Platt scaling fitted by `scripts/threat-gate.ts --fit`, because uniform
