@@ -140,6 +140,9 @@ def main():
     opt_path = os.path.join(a.dir, "opt.pt")
     if os.path.exists(opt_path) and state["iter"] > 0:
         opt.load_state_dict(torch.load(opt_path, map_location=DEVICE))
+        # The saved state carries the old learning rate; --lr wins when resuming.
+        for g in opt.param_groups:
+            g["lr"] = a.lr
     mix = {k: float(v) for k, v in (x.split(":") for x in a.mix.split(","))}
     log = open(os.path.join(a.dir, "log.jsonl"), "a")
 

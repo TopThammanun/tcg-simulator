@@ -22,7 +22,8 @@ def spec(s: str) -> dict:
         return {"kind": "net", "weights": rest[0], "temperature": 0}
     if kind in ("search", "search-np", "search-ng"):
         parts = rest[0].rsplit(":", 3) if rest[0].count(":") >= 3 else [rest[0]]
-        out = {"kind": "search", "weights": parts[0], "tactics": kind != "search-np", "guards": kind == "search"}
+        # The play screen's time limit per decision (src/bots/index.ts SEARCH).
+        out = {"kind": "search", "weights": parts[0], "tactics": kind != "search-np", "guards": kind == "search", "deadlineMs": 2500}
         if len(parts) == 4:
             out.update(width=int(parts[1]), samples=int(parts[2]), horizon=parts[3])
         return out

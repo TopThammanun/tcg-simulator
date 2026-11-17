@@ -44,6 +44,7 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--value-weight", type=float, default=0.5)
     ap.add_argument("--searched-weight", type=float, default=1.0, help="policy loss weight of decisions the recorded bot searched (Expert Iteration)")
+    ap.add_argument("--dims", default="", help="layer sizes for a new network, e.g. H=512,SH=96,OH=192,BAGD=24")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -52,10 +53,15 @@ def main():
     val_games = (data.game * 2654435761 % 100) < 5
     train_idx = torch.nonzero(~val_games).squeeze(1)
     val_idx = torch.nonzero(val_games).squeeze(1)
-    net = import_json(a.init) if a.init else new_net(data)
+    dims = {k: int(v) for k, v in (x.split("=") for x in a.dims.split(",") if x)} or None
+    net = import_json(a.init) if a.init else new_net(data, dims)
+    print(f"{sum(p.numel() for p in net.parameters())} parameters, dims {net.dims}", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=1e-4)
     steps = a.epochs * (len(train_idx) // a.bs)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=a.lr, total_steps=max(1, steps), pct_start=0.05)
+    if a.init:
+        acc, vl, sacc = validate(net, data, val_idx)
+        print(f"before: validation policy top-1 {acc * 100:.1f}% (searched {sacc * 100:.1f}%), value BCE {vl:.4f}", flush=True)
     best = None
     for ep in range(a.epochs):
         perm = train_idx[torch.randperm(len(train_idx), device=train_idx.device)]

@@ -111,23 +111,27 @@ def load(dirs: list[str]) -> Data:
 
 
 class Net(nn.Module):
-    def __init__(self, vocab: int, glob_f: int, opt_f: int):
+    def __init__(self, vocab: int, glob_f: int, opt_f: int, dims: dict | None = None):
         super().__init__()
         self.vocab, self.glob_f, self.opt_f = vocab, glob_f, opt_f
-        self.emb = nn.Embedding(vocab, E)
-        self.slot1 = nn.Linear(2 * E + SLOT_F, SH)
-        self.slot2 = nn.Linear(SH, SH)
-        self.bag_w = nn.Parameter(torch.randn(BAGS, vocab, BAGD) * 0.1)
-        self.bag_b = nn.Parameter(torch.zeros(BAGS * BAGD))
-        trunk_in = 6 * SH + BAGS * BAGD + glob_f + E
-        self.trunk1 = nn.Linear(trunk_in, H)
-        self.trunk2 = nn.Linear(H, H)
-        self.value1 = nn.Linear(H, 64)
+        # Layer sizes (defaults = the shipped network; model.ts reads them from the JSON).
+        d = {"E": E, "SH": SH, "BAGD": BAGD, "H": H, "OH": OH, **(dims or {})}
+        self.dims = d
+        E_, SH_, BAGD_, H_, OH_ = d["E"], d["SH"], d["BAGD"], d["H"], d["OH"]
+        self.emb = nn.Embedding(vocab, E_)
+        self.slot1 = nn.Linear(2 * E_ + SLOT_F, SH_)
+        self.slot2 = nn.Linear(SH_, SH_)
+        self.bag_w = nn.Parameter(torch.randn(BAGS, vocab, BAGD_) * 0.1)
+        self.bag_b = nn.Parameter(torch.zeros(BAGS * BAGD_))
+        trunk_in = 6 * SH_ + BAGS * BAGD_ + glob_f + E_
+        self.trunk1 = nn.Linear(trunk_in, H_)
+        self.trunk2 = nn.Linear(H_, H_)
+        self.value1 = nn.Linear(H_, 64)
         self.value2 = nn.Linear(64, 1)
-        self.opt1 = nn.Linear(E + SH + opt_f, OH)
-        self.q = nn.Linear(H, OH, bias=False)
-        self.k = nn.Linear(OH, OH)
-        self.score = nn.Linear(OH, 1)
+        self.opt1 = nn.Linear(E_ + SH_ + opt_f, OH_)
+        self.q = nn.Linear(H_, OH_, bias=False)
+        self.k = nn.Linear(OH_, OH_)
+        self.score = nn.Linear(OH_, 1)
 
     def forward(self, b: dict[str, torch.Tensor]):
         slots = b["slots"]
@@ -150,18 +154,18 @@ class Net(nn.Module):
         value = self.value2(F.relu(self.value1(h))).squeeze(-1)
 
         slot = b["opt_slot"]
-        st = torch.gather(tok, 1, slot.clamp(min=0)[..., None].expand(-1, -1, SH)) * (slot >= 0).float()[..., None]
+        st = torch.gather(tok, 1, slot.clamp(min=0)[..., None].expand(-1, -1, tok.shape[-1])) * (slot >= 0).float()[..., None]
         o = F.relu(self.opt1(torch.cat([self.emb(b["opt_card"]), st, b["opt_x"]], -1)))
         u = F.relu(self.q(h)[:, None, :] + self.k(o))
         logits = self.score(u).squeeze(-1).masked_fill(~b["mask"], -1e9)
         return logits, value
 
 
-def new_net(data: Data | None = None) -> Net:
+def new_net(data: Data | None = None, dims: dict | None = None) -> Net:
     vocab = len(card_keys()) + 1
     glob_f = data.glob.shape[1] if data else 83
     opt_f = data.opt_x.shape[1] if data else 30
-    return Net(vocab, glob_f, opt_f).to(DEVICE)
+    return Net(vocab, glob_f, opt_f, dims).to(DEVICE)
 
 
 def export(net: Net, path: str, meta: dict | None = None) -> None:
@@ -182,7 +186,7 @@ def export(net: Net, path: str, meta: dict | None = None) -> None:
     }
     out = {
         "cards": card_keys(),
-        "dims": {"E": E, "SH": SH, "BAGD": BAGD, "H": H, "OH": OH, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f},
+        "dims": {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f},
         "tensors": {
             k: {"shape": list(v.shape), "data": base64.b64encode(np.ascontiguousarray(v, dtype="<f4").tobytes()).decode()}
             for k, v in names.items()
@@ -199,7 +203,7 @@ def import_json(path: str) -> Net:
     with open(path) as f:
         j = json.load(f)
     t = {k: torch.from_numpy(np.frombuffer(base64.b64decode(v["data"]), dtype="<f4").reshape(v["shape"]).copy()) for k, v in j["tensors"].items()}
-    net = Net(len(j["cards"]) + 1, j["dims"]["GLOB_F"], j["dims"]["OPT_F"])
+    net = Net(len(j["cards"]) + 1, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], {k: j["dims"][k] for k in ("E", "SH", "BAGD", "H", "OH")})
     sd = {
         "emb.weight": t["emb"],
         "slot1.weight": t["slot1.w"], "slot1.bias": t["slot1.b"],
