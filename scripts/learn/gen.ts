@@ -35,7 +35,32 @@ export interface GenConfig {
   base: number;
   threads?: number;
   players: Record<string, PlayerSpec>;
-  pairs: { a: string; b: string; share: number }[];
+  pairs: Pairing[];
+}
+
+/**
+ * Who plays whom, and the share of the games. By default every deck pair comes up equally often and the
+ * swapped game swaps decks too; with `decksA` / `decksB` (deck slug -> weight) player a always plays a deck
+ * from its list and b from its own, in both seats (training one deck: the meta's first).
+ */
+export interface Pairing {
+  a: string;
+  b: string;
+  share: number;
+  decksA?: Record<string, number>;
+  decksB?: Record<string, number>;
+}
+
+/** Deck slugs repeated by weight (about 100 entries), so cycling through them follows the weights. */
+function weighted(w: Record<string, number> | undefined): string[] {
+  if (!w) return SLUGS;
+  const total = Object.values(w).reduce((t, x) => t + x, 0);
+  const out: string[] = [];
+  for (const [slug, x] of Object.entries(w)) {
+    if (!SLUGS.includes(slug)) throw new Error(`unknown deck ${slug}`);
+    for (let i = 0; i < Math.round((100 * x) / total); i++) out.push(slug);
+  }
+  return out;
 }
 
 interface Match {
@@ -126,13 +151,19 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs'>): Matc
   for (const pair of c.pairs) {
     // A player against itself needs no seat swap (the swapped game would be the same game).
     const mirror = pair.a === pair.b;
+    const fixed = !!(pair.decksA || pair.decksB);
+    const da = weighted(pair.decksA);
+    const db = weighted(pair.decksB);
     const n = Math.round((c.games * pair.share) / total / (mirror ? 1 : 2));
+    // Weighted lists are drawn by a hash of the game number (every combination, in proportion); the default
+    // walks every deck pair in turn.
+    const draw = (list: string[], salt: number) => list[((Math.imul(k + 1, 0x9e3779b1) ^ salt) >>> 0) % list.length]!;
     for (let i = 0; i < n; i++, k++) {
-      const x = SLUGS[k % SLUGS.length]!;
-      const y = SLUGS[Math.floor(k / SLUGS.length) % SLUGS.length]!;
+      const x = fixed ? draw(da, 0x5bd1e995) : da[k % da.length]!;
+      const y = fixed ? draw(db, 0x1b873593) : db[Math.floor(k / da.length) % db.length]!;
       const seed = c.base + k;
       out.push({ id: out.length, seed, decks: [x, y], names: [pair.a, pair.b] });
-      if (!mirror) out.push({ id: out.length, seed, decks: [x, y], names: [pair.b, pair.a] });
+      if (!mirror) out.push({ id: out.length, seed, decks: fixed ? [y, x] : [x, y], names: [pair.b, pair.a] });
     }
   }
   return out;

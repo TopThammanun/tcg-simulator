@@ -30,6 +30,15 @@ def spec(s: str) -> dict:
     raise SystemExit(f"unknown bot {s}")
 
 
+def decks(a) -> dict:
+    """decksA / decksB for gen.ts from --a-decks / --b-decks ("dragapult-ex" or "player=0.4,slowking=0.6")."""
+    out = {}
+    for side, text in (("decksA", a.a_decks), ("decksB", a.b_decks)):
+        if text:
+            out[side] = {k: float(v) if v else 1.0 for k, _, v in (x.partition("=") for x in text.split(","))}
+    return out
+
+
 def wilson(score: float, n: int, z: float = 1.96) -> tuple[float, float]:
     p = score / n
     d = 1 + z * z / n
@@ -46,6 +55,8 @@ def main():
     ap.add_argument("--base", type=int, default=70_000_000)
     ap.add_argument("--threads", type=int, default=15)
     ap.add_argument("--by-deck", action="store_true", help="also print A's score per deck pair")
+    ap.add_argument("--a-decks", default="", help="A plays only these decks: slug or slug=weight,...")
+    ap.add_argument("--b-decks", default="", help="B plays only these decks (same form)")
     a = ap.parse_args()
     cfg = {
         "out": os.path.join(ROOT, ".cache", "learn", "match"),
@@ -53,7 +64,7 @@ def main():
         "base": a.base,
         "threads": a.threads,
         "players": {"A": spec(a.a), "B": spec(a.b)},
-        "pairs": [{"a": "A", "b": "B", "share": 1}],
+        "pairs": [{"a": "A", "b": "B", "share": 1, **decks(a)}],
     }
     r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", "match.json"))
     sc = r["scores"]["A vs B"]

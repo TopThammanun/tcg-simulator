@@ -22,7 +22,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from common import DEVICE, Data, export, import_json, run_gen
+from common import DEVICE, ROOT, Data, export, import_json, run_gen
 
 import glob as globmod
 
@@ -115,6 +115,8 @@ def main():
     ap.add_argument("--mix", default="self:0.5,old:0.15,normal:0.1,hard:0.25")
     ap.add_argument("--frozen", help="a fixed network to play as 'frozen' in --mix (best move, no sampling): train an exploiter against it")
     ap.add_argument("--eval-vs", default="hard", choices=["hard", "frozen"], help="who the greedy network is measured against")
+    ap.add_argument("--focus", help="the network always plays this deck (a specialist), e.g. dragapult-ex")
+    ap.add_argument("--vs-weights", default="", help="with --focus: extra weight on some opponent decks, e.g. player=0.4 (the rest spread evenly)")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=480)
     a = ap.parse_args()
@@ -144,6 +146,13 @@ def main():
         for g in opt.param_groups:
             g["lr"] = a.lr
     mix = {k: float(v) for k, v in (x.split(":") for x in a.mix.split(","))}
+    focus = {}
+    if a.focus:
+        decks = sorted(os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "src", "content", "decks")) if f.endswith(".md"))
+        extra = {k: float(v) for k, v in (x.split("=") for x in a.vs_weights.split(",") if x)}
+        rest = (1 - sum(extra.values())) / len(decks)
+        focus = {"decksA": {a.focus: 1}, "decksB": {d: rest + extra.get(d, 0) for d in decks}}
+        print(f"specialist: plays {a.focus} against {focus['decksB']}", flush=True)
     log = open(os.path.join(a.dir, "log.jsonl"), "a")
 
     for _ in range(a.iters):
@@ -158,7 +167,7 @@ def main():
         }
         if a.frozen:
             players["frozen"] = {"kind": "net", "weights": a.frozen, "temperature": 0}
-        pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v} for k, v in mix.items() if v > 0]
+        pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v, **focus} for k, v in mix.items() if v > 0]
         out = os.path.join(a.dir, "games")
         shutil.rmtree(out, ignore_errors=True)
         cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs}
@@ -193,7 +202,7 @@ def main():
                     "hard": {"kind": "hard"},
                     **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
                 },
-                "pairs": [{"a": "net", "b": a.eval_vs, "share": 1}],
+                "pairs": [{"a": "net", "b": a.eval_vs, "share": 1, **({"decksA": {a.focus: 1}} if a.focus else {})}],
             }
             er = run_gen(ecfg, os.path.join(a.dir, "eval.json"))
             sc = er["scores"][f"net vs {a.eval_vs}"]
