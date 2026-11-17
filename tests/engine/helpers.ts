@@ -73,6 +73,7 @@ export function scenario(spec: {
     koThisTurn: false,
     koByAttackThisTurn: false,
     mulligans: 0,
+    knownTop: [],
   });
   const players: [PlayerState, PlayerState] = [side(spec.p0, 0), side(spec.p1, 1)];
   const stadium = spec.stadium ? { card: make(spec.stadium.card, spec.stadium.owner), owner: spec.stadium.owner } : null;

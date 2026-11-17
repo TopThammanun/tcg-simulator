@@ -20,7 +20,7 @@ import {
   trimBenches,
   usableAttacks,
 } from './rules';
-import { cloneState, keyOf, mustSlot, newState, opp, slotsOf, topDef } from './state';
+import { cloneState, keyOf, knownTopCards, mustSlot, newState, opp, slotsOf, topDef } from './state';
 import type { Action, CardId, DeckSpec, GameState, PlayerId, Rules, Slot } from './types';
 
 export function createGame(opts: {
@@ -199,7 +199,9 @@ function execute(ctx: Ctx, action: Action): void {
       ps.namedUsed.push('Academy at Night');
       const [c] = ctx.pickCards(p, ps.hand, { purpose: 'discard', prompt: 'Academy at Night: วางการ์ดจากมือไว้บนเด็ค', source: 'academy-at-night' });
       ctx.take(p, c!);
+      const known = knownTopCards(ps);
       ps.deck.unshift(c!);
+      ps.knownTop = [c!, ...known];
       ctx.log(`${ctx.who(p)} วางการ์ด 1 ใบไว้บนเด็ค`, p);
       break;
     }

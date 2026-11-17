@@ -45,6 +45,7 @@ def main():
     ap.add_argument("--games", type=int, default=960)
     ap.add_argument("--base", type=int, default=70_000_000)
     ap.add_argument("--threads", type=int, default=15)
+    ap.add_argument("--by-deck", action="store_true", help="also print A's score per deck pair")
     a = ap.parse_args()
     cfg = {
         "out": os.path.join(ROOT, ".cache", "learn", "match"),
@@ -59,6 +60,19 @@ def main():
     lo, hi = wilson(sc["score"], sc["n"])
     print(f"{a.a} vs {a.b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}); "
           f"slowest decision A {r['maxThinkMs'].get('A', 0):.0f} ms, B {r['maxThinkMs'].get('B', 0):.0f} ms; {r['seconds']:.0f}s")
+    if a.by_deck:
+        # A's score by its deck (rows) against B's deck, then by A's deck overall.
+        own = {}
+        for key, v in sorted(r.get("byDeck", {}).items()):
+            if not key.startswith("A "):
+                continue
+            deck = key[2:].split(" vs ")[0]
+            o = own.setdefault(deck, [0.0, 0])
+            o[0] += v["score"]
+            o[1] += v["n"]
+            print(f"  {key[2:]:<50} {v['score']:>6}/{v['n']:<4} {v['score'] / v['n'] * 100:5.1f}%")
+        for deck, (sc_, n) in sorted(own.items(), key=lambda x: x[1][0] / x[1][1]):
+            print(f"  A playing {deck:<28} {sc_ / n * 100:5.1f}% of {n}")
 
 
 if __name__ == "__main__":

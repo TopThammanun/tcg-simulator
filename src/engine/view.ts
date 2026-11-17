@@ -1,7 +1,7 @@
 // What a player is allowed to know. The UI renders viewFor(); bots plan on determinize(), which
 // re-deals every card the player can't see (and reseeds the RNG), so look-ahead can't peek.
 import { derive, shuffleInPlace } from './rng';
-import { cloneState, opp } from './state';
+import { cloneState, knownTopCards, opp } from './state';
 import type { CardId, GameState, PlayerId } from './types';
 
 export const HIDDEN = -1;
@@ -14,7 +14,10 @@ export function viewFor(s: GameState, viewer: PlayerId): GameState {
     const ps = v.players[p];
     ps.deck = hide(ps.deck);
     ps.prizes = hide(ps.prizes);
-    if (p !== viewer) ps.hand = hide(ps.hand);
+    if (p !== viewer) {
+      ps.hand = hide(ps.hand);
+      ps.knownTop = [];
+    }
     // Setup Pokémon are placed face down until both players are done.
     if (p !== viewer && v.phase === 'setup') {
       ps.active = null;
@@ -29,7 +32,8 @@ export function viewFor(s: GameState, viewer: PlayerId): GameState {
 
 /**
  * A full game state consistent with what `viewer` knows: viewer's deck and prizes are re-shuffled
- * together, the opponent's hand, deck and prizes are re-dealt, and coin flips/shuffles are reseeded.
+ * together (except the cards the viewer knows are on top of the deck, which stay there), the opponent's
+ * hand, deck and prizes are re-dealt, and coin flips/shuffles are reseeded.
  * Two states that differ only in where the hidden cards are give the same result for the same seed.
  */
 export function determinize(s: GameState, viewer: PlayerId, seed: number): GameState {
@@ -45,8 +49,13 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
   };
   const me = d.players[viewer];
   const them = d.players[opp(viewer)];
-  redeal([me.deck, me.prizes]);
+  const known = knownTopCards(me);
+  const rest = me.deck.slice(known.length);
+  redeal([rest, me.prizes]);
+  me.deck = [...known, ...rest];
+  me.knownTop = known;
   redeal([them.hand, them.deck, them.prizes]);
+  them.knownTop = [];
   d.rng = { shuffle: [derive(seed, 11), derive(seed, 12)], coin: derive(seed, 13) };
   d.quiet = true;
   return d;

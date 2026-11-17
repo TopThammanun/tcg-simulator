@@ -74,7 +74,16 @@ function emptyPlayer(deck: CardId[]): PlayerState {
     koThisTurn: false,
     koByAttackThisTurn: false,
     mulligans: 0,
+    knownTop: [],
   };
+}
+
+/** The cards on top of this player's deck that the player knows, top first (what is still valid of `knownTop`). */
+export function knownTopCards(ps: PlayerState): CardId[] {
+  const inDeck = ps.knownTop.filter((c) => ps.deck.includes(c));
+  let n = 0;
+  while (n < inDeck.length && ps.deck[n] === inDeck[n]) n++;
+  return inDeck.slice(0, n);
 }
 
 /** A new game before setup; pass it to apply(state, { t: 'setup' }) (see createGame in actions.ts). */
@@ -138,6 +147,7 @@ function clonePlayer(ps: PlayerState): PlayerState {
     bench: ps.bench.map(cloneSlot),
     namedUsed: ps.namedUsed.slice(),
     buffs: ps.buffs.slice(),
+    knownTop: ps.knownTop.slice(),
   };
 }
 

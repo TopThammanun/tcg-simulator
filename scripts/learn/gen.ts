@@ -160,7 +160,14 @@ if (!isMainThread) {
 }
 
 /** Run a config on worker threads; returns games, rows written and each pairing's score. */
-export async function generate(c: GenConfig): Promise<{ games: number; rows: number; scores: Record<string, { score: number; n: number }>; maxThinkMs: Record<string, number> }> {
+export async function generate(c: GenConfig): Promise<{
+  games: number;
+  rows: number;
+  scores: Record<string, { score: number; n: number }>;
+  /** The same per deck: "<player> <its deck> vs <other deck>". */
+  byDeck: Record<string, { score: number; n: number }>;
+  maxThinkMs: Record<string, number>;
+}> {
   if (!existsSync(c.out)) mkdirSync(c.out, { recursive: true });
   const matches = matchesFor(c);
   const threads = Math.max(1, Math.min(c.threads ?? cpus().length - 1, matches.length));
@@ -172,15 +179,21 @@ export async function generate(c: GenConfig): Promise<{ games: number; rows: num
   }));
   const parts = await Promise.all(jobs.map((j) => runTsWorker<JobResult>(new URL(import.meta.url), j)));
   const scores: Record<string, { score: number; n: number }> = {};
+  const byDeck: Record<string, { score: number; n: number }> = {};
   const maxThinkMs: Record<string, number> = {};
   for (const r of parts.flatMap((p) => p.results)) {
     for (const i of [0, 1] as const) {
-      const key = `${r.names[i]} vs ${r.names[1 - i]}`;
-      const sc = (scores[key] ??= { score: 0, n: 0 });
-      sc.n++;
-      sc.score += r.winner === i ? 1 : r.winner === 'draw' || r.winner === null ? 0.5 : 0;
+      const points = r.winner === i ? 1 : r.winner === 'draw' || r.winner === null ? 0.5 : 0;
+      for (const [table, key] of [
+        [scores, `${r.names[i]} vs ${r.names[1 - i]}`],
+        [byDeck, `${r.names[i]} ${r.decks[i]} vs ${r.decks[1 - i]}`],
+      ] as const) {
+        const sc = (table[key] ??= { score: 0, n: 0 });
+        sc.n++;
+        sc.score += points;
+      }
       maxThinkMs[r.names[i]] = Math.max(maxThinkMs[r.names[i]] ?? 0, r.maxThinkMs[i]);
     }
   }
-  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, maxThinkMs };
+  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, byDeck, maxThinkMs };
 }

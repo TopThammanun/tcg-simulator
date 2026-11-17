@@ -58,6 +58,11 @@ export interface PlayerState {
   koThisTurn: boolean;
   koByAttackThisTurn: boolean;
   mulligans: number;
+  /**
+   * Cards this player put on top of their own deck in a known order, top first (Ciphermaniac's Codebreaking,
+   * Academy at Night). Only the part still on top counts (knownTopCards() in state.ts); a shuffle clears it.
+   */
+  knownTop: CardId[];
 }
 
 export interface Rules {

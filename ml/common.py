@@ -20,7 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Must match src/bots/learn/encode.ts and model.ts (checked against the shard shapes and by tests).
-SLOTS, SLOT_F, BAGS = 18, 44, 6
+SLOTS, SLOT_F, BAGS = 18, 44, 8
 E, SH, BAGD, H, OH = 16, 64, 16, 256, 128
 
 
@@ -199,10 +199,27 @@ def export(net: Net, path: str, meta: dict | None = None) -> None:
     os.replace(tmp, path)
 
 
+def upgrade_bags(t: dict, sh: int) -> dict:
+    """A network saved with fewer bags gets the new ones with zero weights, so it computes exactly what it did."""
+    old = t["bag.w"].shape[0]
+    if old >= BAGS:
+        return t
+    bagd = t["bag.w"].shape[2]
+    t = dict(t)
+    t["bag.w"] = torch.cat([t["bag.w"], torch.zeros(BAGS - old, t["bag.w"].shape[1], bagd)])
+    t["bag.b"] = torch.cat([t["bag.b"], torch.zeros((BAGS - old) * bagd)])
+    # trunk1 input: [6 pooled tokens (6*SH), bags (old*BAGD), globals, source]; new bag columns go after the old ones.
+    w = t["trunk1.w"]
+    at = 6 * sh + old * bagd
+    t["trunk1.w"] = torch.cat([w[:, :at], torch.zeros(w.shape[0], (BAGS - old) * bagd), w[:, at:]], 1)
+    return t
+
+
 def import_json(path: str) -> Net:
     with open(path) as f:
         j = json.load(f)
     t = {k: torch.from_numpy(np.frombuffer(base64.b64decode(v["data"]), dtype="<f4").reshape(v["shape"]).copy()) for k, v in j["tensors"].items()}
+    t = upgrade_bags(t, j["dims"]["SH"] if "SH" in j["dims"] else SH)
     net = Net(len(j["cards"]) + 1, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], {k: j["dims"][k] for k in ("E", "SH", "BAGD", "H", "OH")})
     sd = {
         "emb.weight": t["emb"],

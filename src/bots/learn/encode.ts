@@ -8,7 +8,7 @@ import { legalActions } from '../../engine/actions';
 import { applyWR } from '../../engine/combat';
 import { CARDS, def, hasRuleBox } from '../../engine/db';
 import { attackCost, benchLimit, canPay, energyOf, hpLeft, maxHp, retreatCost } from '../../engine/rules';
-import { findSlot, keyOf, opp, topDef, topKey } from '../../engine/state';
+import { findSlot, keyOf, knownTopCards, opp, topDef, topKey } from '../../engine/state';
 import type { Action, ChoiceRequest, GameState, PlayerId, Purpose, Slot } from '../../engine/types';
 import { missingFor, roughDamage } from '../knowledge';
 
@@ -57,8 +57,11 @@ type Kind = (typeof KINDS)[number];
 export const SLOTS = 18;
 /** Numbers per Pokémon token. */
 export const SLOT_F = 44;
-/** Bags: my hand, my deck + Prizes, my discard, their hand + deck + Prizes, their discard, the Stadium. */
-export const BAGS = 6;
+/**
+ * Bags: my hand, my deck + Prizes, my discard, their hand + deck + Prizes, their discard, the Stadium, the
+ * card I know is on top of my deck, the other cards I know are below it (Ciphermaniac's, Academy at Night).
+ */
+export const BAGS = 8;
 /** Numbers for the whole position. */
 export const GLOB_F = 2 + 2 * 19 + 2 * DECK_NAMES.length + PURPOSES.length + 7;
 /** Numbers per option. */
@@ -231,6 +234,9 @@ export function encode(s: GameState, ctx: EncodeContext, picked: number[] = []):
   bag(3, [...theirs.hand, ...theirs.deck, ...theirs.prizes]);
   bag(4, theirs.discard);
   if (s.stadium) bag(5, [s.stadium.card]);
+  const known = knownTopCards(mine);
+  if (known.length) bag(6, [known[0]!]);
+  if (known.length > 1) bag(7, known.slice(1));
 
   const g: number[] = [clamp(s.turn / 30, 2), s.current === me ? 1 : 0];
   playerRow(s, me, g);

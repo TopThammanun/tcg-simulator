@@ -295,6 +295,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       for (const c of order) ctx.take(p, c);
       ctx.shuffle(p);
       ctx.ps(p).deck.unshift(...order);
+      ctx.ps(p).knownTop = order.slice();
     },
   },
   'janines-secret-art': {

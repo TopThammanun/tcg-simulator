@@ -156,6 +156,7 @@ export class Ctx {
 
   shuffle(p: PlayerId): void {
     this.s.rng.shuffle[p] = shuffleInPlace(this.ps(p).deck, this.s.rng.shuffle[p]);
+    this.ps(p).knownTop = [];
   }
 
   // ---------- zones (deck index 0 is the top) ----------
