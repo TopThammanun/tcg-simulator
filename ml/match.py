@@ -4,7 +4,8 @@
     ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b net:src/bots/learn/weights.json
 
 Bots: normal, hard, net:<weights> (no look-ahead), search:<weights>[:width:samples:horizon] (look-ahead with the
-attack planner's line among the options, as the game uses it), search-np:<weights> (look-ahead on policy options only).
+attack planner's line among the options, as the game uses it), search-np:<weights> (look-ahead on policy options only),
+search-ng:<weights> (planner's first step only, without the sure-line checks: the bot of round 2).
 """
 import argparse
 import math
@@ -19,9 +20,9 @@ def spec(s: str) -> dict:
         return {"kind": kind}
     if kind == "net":
         return {"kind": "net", "weights": rest[0], "temperature": 0}
-    if kind in ("search", "search-np"):
+    if kind in ("search", "search-np", "search-ng"):
         parts = rest[0].rsplit(":", 3) if rest[0].count(":") >= 3 else [rest[0]]
-        out = {"kind": "search", "weights": parts[0], "tactics": kind == "search"}
+        out = {"kind": "search", "weights": parts[0], "tactics": kind != "search-np", "guards": kind == "search"}
         if len(parts) == 4:
             out.update(width=int(parts[1]), samples=int(parts[2]), horizon=parts[3])
         return out

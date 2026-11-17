@@ -27,7 +27,7 @@ export type PlayerSpec =
   | { kind: 'hard'; record?: boolean }
   | { kind: 'normal'; record?: boolean }
   | { kind: 'net'; weights: string; temperature?: number; record?: boolean }
-  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan'>);
+  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan'>);
 
 export interface GenConfig {
   out: string;

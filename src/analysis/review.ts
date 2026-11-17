@@ -10,9 +10,8 @@
 import { actor, apply } from '../engine/actions';
 import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
-import { determinize } from '../engine/view';
 import { choosePicks } from '../bots/choose';
-import { planFinish, runStep, type Step } from '../bots/finisher';
+import { sureLine as sureLineFor, type Step } from '../bots/finisher';
 import { createBot } from '../bots/index';
 import { describeAction } from '../ui/play';
 import { isFree, type TurnSpan } from '../review/record';
@@ -69,8 +68,6 @@ export interface ReviewOptions {
 /** Smallest win% gain, and how many standard errors, for "น่าจะดีกว่า". */
 export const BETTER_BY = 0.08;
 export const BETTER_SE = 2.5;
-/** The attack planner searches with these seeds (several, as its search is cut short), the same for every review. */
-const SEARCH_SEEDS = [1, 2, 3];
 /** The bot's seed for the suggested turn (plus the turn number). */
 const ALT_SEED = 7331;
 
@@ -81,35 +78,9 @@ function labels(states: GameState[], actions: Action[], from: number, to: number
   return out;
 }
 
-/**
- * The attack planner's best line from `s` checked on `checks` re-deals of what `me` can't see: the Prizes
- * it takes on all of them (the least), and whether it wins on all of them. The search and the re-deals use
- * fixed seeds, so the same position always gets the same answer.
- */
+/** The attack planner's surest line (finisher.ts sureLine), for your deck. */
 export function sureLine(s: GameState, me: PlayerId, plans: Plans, checks: number): { prizes: number; wins: boolean; steps: Step[] } {
-  let best: { prizes: number; wins: boolean; steps: Step[] } = { prizes: 0, wins: false, steps: [] };
-  for (const seed of SEARCH_SEEDS) {
-    const fin = planFinish(s, me, plans.mine, seed);
-    if (!fin.steps.length) continue;
-    let prizes = Infinity;
-    let wins = true;
-    try {
-      for (let k = 0; k < checks; k++) {
-        let st = determinize(s, me, 7919 * (k + 1));
-        for (const step of fin.steps) {
-          if (st.winner !== null || st.current !== me || st.pending) break;
-          st = runStep(st, step, plans.mine);
-        }
-        prizes = Math.min(prizes, s.players[me].prizes.length - st.players[me].prizes.length);
-        if (st.winner !== me) wins = false;
-      }
-    } catch {
-      continue;
-    }
-    if (prizes === Infinity) continue;
-    if (Number(wins) > Number(best.wins) || (wins === best.wins && prizes > best.prizes)) best = { prizes, wins, steps: fin.steps };
-  }
-  return best;
+  return sureLineFor(s, me, plans.mine, checks);
 }
 
 /**

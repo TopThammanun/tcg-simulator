@@ -220,3 +220,37 @@ function minMissing(s: GameState, sl: Slot, have: ReturnType<typeof energyOf>): 
   return Math.min(...topDef(s, sl).attacks.map((a) => missingFor(have, a.cost)));
 }
 
+/** The planner searches with these seeds (several, as its search is cut short); fixed, so a position always gets the same answer. */
+const SURE_SEEDS = [1, 2, 3];
+
+/**
+ * The attack planner's best line from `s` checked on `checks` re-deals of what `me` can't see: the Prizes
+ * it takes on all of them (the least), and whether it wins on all of them. The search and the re-deals use
+ * fixed seeds, so the same position always gets the same answer. (The review's "พลาดชัด" check, and the
+ * bot's last look before it ends a turn.)
+ */
+export function sureLine(s: GameState, me: PlayerId, plan: DeckPlan, checks: number): { prizes: number; wins: boolean; steps: Step[] } {
+  let best: { prizes: number; wins: boolean; steps: Step[] } = { prizes: 0, wins: false, steps: [] };
+  for (const seed of SURE_SEEDS) {
+    const fin = planFinish(s, me, plan, seed);
+    if (!fin.steps.length) continue;
+    let prizes = Infinity;
+    let wins = true;
+    try {
+      for (let k = 0; k < checks; k++) {
+        let st = determinize(s, me, 7919 * (k + 1));
+        for (const step of fin.steps) {
+          if (st.winner !== null || st.current !== me || st.pending) break;
+          st = runStep(st, step, plan);
+        }
+        prizes = Math.min(prizes, s.players[me].prizes.length - st.players[me].prizes.length);
+        if (st.winner !== me) wins = false;
+      }
+    } catch {
+      continue;
+    }
+    if (prizes === Infinity) continue;
+    if (Number(wins) > Number(best.wins) || (wins === best.wins && prizes > best.prizes)) best = { prizes, wins, steps: fin.steps };
+  }
+  return best;
+}
