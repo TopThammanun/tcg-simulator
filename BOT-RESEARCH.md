@@ -177,8 +177,9 @@ Dragapult 80.4% เทียบ 49.0% แปลว่าบอทเล่นบ
 | R5 | การ์ด 12 ใบที่ list จริงใช้บ่อยแต่ engine ยังไม่มี (`data/card-pool.txt`): Annihilape ×2, Dudunsparce ex, Enamorus, Passimian, Talonflame ex, Enhanced Hammer, Punk Helmet, N's Darumaka/Darmanitan, Forest of Vitality, Applin SCR | list จริงที่เล่นได้: Basic Box 33 → 480, Slowking 114 → 299, Dragapult 982 → 1,418 (`93364b2`) |
 | R6 | list ของบอท 6 เด็คเป็น list ที่ใกล้ค่าเฉลี่ยของอันดับต้นในทัวร์ล่าสุดที่สุด (`scripts/meta/pick-lists.ts`); Slowking มี Annihilape | ระยะห่าง 27.7 → 25.8 จุด; Festival (Seaking) −30.3 → −16.2; Slowking ยัง −37.6 (network รุ่น 1 มองไม่เห็นการ์ดใหม่) (`5396653`) |
 | R7 | network รุ่น 2: เลียนแบบบอทปัจจุบัน (รวม specialist) 12,000 เกมบน list จริง → ชนะบอทปัจจุบัน 48.1% ด้วย network เดียวทุกเด็ค; แล้ว PPO self-play (league: ตัวเอง 40%, รุ่นเก่า 15%, บอทปัจจุบัน 30%, hard 15%; list จริง 70%) | กำลังเทรน (600 รอบ) |
+| R8 | **รับ v2 รอบ 150 เข้าเกม** แทน network รุ่น 1 และ specialist ทั้ง 4 | ไม่คิดล่วงหน้า (รอบ 100): ชนะบอทเดิม 53.6% (51.4–55.8); **คิดล่วงหน้าทั้งสองฝั่ง: 53.8% (50.6–56.9)** (v2 เล่น Dragapult 73.4%, Alakazam 67.7%, Basic Box 54.8%, list คุณ 51.7%, Zoroark 43.1%, Slowking 25.0%); ระยะห่างจากผลจริง 25.8 → **23.1** (Festival −13/−16 → −4, Dragapult +33 → +23, Slowking ยัง −37); ไฟล์ worker 7.2 → 4.7 MB; ยังเทรนต่อ |
 
-เกณฑ์รับรุ่น 2 เข้าเกม: ชนะบอทปัจจุบัน (มี look-ahead ทั้งสองฝั่ง) อย่างมีนัยสำคัญ และระยะห่างจากผลจริงไม่มากขึ้น แล้วเลิกใช้ specialist
+เกณฑ์รับรุ่น 2 เข้าเกม: ชนะบอทปัจจุบัน (มี look-ahead ทั้งสองฝั่ง) อย่างมีนัยสำคัญ และระยะห่างจากผลจริงไม่มากขึ้น แล้วเลิกใช้ specialist (ผ่านที่รอบ 150: แถว R8)
 
 ยังไม่ได้ทำ: ตัวแปลง Battle Log ของ TCG Live (ต้องมี log ตัวอย่างจริงก่อน); ถ้ามี log เกมคนจริงเป็นร้อยเกม จะใช้เลียนแบบคนได้โดยตรง
 
