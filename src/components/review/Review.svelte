@@ -7,8 +7,8 @@
   import { reviewGame, type ReviewRun } from '../../analysis/review-remote';
   import { keyOf } from '../../engine/state';
   import type { GameState, PlayerId } from '../../engine/types';
-  import { replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
-  import { deleteGame, getGame, getReview, listGames, persistent, saveReview } from '../../review/store';
+  import { gamesFile, readGamesFile, replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
+  import { deleteGame, getGame, getReview, listGames, persistent, saveGame, saveReview } from '../../review/store';
   import Board from '../game/Board.svelte';
   import CardFace from '../game/CardFace.svelte';
   import CardInfo from '../game/CardInfo.svelte';
@@ -79,6 +79,33 @@
   }
   void load();
 
+  /** Every saved game as one file, to keep, move to another browser, or send for analysis. */
+  function exportGames() {
+    const blob = new Blob([JSON.stringify(gamesFile(games ?? []))], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tcg-sim-games-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  let note = $state('');
+  async function importGames(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const have = new Set((games ?? []).map((g) => `${g.seed}:${g.savedAt}`));
+      const fresh = readGamesFile(await file.text()).filter((g) => !have.has(`${g.seed}:${g.savedAt}`));
+      for (const g of fresh) await saveGame(g);
+      games = await listGames();
+      note = `นำเข้า ${fresh.length} เกม`;
+    } catch (err) {
+      note = (err as Error).message;
+    }
+  }
+
   async function remove(g: SavedGame) {
     await deleteGame(g.id!);
     games = (games ?? []).filter((x) => x.id !== g.id);
@@ -119,6 +146,11 @@
       </tbody>
     </table>
   {/if}
+  <p class="files">
+    {#if games?.length}<button type="button" onclick={exportGames}>ดาวน์โหลดทุกเกม (.json)</button>{/if}
+    <label class="import">นำเข้าเกมจากไฟล์<input type="file" accept=".json,application/json" onchange={importGames} /></label>
+    {#if note}<span class="muted">{note}</span>{/if}
+  </p>
   {#if !persistent}<p class="muted">เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า</p>{/if}
 {:else if game}
   <section class="head">
@@ -249,6 +281,27 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
+  }
+  .files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  .import {
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .import:focus-within {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .import input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
   }
   .link {
     border: 0;

@@ -5,7 +5,7 @@ import { makeBot } from '../../src/bots/core';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
 import { apply } from '../../src/engine/actions';
 import type { Action, GameState } from '../../src/engine/types';
-import { isFree, replay, turnsOf, type SavedGame } from '../../src/review/record';
+import { gamesFile, isFree, readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review/record';
 import { playGame } from '../../src/sim/game';
 import { deck, scenario } from '../engine/helpers';
 
@@ -98,6 +98,27 @@ describe('win% (winrate.ts)', () => {
 });
 
 describe('saved games (record.ts)', () => {
+  it('a games file round-trips and anything else is refused', () => {
+    const g: SavedGame = {
+      id: 7,
+      savedAt: 1,
+      seed: 3,
+      opponent: 'dragapult-ex',
+      opponentName: 'Dragapult ex',
+      rules: {},
+      policy: DEFAULT_POLICY,
+      decks: [deck('player').cards, deck('dragapult-ex').cards],
+      actions: [{ t: 'end' }],
+      winner: null,
+      reason: '',
+      turns: 1,
+    };
+    const back = readGamesFile(JSON.stringify(gamesFile([g])));
+    expect(back).toEqual([{ ...g, id: undefined }].map(({ id: _, ...x }) => x));
+    expect(() => readGamesFile('{"games": []}')).toThrow();
+    expect(() => readGamesFile(JSON.stringify({ ...gamesFile([g]), games: [{ seed: 'x' }] }))).toThrow();
+  });
+
   it('replays a game exactly and finds your turns in it', () => {
     const slug = 'dragapult-ex';
     const r = playGame({

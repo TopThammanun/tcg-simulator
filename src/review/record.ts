@@ -25,6 +25,31 @@ export interface SavedGame {
   turns: number;
 }
 
+/** A file of saved games (the review page's export; scripts/analyze-games.ts reads it). */
+export interface GamesFile {
+  format: 'tcg-sim-games';
+  version: 1;
+  exported: string;
+  games: SavedGame[];
+}
+
+export const gamesFile = (games: SavedGame[]): GamesFile => ({
+  format: 'tcg-sim-games',
+  version: 1,
+  exported: new Date().toISOString(),
+  games: games.map(({ id: _, ...g }) => g),
+});
+
+/** The games in a file made by gamesFile(); throws on anything else. */
+export function readGamesFile(text: string): SavedGame[] {
+  const f = JSON.parse(text) as Partial<GamesFile>;
+  if (f.format !== 'tcg-sim-games' || f.version !== 1 || !Array.isArray(f.games)) throw new Error('ไม่ใช่ไฟล์เกมของโปรแกรมนี้');
+  for (const g of f.games) {
+    if (typeof g.seed !== 'number' || !Array.isArray(g.actions) || !Array.isArray(g.decks)) throw new Error('ไฟล์เกมเสียหาย');
+  }
+  return f.games;
+}
+
 /** states[0] is the new game; states[i + 1] = apply(states[i], actions[i]). */
 export function replay(g: SavedGame): GameState[] {
   const states = [

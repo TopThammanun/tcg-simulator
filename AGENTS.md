@@ -26,6 +26,7 @@ npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/p
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
 npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
 npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to real players' -> data/meta/compare.md
+npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
 npx tsx scripts/review-gate.ts --games 330 --stability 160   # phase 8 gate: review win% vs results, same verdicts on another seed, time
@@ -79,7 +80,7 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   run on several workers by `review-remote.ts` / `review-worker.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions; `replay()`, `turnsOf()`), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
-  game; `/review/` (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
+  game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.
 - `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
