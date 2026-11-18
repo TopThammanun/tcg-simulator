@@ -4,6 +4,7 @@ side: bot
 rank: 5
 metaShare: 6.39
 archetypeUrl: https://limitlesstcg.com/decks/350
+limitless: alakazam-dudunsparce
 listUrl: https://limitlesstcg.com/decks/list/31085
 listSource: "Cho Tsun Leung — 9th Place Regional Gdańsk - 31st October 2026"
 ---

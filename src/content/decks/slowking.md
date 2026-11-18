@@ -4,6 +4,7 @@ side: bot
 rank: 3
 metaShare: 7.62
 archetypeUrl: https://limitlesstcg.com/decks/322
+limitless: slowking-scr
 listUrl: https://limitlesstcg.com/decks/list/30165
 listSource: "Aarni Karjala — 13th Place Regional Louisville, KY - 10th October 2026"
 ---

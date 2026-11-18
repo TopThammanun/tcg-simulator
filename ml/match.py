@@ -3,7 +3,8 @@
     ml/.venv/Scripts/python ml/match.py --a net:.cache/learn/bc.json --b hard --games 960
     ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b net:src/bots/learn/weights.json
 
-Bots: normal, hard, net:<weights> (no look-ahead), search:<weights>[:width:samples:horizon] (look-ahead with the
+Bots: normal, hard, bot / bot-search (the game's bot: bundled network and specialists, without / with look-ahead),
+net:<weights> (no look-ahead), search:<weights>[:width:samples:horizon] (look-ahead with the
 attack planner's line among the options, as the game uses it), search-np:<weights> (look-ahead on policy options only),
 search-ng:<weights> (planner's first step only, without the sure-line checks: the bot of round 2).
 """
@@ -18,6 +19,8 @@ def spec(s: str) -> dict:
     kind, *rest = s.split(":", 1)
     if kind in ("normal", "hard"):
         return {"kind": kind}
+    if kind in ("bot", "bot-search"):
+        return {"kind": "bot", "fast": kind == "bot"}
     if kind == "net":
         return {"kind": "net", "weights": rest[0], "temperature": 0}
     if kind in ("search", "search-np", "search-ng"):

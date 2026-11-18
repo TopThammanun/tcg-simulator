@@ -23,7 +23,9 @@ ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn
 ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn/ppo   # self-play PPO; resumes; log.jsonl
 ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats
 npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/parity.py <net.json> <dir>   # TS = PyTorch
-npx tsx scripts/show-game.ts <deckA> <deckB> [seed]   # read one bot game's log
+npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
+npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
+npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to real players' -> data/meta/compare.md
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
 npx tsx scripts/review-gate.ts --games 330 --stability 160   # phase 8 gate: review win% vs results, same verdicts on another seed, time
@@ -36,7 +38,10 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
 
 ## Layout
 
-- `src/content/decks/*.md` — decklists (Limitless export format) with frontmatter (`src/data/deck-meta.ts`)
+- `src/content/decks/*.md` — decklists (Limitless export format) with frontmatter (`src/data/deck-meta.ts`;
+  `limitless` = the archetype's id on play.limitlesstcg.com, for comparing with real results)
+- `data/meta/` — real tournament results (`scripts/meta/limitless.ts`) and how far the bots' matchups are from them
+  (`scripts/meta/compare.ts`, `compare.md`)
 - `src/data/` — plain TypeScript shared by scripts, pages and (later) the engine; no Astro imports
   except `astro/zod`
 - `scripts/` — Node build scripts run with `tsx`

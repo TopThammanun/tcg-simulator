@@ -4,6 +4,7 @@ side: bot
 rank: 6
 metaShare: 5.7
 archetypeUrl: https://limitlesstcg.com/decks/336
+limitless: festival-lead
 listUrl: https://limitlesstcg.com/decks/list/30813
 listSource: "Ciaran Farah — 29th Place Regional Puebla - 24th October 2026"
 optional: true

@@ -4,6 +4,7 @@ side: bot
 rank: 6
 metaShare: 5.7
 archetypeUrl: https://limitlesstcg.com/decks/336
+limitless: festival-lead
 listUrl: https://limitlesstcg.com/decks/list/30783
 listSource: "Cedrik B. — 1st Place Regional Nice (SR) - 17th October 2026"
 optional: true

@@ -8,6 +8,8 @@ export const deckMetaSchema = z
     rank: z.number().int().positive().optional(),
     metaShare: z.number().positive().optional(),
     archetypeUrl: z.url().optional(),
+    /** The archetype's id on play.limitlesstcg.com (data/meta/limitless.json): real results to compare with. */
+    limitless: z.string().optional(),
     listUrl: z.url().optional(),
     listSource: z.string(),
     optional: z.boolean().default(false),

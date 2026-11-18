@@ -4,6 +4,7 @@ side: bot
 rank: 2
 metaShare: 8.86
 archetypeUrl: https://limitlesstcg.com/decks/339
+limitless: basic-box-m
 listUrl: https://limitlesstcg.com/decks/list/31093
 listSource: "James Cox — 19th Place Regional Gdańsk - 31st October 2026"
 ---

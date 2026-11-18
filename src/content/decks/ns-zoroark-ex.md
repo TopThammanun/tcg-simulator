@@ -4,6 +4,7 @@ side: bot
 rank: 4
 metaShare: 7.29
 archetypeUrl: https://limitlesstcg.com/decks/320
+limitless: n-zoroark
 listUrl: https://limitlesstcg.com/decks/list/31102
 listSource: "Bartosz Skrobacki — 38th Place Regional Gdańsk - 31st October 2026"
 ---

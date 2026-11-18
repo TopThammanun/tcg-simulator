@@ -2,6 +2,7 @@
 name: "Mega Kangaskhan / Ogerpon / Raging Bolt"
 side: player
 archetypeUrl: https://limitlesstcg.com/decks/339
+limitless: basic-box-m
 listSource: "list ของคุณจาก PLAN.md (ภาคผนวก) ใกล้กับ archetype Basic Box"
 ---
 Pokémon: 20

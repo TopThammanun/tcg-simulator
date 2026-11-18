@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { makeBot } from '../../src/bots/core';
+import { createBot } from '../../src/bots';
 import { makeHardBot } from '../../src/bots/hard';
 import { loadModel, type Model, type ModelJson } from '../../src/bots/learn/model';
 import { makeNetBot, recordBot } from '../../src/bots/learn/netbot';
@@ -27,6 +28,8 @@ export type PlayerSpec =
   | { kind: 'hard'; record?: boolean }
   | { kind: 'normal'; record?: boolean }
   | { kind: 'net'; weights: string; temperature?: number; record?: boolean }
+  /** The game's bot (src/bots/index.ts createBot: bundled network and specialists); fast = without look-ahead. */
+  | { kind: 'bot'; fast?: boolean; record?: boolean }
   | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan'>);
 
 export interface GenConfig {
@@ -106,6 +109,7 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
   const decks = [plan.name, oppPlan.name] as const;
   const record = spec.record && out ? (d: Parameters<ShardWriter['add']>[0]) => out.add(d) : undefined;
   if (spec.kind === 'net') return makeNetBot(model(spec.weights), { decks, seed, temperature: spec.temperature ?? 0, onDecision: record });
+  if (spec.kind === 'bot') return createBot(plan, seed, oppPlan, { fast: spec.fast ?? true });
   const bot =
     spec.kind === 'search'
       ? makeSearchNetBot(model(spec.weights), { ...spec, decks, seed, plan: spec.tactics === false ? undefined : plan })

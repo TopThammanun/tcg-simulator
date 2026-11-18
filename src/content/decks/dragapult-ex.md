@@ -4,6 +4,7 @@ side: bot
 rank: 1
 metaShare: 36.5
 archetypeUrl: https://limitlesstcg.com/decks/284
+limitless: dragapult-ex
 listUrl: https://limitlesstcg.com/decks/list/29678
 listSource: "Demi Eaton — 104th Place Regional Frankfurt - 26th September 2026"
 ---
