@@ -5,7 +5,13 @@
 //   trunk:  [pools, bags·W, globals, source card] → Linear-ReLU-Linear-ReLU = h
 //   value:  h → 64 → 1 (chance that the acting player wins)
 //   policy: each option [card, token it points at, numbers] → 128; score = w·ReLU(Wq h + Wk o + b) + c
-import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
+// Version 2 (ModelJson.version = 2) changes only where card vectors come from: each card's vector is a learned
+// vector for the cards it was trained with (by key; others share an "unknown" one) plus a projection of its
+// printed features (card-features.ts), and each bag's weights per card are a projection of that vector. Both
+// are computed once at load for the cards the engine has now, so new cards and changed lists need no new
+// shapes. Its layer sizes come from the file, and it skips the deck-name globals.
+import { CARD_F, featureTable } from './card-features';
+import { BAGS, CARD_KEYS, DECK_NAMES, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
 
 export const E = 16;
 export const SH = 64;
@@ -15,9 +21,11 @@ export const OH = 128;
 export const TRUNK_IN = 6 * SH + BAGS * BAGD + GLOB_F + E;
 
 export interface ModelJson {
-  /** Card keys in embedding order (index + 1); must match CARD_KEYS. */
+  /** 2: card vectors from features (above); absent: version 1. */
+  version?: 2;
+  /** Version 1: card keys in embedding order (index + 1), must match CARD_KEYS. Version 2: the keys of id.emb rows 2+ (row 0 = no card, 1 = unknown). */
   cards: string[];
-  dims: { E: number; SH: number; BAGD: number; H: number; OH: number; SLOT_F: number; GLOB_F: number; OPT_F: number };
+  dims: { E: number; SH: number; BAGD: number; H: number; OH: number; SLOT_F: number; GLOB_F: number; OPT_F: number; CARD_F?: number };
   tensors: Record<string, { shape: number[]; data: string }>;
   /** Free-form training notes (generation, games…). */
   meta?: Record<string, unknown>;
@@ -26,6 +34,46 @@ export interface ModelJson {
 export interface Model {
   t: Record<string, Float32Array>;
   meta: Record<string, unknown>;
+  dims: { E: number; SH: number; BAGD: number; H: number; OH: number };
+  /** Globals the trunk reads (version 2 leaves the deck names out); null = all. */
+  glob: Int32Array | null;
+}
+
+/** Version 2 drops the deck-name block of the globals (encode.ts: 2 + 2 × 19 numbers come before it). */
+export const DECK_GLOB_AT = 2 + 2 * 19;
+export const GLOB_KEEP = Int32Array.from({ length: GLOB_F }, (_, i) => i).filter((i) => i < DECK_GLOB_AT || i >= DECK_GLOB_AT + 2 * DECK_NAMES.length);
+
+const V1_DIMS = { E, SH, BAGD, H, OH };
+
+/** Version 2 tensor shapes for given sizes and number of trained card ids. */
+export function v2Shapes(d: Model['dims'], ids: number): Record<string, number[]> {
+  const trunkIn = 6 * d.SH + BAGS * d.BAGD + GLOB_KEEP.length + d.E;
+  return {
+    'id.emb': [ids + 2, d.E],
+    'feat.w': [d.E, CARD_F],
+    'feat.b': [d.E],
+    'bag.p': [BAGS, d.BAGD, d.E],
+    'bag.b': [BAGS * d.BAGD],
+    'slot1.w': [d.SH, 2 * d.E + SLOT_F],
+    'slot1.b': [d.SH],
+    'slot2.w': [d.SH, d.SH],
+    'slot2.b': [d.SH],
+    'trunk1.w': [d.H, trunkIn],
+    'trunk1.b': [d.H],
+    'trunk2.w': [d.H, d.H],
+    'trunk2.b': [d.H],
+    'value1.w': [64, d.H],
+    'value1.b': [64],
+    'value2.w': [1, 64],
+    'value2.b': [1],
+    'opt1.w': [d.OH, d.E + d.SH + OPT_F],
+    'opt1.b': [d.OH],
+    'q.w': [d.OH, d.H],
+    'k.w': [d.OH, d.OH],
+    'att.b': [d.OH],
+    'score.w': [1, d.OH],
+    'score.b': [1],
+  };
 }
 
 const NAMES: Record<string, number[]> = {
@@ -61,6 +109,7 @@ function decode(b64: string): Float32Array {
 }
 
 export function loadModel(j: ModelJson): Model {
+  if (j.version === 2) return loadV2(j);
   const t: Record<string, Float32Array> = {};
   for (const [name, shape] of Object.entries(NAMES)) {
     const src = j.tensors[name];
@@ -68,7 +117,53 @@ export function loadModel(j: ModelJson): Model {
     if (src.shape.join() !== shape.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${shape}`);
     t[name] = decode(src.data);
   }
-  return { t, meta: j.meta ?? {} };
+  return { t, meta: j.meta ?? {}, dims: V1_DIMS, glob: null };
+}
+
+function loadV2(j: ModelJson): Model {
+  const d = { E: j.dims.E, SH: j.dims.SH, BAGD: j.dims.BAGD, H: j.dims.H, OH: j.dims.OH };
+  if (j.dims.CARD_F !== CARD_F) throw new Error(`card features: model ${j.dims.CARD_F} ≠ ${CARD_F}`);
+  const t: Record<string, Float32Array> = {};
+  for (const [name, shape] of Object.entries(v2Shapes(d, j.cards.length))) {
+    const src = j.tensors[name];
+    if (!src) throw new Error(`model is missing ${name}`);
+    if (src.shape.join() !== shape.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${shape}`);
+    t[name] = decode(src.data);
+  }
+  return { t: { ...t, ...cardTables(t, d, j.cards) }, meta: j.meta ?? {}, dims: d, glob: GLOB_KEEP };
+}
+
+/**
+ * The per-card tables run() reads (emb: VOCAB × E, bag.w: BAGS × VOCAB × BAGD) for the cards the engine has
+ * now: vector = id.emb[its row, or "unknown"] + feat.w · features + feat.b; bag weights = bag.p[b] · vector.
+ */
+export function cardTables(t: Record<string, Float32Array>, d: Model['dims'], trained: readonly string[]): { emb: Float32Array; 'bag.w': Float32Array } {
+  const row = new Map(trained.map((k, i) => [k, i + 2]));
+  const feats = featureTable(CARD_KEYS);
+  const emb = new Float32Array(VOCAB * d.E);
+  const fw = t['feat.w']!;
+  const fb = t['feat.b']!;
+  const ids = t['id.emb']!;
+  for (let v = 0; v < VOCAB; v++) {
+    const id = v === 0 ? 0 : (row.get(CARD_KEYS[v - 1]!) ?? 1);
+    for (let e = 0; e < d.E; e++) {
+      let x = ids[id * d.E + e]! + fb[e]!;
+      for (let f = 0; f < CARD_F; f++) x += fw[e * CARD_F + f]! * feats[v * CARD_F + f]!;
+      emb[v * d.E + e] = x;
+    }
+  }
+  const bw = new Float32Array(BAGS * VOCAB * d.BAGD);
+  const bp = t['bag.p']!;
+  for (let b = 0; b < BAGS; b++) {
+    for (let v = 0; v < VOCAB; v++) {
+      for (let k = 0; k < d.BAGD; k++) {
+        let x = 0;
+        for (let e = 0; e < d.E; e++) x += bp[(b * d.BAGD + k) * d.E + e]! * emb[v * d.E + e]!;
+        bw[(b * VOCAB + v) * d.BAGD + k] = x;
+      }
+    }
+  }
+  return { emb, 'bag.w': bw };
 }
 
 /** A network with random weights (tests and benchmarks; not a player). */
@@ -87,7 +182,7 @@ export function randomModel(seed = 1): Model {
     const fanIn = shape.length > 1 ? shape[shape.length - 1]! : 1;
     t[name] = Float32Array.from({ length: n }, () => (name.endsWith('.b') ? 0 : (r() * 2 - 1) * Math.sqrt(3 / fanIn)));
   }
-  return { t, meta: {} };
+  return { t, meta: {}, dims: V1_DIMS, glob: null };
 }
 
 /** y = W x + b (W is out × in, row-major), optionally ReLU. */
@@ -112,6 +207,10 @@ export interface Output {
 export function run(m: Model, x: Encoded, policy = true): Output {
   const t = m.t;
   const emb = t.emb!;
+  // The model's own sizes (version 2 files carry theirs).
+  const { E, SH, BAGD, H, OH } = m.dims;
+  const nGlob = m.glob ? m.glob.length : GLOB_F;
+  const TRUNK_IN = 6 * SH + BAGS * BAGD + nGlob + E;
   // Pokémon tokens.
   const tok = new Float32Array(SLOTS * SH);
   const inp = new Float32Array(2 * E + SLOT_F);
@@ -156,8 +255,9 @@ export function run(m: Model, x: Encoded, policy = true): Output {
     }
   }
   at += BAGS * BAGD;
-  z.set(x.glob, at);
-  at += GLOB_F;
+  if (m.glob) for (let i = 0; i < nGlob; i++) z[at + i] = x.glob[m.glob[i]!]!;
+  else z.set(x.glob, at);
+  at += nGlob;
   z.set(emb.subarray(x.source * E, x.source * E + E), at);
 
   const h1 = new Float32Array(H);

@@ -26,6 +26,7 @@ npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/p
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
 npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
 npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to real players' -> data/meta/compare.md
+npx tsx scripts/meta/variants.ts   # real lists our engine can play, per deck -> .cache/meta/variants.json (gen.ts `variants`, ppo.py --variants)
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
@@ -59,7 +60,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   and its replays, the review's comparison turn).
   `learn/`: `encode.ts` (what the network sees: a token per Pokémon in play, card-count bags, globals, one row
   per legal action or pick; hidden zones only as combined counts), `model.ts` (forward pass; same layers as
-  `ml/common.py`), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
+  `ml/common.py`; version 2 files build card vectors from `card-features.ts`, the printed features, plus a vector
+  per trained card, so new cards and changed lists keep the shapes: `ml/common.py` Net2, `train_bc.py --v2`), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
   into training rows). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
   `scripts/learn/gen.ts`). The rule-based bots stay as teachers, sparring partners and quick internal models:
   `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) + `choose.ts` (pending

@@ -114,7 +114,8 @@ def main():
     ap.add_argument("--kl-iters", type=int, default=60)
     ap.add_argument("--mix", default="self:0.5,old:0.15,normal:0.1,hard:0.25")
     ap.add_argument("--frozen", help="a fixed network to play as 'frozen' in --mix (best move, no sampling): train an exploiter against it")
-    ap.add_argument("--eval-vs", default="hard", choices=["hard", "frozen"], help="who the greedy network is measured against")
+    ap.add_argument("--eval-vs", default="hard", choices=["hard", "frozen", "bot"], help="who the greedy network is measured against (bot = the game's bot now)")
+    ap.add_argument("--variants", type=float, default=0.0, help="share of sides that play a real list (.cache/meta/variants.json, scripts/meta/variants.ts)")
     ap.add_argument("--focus", help="the network always plays this deck (a specialist), e.g. dragapult-ex")
     ap.add_argument("--vs-weights", default="", help="with --focus: extra weight on some opponent decks, e.g. player=0.4 (the rest spread evenly)")
     ap.add_argument("--eval-every", type=int, default=10)
@@ -133,8 +134,9 @@ def main():
     if state["iter"] == 0 or not os.path.exists(cur_path):
         shutil.copy(a.init, cur_path)
         shutil.copy(a.init, os.path.join(a.dir, "league-0.json"))
-    net = import_json(cur_path)
-    anchor = import_json(a.init)
+    # No card-vector dropout here: the update compares against the move probabilities the games were played with.
+    net = import_json(cur_path, id_drop=0.0)
+    anchor = import_json(a.init, id_drop=0.0)
     anchor.train(False)
     for p in anchor.parameters():
         p.requires_grad_(False)
@@ -164,13 +166,15 @@ def main():
             "old": {"kind": "net", "weights": random.choice(league), "temperature": 1},
             "normal": {"kind": "normal"},
             "hard": {"kind": "hard"},
+            "bot": {"kind": "bot", "fast": True},
         }
         if a.frozen:
             players["frozen"] = {"kind": "net", "weights": a.frozen, "temperature": 0}
         pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v, **focus} for k, v in mix.items() if v > 0]
         out = os.path.join(a.dir, "games")
         shutil.rmtree(out, ignore_errors=True)
-        cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs}
+        variants = {"variants": {"path": os.path.join(ROOT, ".cache", "meta", "variants.json"), "share": a.variants}} if a.variants > 0 else {}
+        cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs, **variants}
         res = run_gen(cfg, os.path.join(a.dir, "gen.json"))
         t1 = time.time()
         data = Data(sorted(globmod.glob(os.path.join(out, "*.bin"))))
@@ -200,6 +204,7 @@ def main():
                 "players": {
                     "net": {"kind": "net", "weights": cur_path, "temperature": 0},
                     "hard": {"kind": "hard"},
+                    "bot": {"kind": "bot", "fast": True},
                     **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
                 },
                 "pairs": [{"a": "net", "b": a.eval_vs, "share": 1, **({"decksA": {a.focus: 1}} if a.focus else {})}],

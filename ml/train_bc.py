@@ -13,7 +13,7 @@ import time
 import torch
 import torch.nn.functional as F
 
-from common import DEVICE, export, import_json, load, new_net
+from common import DEVICE, export, import_json, load, new_net, new_net2
 
 
 def validate(net, data, idx, bs=8192):
@@ -45,6 +45,8 @@ def main():
     ap.add_argument("--value-weight", type=float, default=0.5)
     ap.add_argument("--searched-weight", type=float, default=1.0, help="policy loss weight of decisions the recorded bot searched (Expert Iteration)")
     ap.add_argument("--dims", default="", help="layer sizes for a new network, e.g. H=512,SH=96,OH=192,BAGD=24")
+    ap.add_argument("--v2", action="store_true", help="a new version-2 network (card features; ml/common.py Net2)")
+    ap.add_argument("--id-drop", type=float, default=0.15, help="v2: share of cards trained without their own vector (as if new)")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -54,7 +56,7 @@ def main():
     train_idx = torch.nonzero(~val_games).squeeze(1)
     val_idx = torch.nonzero(val_games).squeeze(1)
     dims = {k: int(v) for k, v in (x.split("=") for x in a.dims.split(",") if x)} or None
-    net = import_json(a.init) if a.init else new_net(data, dims)
+    net = import_json(a.init, a.id_drop) if a.init else new_net2(data, dims, a.id_drop) if a.v2 else new_net(data, dims)
     print(f"{sum(p.numel() for p in net.parameters())} parameters, dims {net.dims}", flush=True)
     opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=1e-4)
     steps = a.epochs * (len(train_idx) // a.bs)

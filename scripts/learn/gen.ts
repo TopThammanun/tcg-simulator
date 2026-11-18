@@ -39,6 +39,11 @@ export interface GenConfig {
   threads?: number;
   players: Record<string, PlayerSpec>;
   pairs: Pairing[];
+  /**
+   * Real lists (scripts/meta/variants.ts: { slug: card-key lists }): each side of a game plays one of its deck's
+   * lists with chance `share`, otherwise the deck file's list. The swapped-seat game keeps the same lists.
+   */
+  variants?: { path: string; share: number };
 }
 
 /**
@@ -71,6 +76,8 @@ interface Match {
   seed: number;
   decks: [string, string];
   names: [string, string];
+  /** Lists other than the deck files' (variants), by seat. */
+  lists?: [string[] | null, string[] | null];
 }
 interface Job {
   matches: Match[];
@@ -109,9 +116,10 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
   const decks = [plan.name, oppPlan.name] as const;
   const record = spec.record && out ? (d: Parameters<ShardWriter['add']>[0]) => out.add(d) : undefined;
   if (spec.kind === 'net') return makeNetBot(model(spec.weights), { decks, seed, temperature: spec.temperature ?? 0, onDecision: record });
-  if (spec.kind === 'bot') return createBot(plan, seed, oppPlan, { fast: spec.fast ?? true });
   const bot =
-    spec.kind === 'search'
+    spec.kind === 'bot'
+      ? createBot(plan, seed, oppPlan, { fast: spec.fast ?? true })
+      : spec.kind === 'search'
       ? makeSearchNetBot(model(spec.weights), { ...spec, decks, seed, plan: spec.tactics === false ? undefined : plan })
       : spec.kind === 'hard'
         ? makeHardBot(plan, oppPlan, { seed })
@@ -124,8 +132,8 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
   let s: GameState = createGame({
     seed: m.seed,
     decks: [
-      { name: 'a', cards: deckCards.get(m.decks[0])! },
-      { name: 'b', cards: deckCards.get(m.decks[1])! },
+      { name: 'a', cards: m.lists?.[0] ?? deckCards.get(m.decks[0])! },
+      { name: 'b', cards: m.lists?.[1] ?? deckCards.get(m.decks[1])! },
     ],
     quiet: true,
   });
@@ -148,8 +156,16 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
 }
 
 /** Matches for a config: each pairing gets its share of the games, every deck pair, both seats. */
-export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs'>): Match[] {
+export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants'>): Match[] {
   const out: Match[] = [];
+  const variants = c.variants ? (JSON.parse(readFileSync(c.variants.path, 'utf8')) as Record<string, string[][]>) : {};
+  // A list for one side of game k: a variant with chance `share` (decided by a hash of the game and side).
+  const listFor = (slug: string, k: number, side: number): string[] | null => {
+    const vs = variants[slug];
+    if (!vs?.length || !c.variants) return null;
+    const h = (Math.imul(k + 1, 0x85ebca6b) ^ Math.imul(side + 1, 0xc2b2ae35)) >>> 0;
+    return (h % 10_000) / 10_000 < c.variants.share ? vs[(h >>> 7) % vs.length]! : null;
+  };
   const total = c.pairs.reduce((t, p) => t + p.share, 0);
   let k = 0;
   for (const pair of c.pairs) {
@@ -166,8 +182,11 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs'>): Matc
       const x = fixed ? draw(da, 0x5bd1e995) : da[k % da.length]!;
       const y = fixed ? draw(db, 0x1b873593) : db[Math.floor(k / da.length) % db.length]!;
       const seed = c.base + k;
-      out.push({ id: out.length, seed, decks: [x, y], names: [pair.a, pair.b] });
-      if (!mirror) out.push({ id: out.length, seed, decks: fixed ? [y, x] : [x, y], names: [pair.b, pair.a] });
+      const lx = listFor(x, k, 0);
+      const ly = listFor(y, k, 1);
+      const lists = (a: string[] | null, b: string[] | null): Match['lists'] => (a || b ? [a, b] : undefined);
+      out.push({ id: out.length, seed, decks: [x, y], names: [pair.a, pair.b], lists: lists(lx, ly) });
+      if (!mirror) out.push({ id: out.length, seed, decks: fixed ? [y, x] : [x, y], names: [pair.b, pair.a], lists: fixed ? lists(ly, lx) : lists(lx, ly) });
     }
   }
   return out;
