@@ -9,6 +9,7 @@ import { loadModel, type Model, type ModelJson } from './learn/model';
 import { makeNetBot } from './learn/netbot';
 import { makeSearchNetBot, type NetSearchOptions } from './learn/search';
 import weights from './learn/weights.json';
+import basicBox from './learn/specialists/basic-box.json';
 import dragapult from './learn/specialists/dragapult-ex.json';
 import slowking from './learn/specialists/slowking.json';
 import type { Bot, DeckPlan } from './types';
@@ -21,6 +22,7 @@ export const MODEL: Model | null = load(weights);
 /** Specialists by deck plan name (DeckPlan.name). */
 const SPECIALISTS: Record<string, Model | null> = {
   'Dragapult ex': load(dragapult),
+  'basic-box': load(basicBox),
   'Slowking Seek Inspiration': load(slowking),
 };
 
