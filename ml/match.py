@@ -58,15 +58,17 @@ def main():
     ap.add_argument("--a-decks", default="", help="A plays only these decks: slug or slug=weight,...")
     ap.add_argument("--b-decks", default="", help="B plays only these decks (same form)")
     a = ap.parse_args()
+    # Own config and output per run: matches run side by side must not read each other's config.
+    tag = f"match-{os.getpid()}"
     cfg = {
-        "out": os.path.join(ROOT, ".cache", "learn", "match"),
+        "out": os.path.join(ROOT, ".cache", "learn", tag),
         "games": a.games,
         "base": a.base,
         "threads": a.threads,
         "players": {"A": spec(a.a), "B": spec(a.b)},
         "pairs": [{"a": "A", "b": "B", "share": 1, **decks(a)}],
     }
-    r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", "match.json"))
+    r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"))
     sc = r["scores"]["A vs B"]
     lo, hi = wilson(sc["score"], sc["n"])
     print(f"{a.a} vs {a.b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}); "

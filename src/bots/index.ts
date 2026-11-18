@@ -11,6 +11,7 @@ import { makeSearchNetBot, type NetSearchOptions } from './learn/search';
 import weights from './learn/weights.json';
 import basicBox from './learn/specialists/basic-box.json';
 import dragapult from './learn/specialists/dragapult-ex.json';
+import zoroark from './learn/specialists/ns-zoroark-ex.json';
 import slowking from './learn/specialists/slowking.json';
 import type { Bot, DeckPlan } from './types';
 
@@ -23,6 +24,7 @@ export const MODEL: Model | null = load(weights);
 const SPECIALISTS: Record<string, Model | null> = {
   'Dragapult ex': load(dragapult),
   'basic-box': load(basicBox),
+  "N's Zoroark ex": load(zoroark),
   'Slowking Seek Inspiration': load(slowking),
 };
 
