@@ -10,6 +10,7 @@ import { makeNetBot } from './learn/netbot';
 import { makeSearchNetBot, type NetSearchOptions } from './learn/search';
 import weights from './learn/weights.json';
 import dragapult from './learn/specialists/dragapult-ex.json';
+import slowking from './learn/specialists/slowking.json';
 import type { Bot, DeckPlan } from './types';
 
 const load = (j: object): Model | null => ('tensors' in j ? loadModel(j as unknown as ModelJson) : null);
@@ -18,7 +19,10 @@ const load = (j: object): Model | null => ('tensors' in j ? loadModel(j as unkno
 export const MODEL: Model | null = load(weights);
 
 /** Specialists by deck plan name (DeckPlan.name). */
-const SPECIALISTS: Record<string, Model | null> = { 'Dragapult ex': load(dragapult) };
+const SPECIALISTS: Record<string, Model | null> = {
+  'Dragapult ex': load(dragapult),
+  'Slowking Seek Inspiration': load(slowking),
+};
 
 /** The network the bot plays `plan` with: its specialist if there is one, else the general network. */
 export function modelFor(plan: DeckPlan): Model | null {
