@@ -18,7 +18,8 @@ describe('deck files', () => {
   it('gives every bot deck a meta share and list source', () => {
     for (const d of decks.filter((d) => d.meta.side === 'bot')) {
       expect(d.meta.metaShare, d.slug).toBeGreaterThan(0);
-      expect(d.meta.listUrl, d.slug).toMatch(/^https:\/\/limitlesstcg\.com\/decks\/list\/\d+$/);
+      // A list from a major event (limitlesstcg.com) or an online tournament (play.limitlesstcg.com).
+      expect(d.meta.listUrl, d.slug).toMatch(/^https:\/\/(limitlesstcg\.com\/decks\/list\/\d+|play\.limitlesstcg\.com\/tournament\/\w+\/player\/[^/]+\/decklist)$/);
     }
   });
 });

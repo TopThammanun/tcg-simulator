@@ -1,19 +1,19 @@
 # รายงานข้อมูลการ์ด (เฟส 0)
 
-สร้างเมื่อ 2026-11-18T17:37:04.509Z ด้วย `npm run cards` · ข้อมูลอยู่ที่ `data/cards.manifest.json`
+สร้างเมื่อ 2026-11-18T17:48:56.792Z ด้วย `npm run cards` · ข้อมูลอยู่ที่ `data/cards.manifest.json`
 
 ## ด่านเฟส 0
 
-- ✅ ข้อความการ์ดครบทุกใบ: 129 การ์ด จาก 141 print
-- ✅ ทุกใบมีรูปหรือมีทางสำรอง: รูปจริง 140/141 print, ที่เหลือ 1 ใบแสดงเป็นกรอบข้อความ
+- ✅ ข้อความการ์ดครบทุกใบ: 129 การ์ด จาก 143 print
+- ✅ ทุกใบมีรูปหรือมีทางสำรอง: รูปจริง 142/143 print, ที่เหลือ 1 ใบแสดงเป็นกรอบข้อความ
 - ✅ decklist ถูกกฎ (60 ใบ, ชื่อเดียวกันไม่เกิน 4, ACE SPEC ไม่เกิน 1, มี Basic)
 
 ## แหล่งรูป
 
 | แหล่ง | จำนวน print |
 | --- | --- |
-| TCGdex | 127 |
-| pokemontcg.io | 13 |
+| TCGdex | 128 |
+| pokemontcg.io | 14 |
 | รูปจาก print อื่นที่ข้อความเหมือนกัน | 0 |
 | ไม่มีรูป (กรอบข้อความ) | 1 |
 
@@ -26,12 +26,13 @@ print ที่ไม่ได้ใช้รูปจาก TCGdex ของ pr
 - MEE-2 Fire Energy: pokemontcg.io (sve-2)
 - MEE-11 Water Energy: pokemontcg.io (sve-3)
 - MEE-3 Water Energy: pokemontcg.io (sve-3)
+- MEE-12 Lightning Energy: pokemontcg.io (sve-4)
+- MEE-4 Lightning Energy: pokemontcg.io (sve-4)
 - MEE-13 Psychic Energy: pokemontcg.io (sve-5)
 - MEE-5 Psychic Energy: pokemontcg.io (sve-5)
 - MEE-14 Fighting Energy: pokemontcg.io (sve-6)
 - MEE-6 Fighting Energy: pokemontcg.io (sve-6)
 - MEE-15 Darkness Energy: pokemontcg.io (sve-7)
-- MEE-4 Lightning Energy: pokemontcg.io (sve-4)
 - MEP-52 Grookey: ไม่มีรูป (กรอบข้อความ)
 
 ## จำนวนการ์ดที่ต้องเขียน
@@ -41,13 +42,13 @@ print ที่ไม่ได้ใช้รูปจาก TCGdex ของ pr
 | เด็ค | การ์ดไม่ซ้ำ | ใหม่ | ใหม่ที่ต้องเขียนเอฟเฟกต์ | สะสม |
 | --- | --- | --- | --- | --- |
 | Mega Kangaskhan / Ogerpon / Raging Bolt | 31 | 31 | 25 | 31 |
-| Basic Box | 26 | 1 | 1 | 32 |
-| Dragapult ex | 24 | 15 | 13 | 47 |
-| Slowking Seek Inspiration | 24 | 13 | 13 | 60 |
-| N's Zoroark ex | 28 | 15 | 14 | 75 |
-| Alakazam Powerful Hand | 29 | 18 | 18 | 93 |
-| Festival Lead (Seaking) | 27 | 16 | 15 | 109 |
-| Festival Lead (Dipplin) | 26 | 8 | 7 | 117 |
+| Basic Box | 29 | 2 | 2 | 33 |
+| Dragapult ex | 24 | 15 | 13 | 48 |
+| Slowking Seek Inspiration | 24 | 13 | 13 | 61 |
+| N's Zoroark ex | 27 | 14 | 13 | 75 |
+| Alakazam Powerful Hand | 25 | 15 | 15 | 90 |
+| Festival Lead (Seaking) | 27 | 16 | 15 | 106 |
+| Festival Lead (Dipplin) | 27 | 2 | 2 | 108 |
 
 รวม 129 การ์ด ต้องเขียนเอฟเฟกต์ 116 ใบ ที่เหลือเป็นพลังงานพื้นฐานหรือ Pokémon ที่มีแต่ท่าดาเมจตรง ๆ
 
@@ -182,17 +183,18 @@ Stadium
 
 - MEE-13 Psychic Energy
 - MEE-9 Grass Energy
+- MEE-12 Lightning Energy
 - MEE-14 Fighting Energy
 - MEE-11 Water Energy
 - MEE-10 Fire Energy
 - MEE-15 Darkness Energy
-- MEP-52 Grookey
 - MEE-1 Grass Energy
 - MEE-2 Fire Energy
 - MEE-3 Water Energy
 - MEE-4 Lightning Energy
 - MEE-6 Fighting Energy
 - MEE-5 Psychic Energy
+- MEP-52 Grookey
 
 ## รหัสชุด → id ใน API
 

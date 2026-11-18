@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T17:37:04.509Z",
+  "generatedAt": "2026-11-18T17:48:56.792Z",
   "cards": {
     "mew-ex": {
       "name": "Mew ex",
@@ -294,7 +294,8 @@
       "effect": "You can use this card only if you have any Tera Pokémon in play.\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
       "key": "glass-trumpet",
       "prints": [
-        "ASC-189"
+        "ASC-189",
+        "SCR-135"
       ]
     },
     "night-stretcher": {
@@ -1304,6 +1305,21 @@
         "MEE-3"
       ]
     },
+    "lightning-energy": {
+      "name": "Lightning Energy",
+      "subtypes": [],
+      "category": "energy",
+      "rules": [],
+      "energyType": "Basic",
+      "provides": "Lightning",
+      "aceSpec": false,
+      "effect": "",
+      "key": "lightning-energy",
+      "prints": [
+        "MEE-12",
+        "MEE-4"
+      ]
+    },
     "psychic-energy": {
       "name": "Psychic Energy",
       "subtypes": [],
@@ -1346,20 +1362,6 @@
       "key": "darkness-energy",
       "prints": [
         "MEE-15"
-      ]
-    },
-    "lightning-energy": {
-      "name": "Lightning Energy",
-      "subtypes": [],
-      "category": "energy",
-      "rules": [],
-      "energyType": "Basic",
-      "provides": "Lightning",
-      "aceSpec": false,
-      "effect": "",
-      "key": "lightning-energy",
-      "prints": [
-        "MEE-4"
       ]
     },
     "mega-kangaskhan-ex": {
@@ -4316,6 +4318,20 @@
         "low": "https://assets.tcgdex.net/en/me/me02.5/189/low.webp"
       }
     },
+    "SCR-135": {
+      "key": "SCR-135",
+      "set": "SCR",
+      "number": "135",
+      "name": "Glass Trumpet",
+      "card": "glass-trumpet",
+      "tcgdexId": "sv07-135",
+      "ptcgioId": "sv7-135",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv07/135/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv07/135/low.webp"
+      }
+    },
     "ASC-196": {
       "key": "ASC-196",
       "set": "ASC",
@@ -4806,6 +4822,34 @@
         "altOf": "sve-3"
       }
     },
+    "MEE-12": {
+      "key": "MEE-12",
+      "set": "MEE",
+      "number": "12",
+      "name": "Lightning Energy",
+      "card": "lightning-energy",
+      "tcgdexId": "mee-012",
+      "image": {
+        "source": "pokemontcg.io",
+        "high": "https://images.pokemontcg.io/sve/4_hires.png",
+        "low": "https://images.pokemontcg.io/sve/4.png",
+        "altOf": "sve-4"
+      }
+    },
+    "MEE-4": {
+      "key": "MEE-4",
+      "set": "MEE",
+      "number": "4",
+      "name": "Lightning Energy",
+      "card": "lightning-energy",
+      "tcgdexId": "mee-004",
+      "image": {
+        "source": "pokemontcg.io",
+        "high": "https://images.pokemontcg.io/sve/4_hires.png",
+        "low": "https://images.pokemontcg.io/sve/4.png",
+        "altOf": "sve-4"
+      }
+    },
     "MEE-13": {
       "key": "MEE-13",
       "set": "MEE",
@@ -4874,20 +4918,6 @@
         "high": "https://images.pokemontcg.io/sve/7_hires.png",
         "low": "https://images.pokemontcg.io/sve/7.png",
         "altOf": "sve-7"
-      }
-    },
-    "MEE-4": {
-      "key": "MEE-4",
-      "set": "MEE",
-      "number": "4",
-      "name": "Lightning Energy",
-      "card": "lightning-energy",
-      "tcgdexId": "mee-004",
-      "image": {
-        "source": "pokemontcg.io",
-        "high": "https://images.pokemontcg.io/sve/4_hires.png",
-        "low": "https://images.pokemontcg.io/sve/4.png",
-        "altOf": "sve-4"
       }
     },
     "MEG-104": {

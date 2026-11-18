@@ -34,6 +34,7 @@ interface Pairing { round: number; winner: string | number | null; player1: stri
 
 export interface MetaList {
   tournament: string;
+  tournamentId: string;
   date: string;
   player: string;
   placing: number | null;
@@ -129,6 +130,7 @@ for (const [i, t] of events.entries()) {
         }
         (lists.lists[id] ??= []).push({
           tournament: t.name,
+          tournamentId: t.id,
           date: t.date.slice(0, 10),
           player: s.player,
           placing: s.placing,

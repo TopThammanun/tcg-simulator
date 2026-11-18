@@ -27,6 +27,7 @@ npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot gam
 npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
 npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to real players' -> data/meta/compare.md
 npx tsx scripts/meta/variants.ts   # real lists our engine can play, per deck -> .cache/meta/variants.json (gen.ts `variants`, ppo.py --variants)
+npx tsx scripts/meta/pick-lists.ts [--write --only a,b]   # each bot deck's most typical recent top list that the engine can play
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)

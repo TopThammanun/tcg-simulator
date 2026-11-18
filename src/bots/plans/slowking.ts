@@ -1,17 +1,24 @@
 // Slowking: Seek Inspiration discards the top card of the deck and copies its attack, so the deck is
-// stacked first with Ciphermaniac's Codebreaking or Academy at Night (Kyurem, Metagross, Zeraora).
+// stacked first with Ciphermaniac's Codebreaking or Academy at Night (Kyurem, Metagross, Zeraora, Annihilape:
+// Destined Fight trades the 1-Prize Slowking for their Active Pokémon ex, Ghostly Blow adds 5 counters).
 import { canAttackNow } from '../knowledge';
 import { keyOf, opp, topKey } from '../../engine/state';
 import type { GameState, PlayerId } from '../../engine/types';
 import { hasRuleBox } from '../../engine/db';
 import type { DeckPlan } from '../types';
 
-const SOURCES = ['kyurem', 'metagross', 'zeraora'];
+const SOURCES = ['kyurem', 'metagross', 'zeraora', 'annihilape-ssp-100', 'annihilape-pbl-41'];
 
 function sourceRank(s: GameState, me: PlayerId, key: string): number {
   if (key === 'zeraora') return s.players[opp(me)].bench.some((b) => hasRuleBox(topKey(s, b))) ? 3 : 0;
   if (key === 'kyurem') return 4;
   if (key === 'metagross') return 2;
+  // Destined Fight: worth it when their Active gives more Prizes than the Slowking it costs.
+  if (key === 'annihilape-ssp-100') {
+    const theirs = s.players[opp(me)].active;
+    return theirs && hasRuleBox(topKey(s, theirs)) ? 6 : -1;
+  }
+  if (key === 'annihilape-pbl-41') return 3;
   return -1;
 }
 

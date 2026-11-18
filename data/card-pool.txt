@@ -13,3 +13,16 @@
 1 N's Darmanitan JTG 27
 1 Forest of Vitality MEG 117
 1 Applin SCR 12
+# Cards earlier deck files played (the engine implements them; real lists and tests still use them).
+1 Mew ex 30C 66
+1 Nighttime Mine ASC 197
+1 Psyduck ASC 39
+1 Elgyem BLK 40
+1 N's Purrloin JTG 96
+1 Grookey MEP 52
+1 Moltres PFL 14
+1 Gravity Mountain SSP 177
+1 Surfer SSP 187
+1 Eri TEF 146
+1 Hand Trimmer TEF 150
+1 Handheld Fan TWM 150

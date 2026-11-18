@@ -5,29 +5,29 @@ rank: 3
 metaShare: 7.62
 archetypeUrl: https://limitlesstcg.com/decks/322
 limitless: slowking-scr
-listUrl: https://limitlesstcg.com/decks/list/30165
-listSource: "Aarni Karjala — 13th Place Regional Louisville, KY - 10th October 2026"
+listUrl: https://play.limitlesstcg.com/tournament/6af0cebee99f3235a75e4445/player/minhosong/decklist
+listSource: "minhosong — placed 9 of 192, AOB's Team Challenge (Limitless online), 2026-11-15"
 ---
-Pokémon: 22
+Pokémon: 21
 4 Slowpoke SCR 57
 3 Slowking SCR 58
-4 Mega Kangaskhan ex MEG 104
+3 Mega Kangaskhan ex MEG 104
 2 Latias ex SSP 76
-2 Metagross CRI 61
 2 Kyurem SFA 47
-1 Fezandipiti ex ASC 142
-1 Zeraora DRI 78
-1 Lillie's Clefairy ex JTG 56
+2 Metagross CRI 61
 1 Meowth ex POR 62
-1 Mew ex 30C 66
+1 Zeraora DRI 78
+1 Fezandipiti ex ASC 142
+1 Lillie's Clefairy ex JTG 56
+1 Annihilape PBL 41
 
-Trainer: 28
+Trainer: 29
 4 Ciphermaniac's Codebreaking TEF 145
 4 Lillie's Determination MEG 119
 4 Ultra Ball MEG 131
 4 Poké Pad POR 81
+3 Night Stretcher ASC 196
 3 Wondrous Patch PFL 94
-2 Night Stretcher ASC 196
 1 Switch MEG 130
 1 Secret Box TWM 163
 1 Lucky Helmet TWM 158

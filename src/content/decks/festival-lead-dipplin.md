@@ -5,10 +5,10 @@ rank: 6
 metaShare: 5.7
 archetypeUrl: https://limitlesstcg.com/decks/336
 limitless: festival-lead
-listUrl: https://limitlesstcg.com/decks/list/30813
-listSource: "Ciaran Farah — 29th Place Regional Puebla - 24th October 2026"
 optional: true
 variant: dipplin
+listUrl: https://play.limitlesstcg.com/tournament/6adfe08680a8f79408d1f1d6/player/sonsitha/decklist
+listSource: "sonsitha — placed 20 of 190, 🪎Vault Of Games #9🪙|REGIONAL FORMAT🏆|WEEKLY📅 (Limitless online), 2026-11-01"
 ---
 Pokémon: 20
 3 Applin TWM 17
@@ -24,18 +24,19 @@ Pokémon: 20
 
 Trainer: 35
 4 Lillie's Determination MEG 119
-2 Boss's Orders MEG 114
 2 Gladion's Final Battle PBL 77
+2 Boss's Orders MEG 114
 1 Kieran TWM 154
 1 Lana's Aid TWM 155
-4 Buddy-Buddy Poffin TEF 144
 4 Poké Pad POR 81
-3 Bug Catching Set TWM 143
-2 Ultra Ball MEG 131
+4 Buddy-Buddy Poffin TEF 144
+3 Ultra Ball MEG 131
 2 Night Stretcher ASC 196
+2 Bug Catching Set TWM 143
 1 Secret Box TWM 163
-3 Air Balloon ASC 181
+1 Switch MEG 130
 2 Brave Bangle WHT 80
+2 Air Balloon ASC 181
 4 Festival Grounds TWM 149
 
 Energy: 5
