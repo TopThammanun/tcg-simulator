@@ -73,7 +73,7 @@ export function fromTcgdex(raw: TcgdexCard, ptcg?: PtcgCard): NormalizedCard {
       rules: dedupeRules(ptcg?.rules ?? []),
       hp: required(raw.hp, raw, 'hp'),
       types: (raw.types ?? []).map(energyType),
-      stage: stageOf(raw),
+      stage: stageOf(raw, subtypes),
       evolvesFrom: raw.evolveFrom,
       abilities: (raw.abilities ?? []).map((a): Ability => ({ name: a.name, effect: clean(a.effect) })),
       attacks: (raw.attacks ?? []).map(
@@ -224,7 +224,10 @@ function damageOf(d: string | number | undefined): string {
   return String(d ?? '').trim().replace(/x$/i, '×');
 }
 
-function stageOf(raw: TcgdexCard): PokemonCard['stage'] {
+function stageOf(raw: TcgdexCard, subtypes: string[]): PokemonCard['stage'] {
+  // pokemontcg.io's subtypes win when they name a stage: TCGdex has Talonflame ex (Stage 2) as Basic.
+  if (subtypes.includes('Stage 2')) return 'Stage2';
+  if (subtypes.includes('Stage 1')) return 'Stage1';
   const s = (raw.stage ?? '').replace(/\s+/g, '');
   if (s === 'Basic' || s === 'Stage1' || s === 'Stage2') return s;
   throw new Error(`${raw.id}: unknown stage "${raw.stage}"`);

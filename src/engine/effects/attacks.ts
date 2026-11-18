@@ -4,8 +4,8 @@
 import type { Attack } from '../../data/cards';
 import type { AttackCtx, AttackImpl } from '../combat';
 import { uniqueByKey } from '../ctx';
-import { def, hasRuleBox, isBasicEnergy, isNsPokemon, isPokemon } from '../db';
-import { chooseSwitch, provides, switchIn } from '../rules';
+import { def, hasRuleBox, isBasicEnergy, isBasicPokemon, isNsPokemon, isPokemon } from '../db';
+import { chooseSwitch, maxHp, provides, switchIn } from '../rules';
 import { keyOf, nameOf, slotsOf, topDef, topKey } from '../state';
 
 /** Attacks that copy other attacks are not offered as copy targets themselves (avoids loops). */
@@ -301,6 +301,62 @@ export const ATTACKS: Record<string, AttackImpl> = {
     a.ctx.log(`ทิ้งการ์ดบนสุด: ${def(k).name}`);
     if (!isPokemon(k) || hasRuleBox(k)) return;
     copyAttack(a, topDefOfKey(k).attacks, `Seek Inspiration: เลือกท่าของ ${def(k).name}`);
+  },
+
+  // ---- Annihilape (Surging Sparks, Pitch Black) ----
+  Tantrum: (a) => {
+    a.hit(a.defender, a.base);
+    a.condition(a.user, 'confused');
+  },
+  // A Knock Out by effect, not damage: Durable Body and damage prevention don't apply; protection from
+  // attack effects does.
+  'Destined Fight': (a) => {
+    const d = a.defender;
+    if (d && !a.blocked(d)) d.damage = Math.max(d.damage, maxHp(a.s, d));
+    a.user.damage = Math.max(a.user.damage, maxHp(a.s, a.user));
+    a.ctx.log('Destined Fight: Active ทั้งสองฝั่งถูก Knock Out');
+  },
+  'Ghostly Blow': (a) => {
+    a.hit(a.defender, a.base);
+    const t = a.pickTarget(a.s.players[a.opp].bench, 'Ghostly Blow: วางตัวนับดาเมจ 5 ตัวบน Pokémon บน Bench ตัวไหน', 'counters');
+    if (t) a.counters(t, 5);
+  },
+  // ---- Dudunsparce ex ----
+  'Tenacious Tail': (a) => {
+    const n = a.oppSlots().filter((sl) => topDef(a.s, sl).subtypes.includes('ex') || / ex$/.test(topDef(a.s, sl).name)).length;
+    a.hit(a.defender, 60 * n);
+  },
+  'Destructive Drill': (a) => {
+    a.hit(a.defender, a.base, { pierce: true });
+  },
+  // ---- N's Darmanitan ----
+  'Back Draft': (a) => {
+    const n = a.s.players[a.opp].discard.filter((c) => isBasicEnergy(keyOf(a.s, c))).length;
+    a.hit(a.defender, 30 * n);
+  },
+  'Flamebody Cannon': (a) => {
+    a.hit(a.defender, a.base);
+    a.discardEnergy(a.user, a.user.energy.slice());
+    const t = a.pickTarget(a.s.players[a.opp].bench, 'Flamebody Cannon: 90 ดาเมจใส่ Pokémon บน Bench ตัวไหน');
+    if (t) a.hit(t, 90, { noWR: true });
+  },
+  // ---- Talonflame ex ----
+  'Talon Hunt': (a) => {
+    a.hit(a.defender, a.base);
+    const picked = a.ctx.search(a.me, () => true, { prompt: 'Talon Hunt: ค้นหาการ์ดได้สูงสุด 2 ใบ', max: 2, source: 'talonflame-ex' });
+    a.ctx.toHand(a.me, picked);
+    a.ctx.shuffle(a.me);
+  },
+  // ---- Passimian, Enamorus ----
+  'Coordinated Throwing': (a) => {
+    const n = slotsOf(a.s.players[a.me]).filter((sl) => isBasicPokemon(topKey(a.s, sl))).length;
+    a.hit(a.defender, 20 * n);
+  },
+  'Love Resonance': (a) => {
+    const types = (p: typeof a.me) => new Set(slotsOf(a.s.players[p]).flatMap((sl) => topDef(a.s, sl).types));
+    const theirs = types(a.opp);
+    const match = [...types(a.me)].some((t) => theirs.has(t));
+    a.hit(a.defender, a.base + (match ? 120 : 0));
   },
 };
 

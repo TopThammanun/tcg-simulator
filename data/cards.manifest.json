@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-14T18:12:17.137Z",
+  "generatedAt": "2026-11-18T17:37:04.509Z",
   "cards": {
     "mew-ex": {
       "name": "Mew ex",
@@ -580,6 +580,58 @@
         "CRI-82"
       ]
     },
+    "talonflame-ex": {
+      "name": "Talonflame ex",
+      "subtypes": [
+        "Stage 2",
+        "ex"
+      ],
+      "category": "pokemon",
+      "rules": [
+        "Pokémon ex rule: When your Pokémon ex is Knocked Out, your opponent takes 2 Prize cards."
+      ],
+      "hp": 280,
+      "types": [
+        "Colorless"
+      ],
+      "stage": "Stage2",
+      "abilities": [
+        {
+          "name": "Excited Dive",
+          "effect": "Once during your turn, if this Pokémon is in your hand, and if you have any Colorless Mega Evolution Pokémon ex in play, you may use this Ability. Put this Pokémon onto your Bench."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Talon Hunt",
+          "cost": [
+            "Colorless",
+            "Colorless"
+          ],
+          "damage": "150",
+          "effect": "You may search your deck for up to 2 cards and put them into your hand. Then, shuffle your deck."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Lightning",
+          "value": "×2"
+        }
+      ],
+      "resistances": [
+        {
+          "type": "Fighting",
+          "value": "-30"
+        }
+      ],
+      "retreat": 0,
+      "prizes": 2,
+      "tera": false,
+      "key": "talonflame-ex",
+      "prints": [
+        "DLR-88"
+      ]
+    },
     "shaymin": {
       "name": "Shaymin",
       "subtypes": [
@@ -853,6 +905,59 @@
         "TEF-128"
       ]
     },
+    "dudunsparce-ex": {
+      "name": "Dudunsparce ex",
+      "subtypes": [
+        "Stage 1",
+        "ex"
+      ],
+      "regulationMark": "I",
+      "category": "pokemon",
+      "rules": [
+        "Pokémon ex rule: When your Pokémon ex is Knocked Out, your opponent takes 2 Prize cards."
+      ],
+      "hp": 270,
+      "types": [
+        "Colorless"
+      ],
+      "stage": "Stage1",
+      "evolvesFrom": "Dunsparce",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Tenacious Tail",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "60×",
+          "effect": "This attack does 60 damage for each of your opponent's Pokémon ex in play."
+        },
+        {
+          "name": "Destructive Drill",
+          "cost": [
+            "Colorless",
+            "Colorless",
+            "Colorless"
+          ],
+          "damage": "150",
+          "effect": "This attack's damage isn't affected by any effects on your opponent's Active Pokémon."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Fighting",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 3,
+      "prizes": 2,
+      "tera": false,
+      "key": "dudunsparce-ex",
+      "prints": [
+        "JTG-121"
+      ]
+    },
     "black-belts-training": {
       "name": "Black Belt's Training",
       "subtypes": [
@@ -923,6 +1028,107 @@
       "key": "ns-pp-up",
       "prints": [
         "JTG-153"
+      ]
+    },
+    "ns-darumaka": {
+      "name": "N's Darumaka",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "I",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 80,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Rolling Tackle",
+          "cost": [
+            "Colorless",
+            "Colorless"
+          ],
+          "damage": "20",
+          "effect": ""
+        },
+        {
+          "name": "Flare",
+          "cost": [
+            "Fire",
+            "Fire",
+            "Colorless"
+          ],
+          "damage": "50",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 2,
+      "prizes": 1,
+      "tera": false,
+      "key": "ns-darumaka",
+      "prints": [
+        "JTG-26"
+      ]
+    },
+    "ns-darmanitan": {
+      "name": "N's Darmanitan",
+      "subtypes": [
+        "Stage 1"
+      ],
+      "regulationMark": "I",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 140,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Stage1",
+      "evolvesFrom": "N's Darumaka",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Back Draft",
+          "cost": [
+            "Colorless",
+            "Colorless"
+          ],
+          "damage": "30×",
+          "effect": "This attack does 30 damage for each Basic Energy card in your opponent's discard pile."
+        },
+        {
+          "name": "Flamebody Cannon",
+          "cost": [
+            "Fire",
+            "Fire",
+            "Colorless"
+          ],
+          "damage": "90",
+          "effect": "Discard all Energy from this Pokémon, and this attack also does 90 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)"
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 3,
+      "prizes": 1,
+      "tera": false,
+      "key": "ns-darmanitan",
+      "prints": [
+        "JTG-27"
       ]
     },
     "ns-purrloin": {
@@ -1222,6 +1428,25 @@
       "key": "energy-switch",
       "prints": [
         "MEG-115"
+      ]
+    },
+    "forest-of-vitality": {
+      "name": "Forest of Vitality",
+      "subtypes": [
+        "Stadium"
+      ],
+      "regulationMark": "I",
+      "category": "trainer",
+      "rules": [
+        "Each player's Grass Pokémon can evolve into Grass Pokémon during the turn they play those Pokémon, except during their first turn.",
+        "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+      ],
+      "trainerType": "Stadium",
+      "aceSpec": false,
+      "effect": "Each player's {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn.",
+      "key": "forest-of-vitality",
+      "prints": [
+        "MEG-117"
       ]
     },
     "lillies-determination": {
@@ -1581,6 +1806,106 @@
         "TWM-14"
       ]
     },
+    "annihilape-pbl-41": {
+      "name": "Annihilape",
+      "subtypes": [
+        "Stage 2"
+      ],
+      "regulationMark": "J",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 150,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Stage2",
+      "evolvesFrom": "Primeape",
+      "abilities": [
+        {
+          "name": "Durable Body",
+          "effect": "If this Pokémon would be Knocked Out by damage from an attack, flip a coin. If heads, this Pokémon is not Knocked Out, and its remaining HP becomes 10."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Ghostly Blow",
+          "cost": [
+            "Psychic",
+            "Psychic"
+          ],
+          "damage": "100",
+          "effect": "Place 5 damage counters on 1 of your opponent's Benched Pokémon."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Darkness",
+          "value": "×2"
+        }
+      ],
+      "resistances": [
+        {
+          "type": "Fighting",
+          "value": "-30"
+        }
+      ],
+      "retreat": 2,
+      "prizes": 1,
+      "tera": false,
+      "key": "annihilape-pbl-41",
+      "prints": [
+        "PBL-41"
+      ]
+    },
+    "annihilape-ssp-100": {
+      "name": "Annihilape",
+      "subtypes": [
+        "Stage 2"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 140,
+      "types": [
+        "Fighting"
+      ],
+      "stage": "Stage2",
+      "evolvesFrom": "Primeape",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Tantrum",
+          "cost": [
+            "Fighting"
+          ],
+          "damage": "130",
+          "effect": "This Pokémon is now Confused."
+        },
+        {
+          "name": "Destined Fight",
+          "cost": [
+            "Fighting",
+            "Colorless"
+          ],
+          "damage": "",
+          "effect": "Both Active Pokémon are Knocked Out."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Psychic",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 2,
+      "prizes": 1,
+      "tera": false,
+      "key": "annihilape-ssp-100",
+      "prints": [
+        "SSP-100"
+      ]
+    },
     "gladions-final-battle": {
       "name": "Gladion's Final Battle",
       "subtypes": [
@@ -1670,6 +1995,25 @@
       "key": "dawn",
       "prints": [
         "PFL-87"
+      ]
+    },
+    "punk-helmet": {
+      "name": "Punk Helmet",
+      "subtypes": [
+        "Pokémon Tool"
+      ],
+      "regulationMark": "I",
+      "category": "trainer",
+      "rules": [
+        "If the Darkness Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon.",
+        "You may attach any number of Pokémon Tools to your Pokémon during your turn. You may attach only 1 Pokémon Tool to each Pokémon, and it stays attached."
+      ],
+      "trainerType": "Tool",
+      "aceSpec": false,
+      "effect": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon.",
+      "key": "punk-helmet",
+      "prints": [
+        "PFL-92"
       ]
     },
     "wondrous-patch": {
@@ -2039,6 +2383,127 @@
         "PRE-95"
       ]
     },
+    "applin-scr-12": {
+      "name": "Applin",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 40,
+      "types": [
+        "Grass"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Spray Fluid",
+          "cost": [
+            "Grass"
+          ],
+          "damage": "20",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Fire",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "applin-scr-12",
+      "prints": [
+        "SCR-12"
+      ]
+    },
+    "applin-twm-126": {
+      "name": "Applin",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 40,
+      "types": [
+        "Dragon"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Find a Friend",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "",
+          "effect": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+        },
+        {
+          "name": "Rolling Tackle",
+          "cost": [
+            "Grass",
+            "Fire"
+          ],
+          "damage": "30",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "applin-twm-126",
+      "prints": [
+        "TWM-126"
+      ]
+    },
+    "applin-twm-17": {
+      "name": "Applin",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 40,
+      "types": [
+        "Grass"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Tumbling Attack",
+          "cost": [
+            "Grass"
+          ],
+          "damage": "10+",
+          "effect": "Flip a coin. If heads, this attack does 20 more damage."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Fire",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "applin-twm-17",
+      "prints": [
+        "TWM-17"
+      ]
+    },
     "slowpoke": {
       "name": "Slowpoke",
       "subtypes": [
@@ -2306,6 +2771,46 @@
       "key": "academy-at-night",
       "prints": [
         "SFA-54"
+      ]
+    },
+    "passimian": {
+      "name": "Passimian",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 110,
+      "types": [
+        "Fighting"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Coordinated Throwing",
+          "cost": [
+            "Fighting",
+            "Colorless"
+          ],
+          "damage": "20×",
+          "effect": "This attack does 20 damage for each of your Basic Pokémon in play."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Psychic",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "passimian",
+      "prints": [
+        "SSP-111"
       ]
     },
     "cyrano": {
@@ -2950,88 +3455,6 @@
         "TEF-81"
       ]
     },
-    "applin-twm-126": {
-      "name": "Applin",
-      "subtypes": [
-        "Basic"
-      ],
-      "regulationMark": "H",
-      "category": "pokemon",
-      "rules": [],
-      "hp": 40,
-      "types": [
-        "Dragon"
-      ],
-      "stage": "Basic",
-      "abilities": [],
-      "attacks": [
-        {
-          "name": "Find a Friend",
-          "cost": [
-            "Colorless"
-          ],
-          "damage": "",
-          "effect": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
-        },
-        {
-          "name": "Rolling Tackle",
-          "cost": [
-            "Grass",
-            "Fire"
-          ],
-          "damage": "30",
-          "effect": ""
-        }
-      ],
-      "weaknesses": [],
-      "resistances": [],
-      "retreat": 1,
-      "prizes": 1,
-      "tera": false,
-      "key": "applin-twm-126",
-      "prints": [
-        "TWM-126"
-      ]
-    },
-    "applin-twm-17": {
-      "name": "Applin",
-      "subtypes": [
-        "Basic"
-      ],
-      "regulationMark": "H",
-      "category": "pokemon",
-      "rules": [],
-      "hp": 40,
-      "types": [
-        "Grass"
-      ],
-      "stage": "Basic",
-      "abilities": [],
-      "attacks": [
-        {
-          "name": "Tumbling Attack",
-          "cost": [
-            "Grass"
-          ],
-          "damage": "10+",
-          "effect": "Flip a coin. If heads, this attack does 20 more damage."
-        }
-      ],
-      "weaknesses": [
-        {
-          "type": "Fire",
-          "value": "×2"
-        }
-      ],
-      "resistances": [],
-      "retreat": 1,
-      "prizes": 1,
-      "tera": false,
-      "key": "applin-twm-17",
-      "prints": [
-        "TWM-17"
-      ]
-    },
     "dreepy": {
       "name": "Dreepy",
       "subtypes": [
@@ -3272,6 +3695,24 @@
       "key": "bug-catching-set",
       "prints": [
         "TWM-143"
+      ]
+    },
+    "enhanced-hammer": {
+      "name": "Enhanced Hammer",
+      "subtypes": [
+        "Item"
+      ],
+      "regulationMark": "H",
+      "category": "trainer",
+      "rules": [
+        "You may play any number of Item cards during your turn."
+      ],
+      "trainerType": "Item",
+      "aceSpec": false,
+      "effect": "Discard a Special Energy from 1 of your opponent's Pokémon.",
+      "key": "enhanced-hammer",
+      "prints": [
+        "TWM-148"
       ]
     },
     "festival-grounds": {
@@ -3609,6 +4050,55 @@
       "key": "goldeen",
       "prints": [
         "TWM-44"
+      ]
+    },
+    "enamorus": {
+      "name": "Enamorus",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 120,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Heart Sign",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "30",
+          "effect": ""
+        },
+        {
+          "name": "Love Resonance",
+          "cost": [
+            "Psychic",
+            "Colorless",
+            "Colorless"
+          ],
+          "damage": "80+",
+          "effect": "If any of your Pokémon in play are the same type as any of your opponent's Pokémon in play, this attack does 120 more damage."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Metal",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "enamorus",
+      "prints": [
+        "TWM-93"
       ]
     },
     "munkidori": {
@@ -3980,6 +4470,20 @@
         "low": "https://assets.tcgdex.net/en/me/me04/082/low.webp"
       }
     },
+    "DLR-88": {
+      "key": "DLR-88",
+      "set": "DLR",
+      "number": "88",
+      "name": "Talonflame ex",
+      "card": "talonflame-ex",
+      "tcgdexId": "me06-088",
+      "ptcgioId": "me6-88",
+      "image": {
+        "source": "pokemontcg.io",
+        "high": "https://images.scrydex.com/pokemon/me6-88/large",
+        "low": "https://images.scrydex.com/pokemon/me6-88/small"
+      }
+    },
     "DRI-10": {
       "key": "DRI-10",
       "set": "DRI",
@@ -4078,6 +4582,20 @@
         "low": "https://assets.tcgdex.net/en/sv/sv05/128/low.webp"
       }
     },
+    "JTG-121": {
+      "key": "JTG-121",
+      "set": "JTG",
+      "number": "121",
+      "name": "Dudunsparce ex",
+      "card": "dudunsparce-ex",
+      "tcgdexId": "sv09-121",
+      "ptcgioId": "sv9-121",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv09/121/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv09/121/low.webp"
+      }
+    },
     "JTG-143": {
       "key": "JTG-143",
       "set": "JTG",
@@ -4132,6 +4650,34 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv09/153/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv09/153/low.webp"
+      }
+    },
+    "JTG-26": {
+      "key": "JTG-26",
+      "set": "JTG",
+      "number": "26",
+      "name": "N's Darumaka",
+      "card": "ns-darumaka",
+      "tcgdexId": "sv09-026",
+      "ptcgioId": "sv9-26",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv09/026/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv09/026/low.webp"
+      }
+    },
+    "JTG-27": {
+      "key": "JTG-27",
+      "set": "JTG",
+      "number": "27",
+      "name": "N's Darmanitan",
+      "card": "ns-darmanitan",
+      "tcgdexId": "sv09-027",
+      "ptcgioId": "sv9-27",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv09/027/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv09/027/low.webp"
       }
     },
     "JTG-96": {
@@ -4372,6 +4918,20 @@
         "low": "https://assets.tcgdex.net/en/me/me01/115/low.webp"
       }
     },
+    "MEG-117": {
+      "key": "MEG-117",
+      "set": "MEG",
+      "number": "117",
+      "name": "Forest of Vitality",
+      "card": "forest-of-vitality",
+      "tcgdexId": "me01-117",
+      "ptcgioId": "me1-117",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me01/117/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me01/117/low.webp"
+      }
+    },
     "MEG-119": {
       "key": "MEG-119",
       "set": "MEG",
@@ -4509,6 +5069,34 @@
         "low": "https://assets.tcgdex.net/en/sv/sv06/014/low.webp"
       }
     },
+    "PBL-41": {
+      "key": "PBL-41",
+      "set": "PBL",
+      "number": "41",
+      "name": "Annihilape",
+      "card": "annihilape-pbl-41",
+      "tcgdexId": "me05-041",
+      "ptcgioId": "me5-41",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me05/041/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me05/041/low.webp"
+      }
+    },
+    "SSP-100": {
+      "key": "SSP-100",
+      "set": "SSP",
+      "number": "100",
+      "name": "Annihilape",
+      "card": "annihilape-ssp-100",
+      "tcgdexId": "sv08-100",
+      "ptcgioId": "sv8-100",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08/100/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08/100/low.webp"
+      }
+    },
     "PBL-77": {
       "key": "PBL-77",
       "set": "PBL",
@@ -4563,6 +5151,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/me/me02/087/high.webp",
         "low": "https://assets.tcgdex.net/en/me/me02/087/low.webp"
+      }
+    },
+    "PFL-92": {
+      "key": "PFL-92",
+      "set": "PFL",
+      "number": "92",
+      "name": "Punk Helmet",
+      "card": "punk-helmet",
+      "tcgdexId": "me02-092",
+      "ptcgioId": "me2-92",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me02/092/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me02/092/low.webp"
       }
     },
     "PFL-94": {
@@ -4831,6 +5433,48 @@
         "low": "https://assets.tcgdex.net/en/sv/sv08.5/095/low.webp"
       }
     },
+    "SCR-12": {
+      "key": "SCR-12",
+      "set": "SCR",
+      "number": "12",
+      "name": "Applin",
+      "card": "applin-scr-12",
+      "tcgdexId": "sv07-012",
+      "ptcgioId": "sv7-12",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv07/012/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv07/012/low.webp"
+      }
+    },
+    "TWM-126": {
+      "key": "TWM-126",
+      "set": "TWM",
+      "number": "126",
+      "name": "Applin",
+      "card": "applin-twm-126",
+      "tcgdexId": "sv06-126",
+      "ptcgioId": "sv6-126",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/126/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/126/low.webp"
+      }
+    },
+    "TWM-17": {
+      "key": "TWM-17",
+      "set": "TWM",
+      "number": "17",
+      "name": "Applin",
+      "card": "applin-twm-17",
+      "tcgdexId": "sv06-017",
+      "ptcgioId": "sv6-17",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/017/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/017/low.webp"
+      }
+    },
     "SCR-57": {
       "key": "SCR-57",
       "set": "SCR",
@@ -4913,6 +5557,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv06.5/054/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv06.5/054/low.webp"
+      }
+    },
+    "SSP-111": {
+      "key": "SSP-111",
+      "set": "SSP",
+      "number": "111",
+      "name": "Passimian",
+      "card": "passimian",
+      "tcgdexId": "sv08-111",
+      "ptcgioId": "sv8-111",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08/111/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08/111/low.webp"
       }
     },
     "SSP-170": {
@@ -5181,34 +5839,6 @@
         "low": "https://assets.tcgdex.net/en/sv/sv05/081/low.webp"
       }
     },
-    "TWM-126": {
-      "key": "TWM-126",
-      "set": "TWM",
-      "number": "126",
-      "name": "Applin",
-      "card": "applin-twm-126",
-      "tcgdexId": "sv06-126",
-      "ptcgioId": "sv6-126",
-      "image": {
-        "source": "tcgdex",
-        "high": "https://assets.tcgdex.net/en/sv/sv06/126/high.webp",
-        "low": "https://assets.tcgdex.net/en/sv/sv06/126/low.webp"
-      }
-    },
-    "TWM-17": {
-      "key": "TWM-17",
-      "set": "TWM",
-      "number": "17",
-      "name": "Applin",
-      "card": "applin-twm-17",
-      "tcgdexId": "sv06-017",
-      "ptcgioId": "sv6-17",
-      "image": {
-        "source": "tcgdex",
-        "high": "https://assets.tcgdex.net/en/sv/sv06/017/high.webp",
-        "low": "https://assets.tcgdex.net/en/sv/sv06/017/low.webp"
-      }
-    },
     "TWM-128": {
       "key": "TWM-128",
       "set": "TWM",
@@ -5291,6 +5921,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv06/143/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv06/143/low.webp"
+      }
+    },
+    "TWM-148": {
+      "key": "TWM-148",
+      "set": "TWM",
+      "number": "148",
+      "name": "Enhanced Hammer",
+      "card": "enhanced-hammer",
+      "tcgdexId": "sv06-148",
+      "ptcgioId": "sv6-148",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/148/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/148/low.webp"
       }
     },
     "TWM-149": {
@@ -5459,6 +6103,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv06/044/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv06/044/low.webp"
+      }
+    },
+    "TWM-93": {
+      "key": "TWM-93",
+      "set": "TWM",
+      "number": "93",
+      "name": "Enamorus",
+      "card": "enamorus",
+      "tcgdexId": "sv06-093",
+      "ptcgioId": "sv6-93",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/093/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/093/low.webp"
       }
     },
     "TWM-95": {

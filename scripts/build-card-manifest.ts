@@ -6,7 +6,7 @@
 //
 // Optional: POKEMONTCG_API_KEY raises pokemontcg.io rate limits (works without it).
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { CardImage, CardManifest } from '../src/data/cards';
 import { printKey } from '../src/data/decklist';
 import {
@@ -49,6 +49,15 @@ for (const deck of decks) {
     }
     wanted.set(key, { set: e.set, number: e.number, name: e.name });
   }
+}
+// The card pool: cards real lists play that no deck file has yet (data/card-pool.txt, decklist lines).
+for (const line of readFileSync('data/card-pool.txt', 'utf8').split(/\r?\n/)) {
+  const m = line.trim().match(/^\d+\s+(.+?)\s+([A-Z0-9]{2,5})\s+([A-Za-z0-9-]+)$/);
+  if (!m || line.trim().startsWith('#')) continue;
+  const e = { name: m[1]!, set: m[2]!, number: m[3]! };
+  const seen = wanted.get(printKey(e));
+  if (seen && !sameCardName(seen.name, e.name)) throw new Error(`${printKey(e)} is "${seen.name}" in a deck and "${e.name}" in the card pool`);
+  if (!seen) wanted.set(printKey(e), e);
 }
 const codes = new Set([...wanted.values()].map((p) => p.set));
 console.log(`${decks.length} decks, ${wanted.size} printings, ${codes.size} set codes`);

@@ -35,7 +35,8 @@ npm run dev        # dev server on :4321
 npm run build      # static site in dist/
 ```
 
-`npm run cards` caches API responses in `.cache/http`; add `-- --refresh` to re-download.
+`npm run cards` caches API responses in `.cache/http`; add `-- --refresh` to re-download. It reads the deck files and
+`data/card-pool.txt` (cards real lists of our archetypes play that no deck file has; each needs an engine effect too).
 pokemontcg.io fails often (502/500); the script retries and treats it as a secondary source.
 
 ## Layout

@@ -37,6 +37,10 @@ export const isBasicEnergy = (key: string) => {
   const d = def(key);
   return d.category === 'energy' && d.energyType === 'Basic';
 };
+export const isSpecialEnergy = (key: string) => {
+  const d = def(key);
+  return d.category === 'energy' && d.energyType === 'Special';
+};
 export const isEnergy = (key: string) => def(key).category === 'energy';
 export const isTrainerType = (key: string, type: TrainerCard['trainerType']) => trainer(key)?.trainerType === type;
 export const basicEnergyType = (key: string): EnergyType | undefined => energyCard(key)?.provides;

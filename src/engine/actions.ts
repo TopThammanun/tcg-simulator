@@ -1,6 +1,6 @@
 // apply(state, action) -> new state, and legalActions(state). The public engine API.
 import { Ctx, GameOver, NeedChoice } from './ctx';
-import { def, isBasicPokemon } from './db';
+import { def, isBasicPokemon, pokemon } from './db';
 import { performAttack } from './combat';
 import { ABILITIES, activatedAbilities, offerTrigger } from './effects/abilities';
 import { discardStadium, putOnBench } from './effects/common';
@@ -91,11 +91,11 @@ export function legalActions(s: GameState): Action[] {
     const k = keyOf(s, c);
     const d = def(k);
     if (d.category === 'pokemon') {
-      if (d.stage === 'Basic') {
+      if (d.stage === 'Basic' || excitedDive(s, p, k)) {
         if (ps.bench.length < benchLimit(s, p)) add({ t: 'bench', card: c }, `bench:${k}`);
       } else if (s.turn > 2) {
         for (const sl of mine) {
-          if (canEvolve(s, sl, d.evolvesFrom)) add({ t: 'evolve', card: c, target: sl.uid }, `evolve:${k}:${sl.uid}`);
+          if (canEvolve(s, sl, k)) add({ t: 'evolve', card: c, target: sl.uid }, `evolve:${k}:${sl.uid}`);
         }
       }
     } else if (d.category === 'energy') {
@@ -130,8 +130,23 @@ export function legalActions(s: GameState): Action[] {
   return out;
 }
 
-function canEvolve(s: GameState, sl: Slot, from: string | undefined): boolean {
-  return !!from && topDef(s, sl).name === from && sl.enteredTurn !== s.turn && sl.evolvedTurn !== s.turn;
+function canEvolve(s: GameState, sl: Slot, into: string): boolean {
+  const d = pokemon(into);
+  const top = topDef(s, sl);
+  if (!d.evolvesFrom || top.name !== d.evolvesFrom) return false;
+  // Forest of Vitality: a {G} Pokémon can evolve into a {G} Pokémon the turn it was played (or evolved).
+  if (stadiumIs(s, 'forest-of-vitality') && d.types.includes('Grass') && top.types.includes('Grass')) return true;
+  return sl.enteredTurn !== s.turn && sl.evolvedTurn !== s.turn;
+}
+
+/** Talonflame ex's Excited Dive: from the hand onto the Bench while a {C} Mega Evolution Pokémon ex is in play. */
+function excitedDive(s: GameState, p: PlayerId, key: string): boolean {
+  const d = pokemon(key);
+  if (!d.abilities.some((a) => a.name === 'Excited Dive')) return false;
+  return slotsOf(s.players[p]).some((sl) => {
+    const t = topDef(s, sl);
+    return (t.subtypes.includes('MEGA') || t.name.startsWith('Mega ')) && t.types.includes('Colorless');
+  });
 }
 
 /** Same as one of legalActions(), treating copies of the same card as equal. */

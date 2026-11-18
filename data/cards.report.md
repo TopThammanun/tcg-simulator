@@ -1,24 +1,25 @@
 # รายงานข้อมูลการ์ด (เฟส 0)
 
-สร้างเมื่อ 2026-11-14T18:12:17.137Z ด้วย `npm run cards` · ข้อมูลอยู่ที่ `data/cards.manifest.json`
+สร้างเมื่อ 2026-11-18T17:37:04.509Z ด้วย `npm run cards` · ข้อมูลอยู่ที่ `data/cards.manifest.json`
 
 ## ด่านเฟส 0
 
-- ✅ ข้อความการ์ดครบทุกใบ: 117 การ์ด จาก 129 print
-- ✅ ทุกใบมีรูปหรือมีทางสำรอง: รูปจริง 128/129 print, ที่เหลือ 1 ใบแสดงเป็นกรอบข้อความ
+- ✅ ข้อความการ์ดครบทุกใบ: 129 การ์ด จาก 141 print
+- ✅ ทุกใบมีรูปหรือมีทางสำรอง: รูปจริง 140/141 print, ที่เหลือ 1 ใบแสดงเป็นกรอบข้อความ
 - ✅ decklist ถูกกฎ (60 ใบ, ชื่อเดียวกันไม่เกิน 4, ACE SPEC ไม่เกิน 1, มี Basic)
 
 ## แหล่งรูป
 
 | แหล่ง | จำนวน print |
 | --- | --- |
-| TCGdex | 116 |
-| pokemontcg.io | 12 |
+| TCGdex | 127 |
+| pokemontcg.io | 13 |
 | รูปจาก print อื่นที่ข้อความเหมือนกัน | 0 |
 | ไม่มีรูป (กรอบข้อความ) | 1 |
 
 print ที่ไม่ได้ใช้รูปจาก TCGdex ของ print ตัวเอง:
 
+- DLR-88 Talonflame ex: pokemontcg.io
 - MEE-1 Grass Energy: pokemontcg.io (sve-1)
 - MEE-9 Grass Energy: pokemontcg.io (sve-1)
 - MEE-10 Fire Energy: pokemontcg.io (sve-2)
@@ -48,7 +49,7 @@ print ที่ไม่ได้ใช้รูปจาก TCGdex ของ pr
 | Festival Lead (Seaking) | 27 | 16 | 15 | 109 |
 | Festival Lead (Dipplin) | 26 | 8 | 7 | 117 |
 
-รวม 117 การ์ด ต้องเขียนเอฟเฟกต์ 106 ใบ ที่เหลือเป็นพลังงานพื้นฐานหรือ Pokémon ที่มีแต่ท่าดาเมจตรง ๆ
+รวม 129 การ์ด ต้องเขียนเอฟเฟกต์ 116 ใบ ที่เหลือเป็นพลังงานพื้นฐานหรือ Pokémon ที่มีแต่ท่าดาเมจตรง ๆ
 
 ## การ์ดที่แผนขอให้เช็คข้อความ
 
@@ -65,6 +66,13 @@ Basic · 70 HP · Grass
 
 - **[G] Smash Kick** 10
 - **[GG] Branch Poke** 30
+- Weakness Fire ×2 · Resistance — · Retreat 1
+
+### Applin (SCR-12)
+
+Basic · 40 HP · Grass
+
+- **[G] Spray Fluid** 20
 - Weakness Fire ×2 · Resistance — · Retreat 1
 
 ### Applin (TWM-126)
@@ -161,7 +169,8 @@ Stadium
 
 - **Dunsparce**: `dunsparce-jtg-120` (JTG-120) / `dunsparce-tef-128` (TEF-128)
 - **Grookey**: `grookey-mep-52` (MEP-52) / `grookey-twm-14` (TWM-14)
-- **Applin**: `applin-twm-126` (TWM-126) / `applin-twm-17` (TWM-17)
+- **Annihilape**: `annihilape-pbl-41` (PBL-41) / `annihilape-ssp-100` (SSP-100)
+- **Applin**: `applin-scr-12` (SCR-12) / `applin-twm-126` (TWM-126) / `applin-twm-17` (TWM-17)
 
 ## TCGdex กับ pokemontcg.io ไม่ตรงกัน
 
@@ -193,6 +202,7 @@ Stadium
 | ASC | me02.5 (Ascended Heroes) | me2pt5 (Ascended Heroes) |
 | BLK | sv10.5b (Black Bolt) | zsv10pt5 (Black Bolt) |
 | CRI | me04 (Chaos Rising) | me4 (Chaos Rising) |
+| DLR | me06 (Delta Reign) | me6 (Delta Reign) |
 | DRI | sv10 (Destined Rivals) | sv10 (Destined Rivals) |
 | JTG | sv09 (Journey Together) | sv9 (Journey Together) |
 | MEE | mee (Mega Evolution Energy) | — |

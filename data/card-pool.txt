@@ -1,0 +1,15 @@
+# Cards the engine knows beyond the deck files: the ones real lists of our archetypes play most
+# (scripts/meta/limitless.ts), so those lists can be played (scripts/meta/variants.ts) and the decks updated.
+# Decklist lines (count ignored). npm run cards reads this with src/content/decks.
+1 Annihilape SSP 100
+1 Annihilape PBL 41
+1 Dudunsparce ex JTG 121
+1 Enamorus TWM 93
+1 Passimian SSP 111
+1 Talonflame ex DLR 88
+1 Enhanced Hammer TWM 148
+1 Punk Helmet PFL 92
+1 N's Darumaka JTG 26
+1 N's Darmanitan JTG 27
+1 Forest of Vitality MEG 117
+1 Applin SCR 12

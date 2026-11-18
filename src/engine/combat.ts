@@ -236,6 +236,11 @@ function afterAttack(a: AttackCtx): void {
   if (defender && a.hits.has(defender.uid) && s.players[a.opp].active?.uid === defender.uid) {
     const tk = toolKey(s, defender);
     if (tk === 'lucky-helmet') ctx.draw(a.opp, 2);
+    // Punk Helmet: 4 damage counters on the attacker, even when the Darkness Pokémon is Knocked Out.
+    if (tk === 'punk-helmet' && userInPlay && topDef(s, defender).types.includes('Darkness')) {
+      user.damage += 40;
+      ctx.log(`Punk Helmet: วางตัวนับดาเมจ 4 ตัวบน ${topDef(s, user).name}`);
+    }
     const bench = s.players[a.me].bench;
     if (tk === 'handheld-fan' && userInPlay && user.energy.length > 0 && bench.length > 0) {
       const [e] = ctx.pickCards(a.opp, uniqueByKey(s, user.energy), {

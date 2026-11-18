@@ -220,10 +220,23 @@ export function promote(ctx: Ctx, p: PlayerId): void {
  */
 export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): void {
   const s = ctx.s;
+  const durableTried = new Set<SlotId>();
   for (;;) {
     const kos: { p: PlayerId; slot: Slot }[] = [];
     for (const p of [0, 1] as const) {
-      for (const sl of slotsOf(s.players[p])) if (sl.damage >= maxHp(s, sl)) kos.push({ p, slot: sl });
+      for (const sl of slotsOf(s.players[p])) {
+        if (sl.damage < maxHp(s, sl)) continue;
+        // Durable Body (Annihilape): a Knock Out by attack damage is survived at 10 HP on heads.
+        if (byAttack.has(sl.uid) && abilityOn(s, sl, 'Durable Body') && !durableTried.has(sl.uid)) {
+          durableTried.add(sl.uid);
+          if (ctx.flip()) {
+            sl.damage = maxHp(s, sl) - 10;
+            ctx.log(`Durable Body: ${topDef(s, sl).name} ไม่ถูก Knock Out เหลือ HP 10`, p);
+            continue;
+          }
+        }
+        kos.push({ p, slot: sl });
+      }
     }
     if (kos.length === 0) break;
 

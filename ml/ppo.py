@@ -142,8 +142,10 @@ def main():
         p.requires_grad_(False)
     opt = torch.optim.Adam(net.parameters(), lr=a.lr)
     opt_path = os.path.join(a.dir, "opt.pt")
-    if os.path.exists(opt_path) and state["iter"] > 0:
-        opt.load_state_dict(torch.load(opt_path, map_location=DEVICE))
+    saved = torch.load(opt_path, map_location=DEVICE) if os.path.exists(opt_path) and state["iter"] > 0 else None
+    # Cards added since (v2: more id rows) change parameter shapes: the saved moments no longer fit, start them again.
+    if saved and all(st["exp_avg"].shape == p.shape for p, st in zip(net.parameters(), saved["state"].values()) if "exp_avg" in st):
+        opt.load_state_dict(saved)
         # The saved state carries the old learning rate; --lr wins when resuming.
         for g in opt.param_groups:
             g["lr"] = a.lr

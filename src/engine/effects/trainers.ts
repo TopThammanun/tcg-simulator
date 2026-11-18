@@ -12,6 +12,7 @@ import {
   isEx,
   isNsPokemon,
   isPokemon,
+  isSpecialEnergy,
   isTrainerType,
   pokemon,
 } from '../db';
@@ -111,6 +112,19 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       t!.energy = t!.energy.filter((x) => x !== e);
       ctx.ps(opp(p)).discard.push(e!);
       ctx.log(`ทิ้ง ${ctx.cardName(e!)} จาก ${topDef(ctx.s, t!).name}`, p);
+    },
+  },
+  'enhanced-hammer': {
+    canPlay: (s, p) => slotsOf(s.players[opp(p)]).some((sl) => sl.energy.some((e) => isSpecialEnergy(keyOf(s, e)))),
+    play: (ctx, p) => {
+      const s = ctx.s;
+      const special = (sl: Slot) => sl.energy.filter((e) => isSpecialEnergy(keyOf(s, e)));
+      const targets = slotsOf(ctx.ps(opp(p))).filter((sl) => special(sl).length > 0);
+      const [t] = ctx.pickSlots(p, targets, { purpose: 'target', prompt: 'Enhanced Hammer: ทิ้ง Special Energy จาก Pokémon ตัวไหน', source: 'enhanced-hammer' });
+      const [e] = ctx.pickCards(p, uniqueByKey(s, special(t!)), { purpose: 'energy', prompt: 'เลือก Special Energy ที่จะทิ้ง', source: 'enhanced-hammer' });
+      t!.energy = t!.energy.filter((x) => x !== e);
+      ctx.ps(opp(p)).discard.push(e!);
+      ctx.log(`ทิ้ง ${ctx.cardName(e!)} จาก ${topDef(s, t!).name}`, p);
     },
   },
   'rare-candy': {

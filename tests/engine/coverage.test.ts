@@ -9,14 +9,14 @@ import { TRAINERS } from '../../src/engine/effects/trainers';
 // Read by the rules where they apply (rules.ts, combat.ts, actions.ts).
 const PASSIVE_ABILITIES = [
   'Skyliner', 'Fairy Zone', 'Cobalt Command', 'Flower Curtain', 'Spherical Shield', 'Midnight Fluttering',
-  'Memory Helix', 'Festival Lead', 'Seasoned Skill', 'ACE Nullifier',
+  'Memory Helix', 'Festival Lead', 'Seasoned Skill', 'ACE Nullifier', 'Durable Body', 'Excited Dive',
   // No card in the pool can trigger these: Damp (self-KO Abilities), Plasma Bane ("Colress" cards).
   'Damp', 'Plasma Bane',
 ];
-const TOOLS = ['heros-cape', 'air-balloon', 'brave-bangle', 'lillies-pearl', 'handheld-fan', 'lucky-helmet', 'binding-mochi'];
+const TOOLS = ['heros-cape', 'air-balloon', 'brave-bangle', 'lillies-pearl', 'handheld-fan', 'lucky-helmet', 'binding-mochi', 'punk-helmet'];
 const STADIUMS = [
   'area-zero-underdepths', 'festival-grounds', 'nighttime-mine', 'team-rockets-watchtower', 'ns-castle', 'risky-ruins',
-  'battle-cage', 'academy-at-night', 'gravity-mountain',
+  'battle-cage', 'academy-at-night', 'gravity-mountain', 'forest-of-vitality',
 ];
 const SPECIAL_ENERGY_IN_RULES = ['mist-energy', 'boomerang-energy', 'growing-grass-energy'];
 // Attacks whose text only restates how damage works.

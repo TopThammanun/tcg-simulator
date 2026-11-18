@@ -111,13 +111,36 @@ function decode(b64: string): Float32Array {
 export function loadModel(j: ModelJson): Model {
   if (j.version === 2) return loadV2(j);
   const t: Record<string, Float32Array> = {};
+  // Shapes as saved: the per-card tables have the vocabulary the network was trained with (j.cards).
+  const saved = j.cards.length + 1;
   for (const [name, shape] of Object.entries(NAMES)) {
     const src = j.tensors[name];
+    const want = name === 'emb' ? [saved, E] : name === 'bag.w' ? [BAGS, saved, BAGD] : shape;
     if (!src) throw new Error(`model is missing ${name}`);
-    if (src.shape.join() !== shape.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${shape}`);
+    if (src.shape.join() !== want.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${want}`);
     t[name] = decode(src.data);
   }
+  if (j.cards.join() !== CARD_KEYS.join()) Object.assign(t, remapV1(t, j.cards));
   return { t, meta: j.meta ?? {}, dims: V1_DIMS, glob: null };
+}
+
+/**
+ * A version-1 network on today's card list: rows of the cards it was trained with move to their new places;
+ * cards added since get zeros (to it they are no card at all).
+ */
+function remapV1(t: Record<string, Float32Array>, trained: readonly string[]): { emb: Float32Array; 'bag.w': Float32Array } {
+  const old = new Map(trained.map((k, i) => [k, i + 1]));
+  const from = (v: number) => (v === 0 ? 0 : (old.get(CARD_KEYS[v - 1]!) ?? -1));
+  const n = trained.length + 1;
+  const emb = new Float32Array(VOCAB * E);
+  const bw = new Float32Array(BAGS * VOCAB * BAGD);
+  for (let v = 0; v < VOCAB; v++) {
+    const o = from(v);
+    if (o < 0) continue;
+    emb.set(t.emb!.subarray(o * E, o * E + E), v * E);
+    for (let b = 0; b < BAGS; b++) bw.set(t['bag.w']!.subarray((b * n + o) * BAGD, (b * n + o + 1) * BAGD), (b * VOCAB + v) * BAGD);
+  }
+  return { emb, 'bag.w': bw };
 }
 
 function loadV2(j: ModelJson): Model {
