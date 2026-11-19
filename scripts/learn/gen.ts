@@ -18,6 +18,9 @@ import { makeSearchNetBot, type NetSearchOptions } from '../../src/bots/learn/se
 import { planFor } from '../../src/bots/plans';
 import type { Bot } from '../../src/bots/types';
 import { actor, apply, createGame } from '../../src/engine/actions';
+import { derive, shuffleInPlace } from '../../src/engine/rng';
+import { cloneState } from '../../src/engine/state';
+import { readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review/record';
 import { deckKeys } from '../../src/engine/db';
 import type { GameState } from '../../src/engine/types';
 import { loadDeckFiles } from '../lib/decks';
@@ -44,6 +47,12 @@ export interface GenConfig {
    * lists with chance `share`, otherwise the deck file's list. The swapped-seat game keeps the same lists.
    */
   variants?: { path: string; share: number };
+  /**
+   * Positions from games people played against the bot (the review page's games file): this share of the games
+   * starts from one of them (a turn's first free position, Prizes and deck orders dealt again) instead of
+   * from the beginning, with that game's lists and decks. Self-play then learns what real players did to it.
+   */
+  starts?: { path: string; share: number };
 }
 
 /**
@@ -78,10 +87,14 @@ interface Match {
   names: [string, string];
   /** Lists other than the deck files' (variants), by seat. */
   lists?: [string[] | null, string[] | null];
+  /** Start from state `at` of saved game `game` (Job.games). */
+  start?: { game: number; at: number };
 }
 interface Job {
   matches: Match[];
   players: Record<string, PlayerSpec>;
+  /** The saved games starts refer to. */
+  games?: SavedGame[];
   path: string;
 }
 export interface MatchResult {
@@ -127,16 +140,38 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
   return record ? recordBot(bot, decks, record) : bot;
 }
 
-export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: ShardWriter | null, gameId: number): MatchResult {
+const replays = new Map<number, GameState[]>();
+
+/** A saved game's state `at`, with both players' decks and Prizes dealt again and fresh coins (the game's seed). */
+function startFrom(games: SavedGame[], start: NonNullable<Match['start']>, seed: number): GameState {
+  if (!replays.has(start.game)) replays.set(start.game, replay(games[start.game]!));
+  const s = cloneState(replays.get(start.game)![start.at]!);
+  s.quiet = true;
+  s.log = [];
+  s.rng = { shuffle: [derive(seed, 1), derive(seed, 2)], coin: derive(seed, 3) };
+  for (const p of [0, 1] as const) {
+    const ps = s.players[p];
+    const pool = [...ps.deck, ...ps.prizes];
+    shuffleInPlace(pool, derive(seed, 4 + p));
+    ps.deck = pool.slice(0, ps.deck.length);
+    ps.prizes = pool.slice(ps.deck.length);
+    ps.knownTop = [];
+  }
+  return s;
+}
+
+export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: ShardWriter | null, gameId: number, games: SavedGame[] = []): MatchResult {
   const bots = [0, 1].map((i) => makePlayer(players[m.names[i]!]!, m.decks[i]!, m.decks[1 - i]!, m.seed * 2 + i + 1, out));
-  let s: GameState = createGame({
-    seed: m.seed,
-    decks: [
-      { name: 'a', cards: m.lists?.[0] ?? deckCards.get(m.decks[0])! },
-      { name: 'b', cards: m.lists?.[1] ?? deckCards.get(m.decks[1])! },
-    ],
-    quiet: true,
-  });
+  let s: GameState = m.start
+    ? startFrom(games, m.start, m.seed)
+    : createGame({
+        seed: m.seed,
+        decks: [
+          { name: 'a', cards: m.lists?.[0] ?? deckCards.get(m.decks[0])! },
+          { name: 'b', cards: m.lists?.[1] ?? deckCards.get(m.decks[1])! },
+        ],
+        quiet: true,
+      });
   const think: [number, number] = [0, 0];
   out?.beginGame(gameId);
   try {
@@ -155,9 +190,28 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
   return { names: m.names, decks: m.decks, winner: s.winner, maxThinkMs: think };
 }
 
+/** The saved games of a config's `starts`, and each one's start positions (a turn's first free state, turn 2 on). */
+export function startPositions(c: Pick<GenConfig, 'starts'>): { games: SavedGame[]; at: number[][] } {
+  if (!c.starts) return { games: [], at: [] };
+  const games = readGamesFile(readFileSync(c.starts.path, 'utf8'));
+  const at = games.map((g) => {
+    const states = replay(g);
+    return [...turnsOf(states, 0), ...turnsOf(states, 1)].filter((t) => t.turn >= 2).map((t) => t.start).sort((x, y) => x - y);
+  });
+  return { games, at };
+}
+
 /** Matches for a config: each pairing gets its share of the games, every deck pair, both seats. */
-export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants'>): Match[] {
+export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants' | 'starts'>): Match[] {
   const out: Match[] = [];
+  const starts = startPositions(c);
+  const pool = starts.at.flatMap((list, g) => list.map((at) => ({ g, at })));
+  // A saved game's position for game k, with chance `share` (a hash of k).
+  const startFor = (k: number) => {
+    if (!c.starts || pool.length === 0) return null;
+    const h = Math.imul(k + 7, 0x27d4eb2f) >>> 0;
+    return (h % 10_000) / 10_000 < c.starts.share ? pool[(h >>> 9) % pool.length]! : null;
+  };
   const variants = c.variants ? (JSON.parse(readFileSync(c.variants.path, 'utf8')) as Record<string, string[][]>) : {};
   // A list for one side of game k: a variant with chance `share` (decided by a hash of the game and side).
   const listFor = (slug: string, k: number, side: number): string[] | null => {
@@ -182,6 +236,15 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
       const x = fixed ? draw(da, 0x5bd1e995) : da[k % da.length]!;
       const y = fixed ? draw(db, 0x1b873593) : db[Math.floor(k / da.length) % db.length]!;
       const seed = c.base + k;
+      const st = startFor(k);
+      if (st) {
+        // Seats as in the saved game: the person's deck (deck file "player") first, the bot's second.
+        const g = starts.games[st.g]!;
+        const decks: [string, string] = ['player', g.opponent];
+        out.push({ id: out.length, seed, decks, names: [pair.a, pair.b], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
+        if (!mirror) out.push({ id: out.length, seed, decks, names: [pair.b, pair.a], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
+        continue;
+      }
       const lx = listFor(x, k, 0);
       const ly = listFor(y, k, 1);
       const lists = (a: string[] | null, b: string[] | null): Match['lists'] => (a || b ? [a, b] : undefined);
@@ -198,7 +261,7 @@ if (!isMainThread) {
   const results: MatchResult[] = [];
   job.matches.forEach((m) => {
     try {
-      results.push(playMatch(m, job.players, out, m.id));
+      results.push(playMatch(m, job.players, out, m.id, job.games));
     } catch (e) {
       results.push({ names: m.names, decks: m.decks, winner: null, maxThinkMs: [0, 0] });
       console.error(`game ${m.seed} ${m.decks.join(' vs ')} broke: ${(e as Error).message}`);
@@ -226,9 +289,11 @@ export async function generate(c: GenConfig): Promise<{
   const matches = matchesFor(c);
   const threads = Math.max(1, Math.min(c.threads ?? cpus().length - 1, matches.length));
   // Interleave so every thread gets a mix of decks and pairings.
+  const games = startPositions(c).games;
   const jobs: Job[] = Array.from({ length: threads }, (_, t) => ({
     matches: matches.filter((_, i) => i % threads === t),
     players: c.players,
+    games,
     path: `${c.out}/shard-${t}.bin`,
   }));
   const parts = await Promise.all(jobs.map((j) => runTsWorker<JobResult>(new URL(import.meta.url), j)));

@@ -29,6 +29,7 @@ npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to re
 npx tsx scripts/meta/variants.ts   # real lists our engine can play, per deck -> .cache/meta/variants.json (gen.ts `variants`, ppo.py --variants)
 npx tsx scripts/meta/pick-lists.ts [--write --only a,b]   # each bot deck's most typical recent top list that the engine can play
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
+# ppo.py --starts <tcg-sim-games-*.json> [--starts-share 0.1]: some self-play games start from those games' positions (gen.ts `starts`)
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
 npx tsx scripts/review-gate.ts --games 330 --stability 160   # phase 8 gate: review win% vs results, same verdicts on another seed, time

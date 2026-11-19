@@ -116,6 +116,8 @@ def main():
     ap.add_argument("--frozen", help="a fixed network to play as 'frozen' in --mix (best move, no sampling): train an exploiter against it")
     ap.add_argument("--eval-vs", default="hard", choices=["hard", "frozen", "bot"], help="who the greedy network is measured against (bot = the game's bot now)")
     ap.add_argument("--variants", type=float, default=0.0, help="share of sides that play a real list (.cache/meta/variants.json, scripts/meta/variants.ts)")
+    ap.add_argument("--starts", help="games people played against the bot (the review page's games file): some games start from their positions")
+    ap.add_argument("--starts-share", type=float, default=0.1, help="share of the games that start from --starts positions")
     ap.add_argument("--focus", help="the network always plays this deck (a specialist), e.g. dragapult-ex")
     ap.add_argument("--vs-weights", default="", help="with --focus: extra weight on some opponent decks, e.g. player=0.4 (the rest spread evenly)")
     ap.add_argument("--eval-every", type=int, default=10)
@@ -176,6 +178,8 @@ def main():
         out = os.path.join(a.dir, "games")
         shutil.rmtree(out, ignore_errors=True)
         variants = {"variants": {"path": os.path.join(ROOT, ".cache", "meta", "variants.json"), "share": a.variants}} if a.variants > 0 else {}
+        if a.starts:
+            variants["starts"] = {"path": os.path.abspath(a.starts), "share": a.starts_share}
         cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs, **variants}
         res = run_gen(cfg, os.path.join(a.dir, "gen.json"))
         t1 = time.time()
