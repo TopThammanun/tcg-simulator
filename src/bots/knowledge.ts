@@ -1,7 +1,7 @@
 // Shared heuristics: how much a card is worth right now, which Pokémon should attack, where Energy goes.
 import type { Attack, EnergyType } from '../data/cards';
 import { baseDamage } from '../engine/combat';
-import { def, hasRuleBox } from '../engine/db';
+import { def, hasRuleBox, isBasicEnergy } from '../engine/db';
 import { attackCost, canPay, energyOf, hpLeft } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef, topKey } from '../engine/state';
 import type { GameState, PlayerId, Slot } from '../engine/types';
@@ -44,6 +44,16 @@ export function roughDamage(s: GameState, user: Slot, a: Attack): number {
   if (a.name === 'Thunder Raid') return theirs.bench.some((b) => hasRuleBox(topKey(s, b))) ? 210 : 0;
   if (a.name === 'Trifrost') return 110 * Math.min(3, theirs.bench.length + 1);
   if (a.name === 'Cruel Arrow') return 100;
+  // Card pool (data/card-pool.txt).
+  if (a.name === 'Tenacious Tail') return 60 * slotsOf(theirs).filter((sl) => topDef(s, sl).subtypes.includes('ex')).length;
+  if (a.name === 'Back Draft') return 30 * theirs.discard.filter((c) => isBasicEnergy(keyOf(s, c))).length;
+  if (a.name === 'Coordinated Throwing') return 20 * slotsOf(s.players[me]).filter((sl) => topDef(s, sl).stage === 'Basic').length;
+  if (a.name === 'Love Resonance') {
+    const types = new Set(slotsOf(theirs).flatMap((sl) => topDef(s, sl).types));
+    return slotsOf(s.players[me]).some((sl) => topDef(s, sl).types.some((t) => types.has(t))) ? 200 : 80;
+  }
+  if (a.name === 'Destined Fight') return theirs.active ? hpLeft(s, theirs.active) : 0;
+  if (a.name === 'Ghostly Blow') return 150;
   if (a.name === 'Twin Shotels') return 100;
   if (d.endsWith('+')) return base + 30;
   return base;
