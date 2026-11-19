@@ -29,7 +29,7 @@ let turnsSeen = 0;
 
 function analyze(g: SavedGame, n: number) {
   const states = replay(g);
-  const plans = { mine: planFor(g.opponent), theirs: planFor('player', g.policy) };
+  const plans = { mine: planFor(g.opponent), theirs: planFor(g.mine ?? 'player', g.policy) };
   const result = g.winner === 1 ? 'bot won' : g.winner === 0 ? 'bot lost' : 'draw';
   out.push(`## Game ${n}: you vs ${g.opponentName} (${result}, ${g.reason}, ${g.turns} turns, seed ${g.seed})`, '');
   out.push('| Turn | Bot played | Win% before → after | Note |', '|---|---|---|---|');

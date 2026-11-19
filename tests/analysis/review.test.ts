@@ -10,7 +10,7 @@ import { playGame } from '../../src/sim/game';
 import { deck, scenario } from '../engine/helpers';
 
 const plans = { mine: planFor('player'), theirs: planFor('dragapult-ex') };
-const FAST = { samples: 6, threatSamples: 6, theirDeck: 'dragapult-ex' };
+const FAST = { deals: 4 };
 
 /** Your Dragapult ex can Jet Headbutt (70) the opponent's Dreepy (70 HP); `bench` decides whether that wins. */
 function position(bench: string[]): GameState {

@@ -238,9 +238,9 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
       const seed = c.base + k;
       const st = startFor(k);
       if (st) {
-        // Seats as in the saved game: the person's deck (deck file "player") first, the bot's second.
+        // Seats as in the saved game: the person's deck first (its plan; "player" for games saved before decks could be picked), the bot's second.
         const g = starts.games[st.g]!;
-        const decks: [string, string] = ['player', g.opponent];
+        const decks: [string, string] = [g.mine ?? 'player', g.opponent];
         out.push({ id: out.length, seed, decks, names: [pair.a, pair.b], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
         if (!mirror) out.push({ id: out.length, seed, decks, names: [pair.b, pair.a], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
         continue;

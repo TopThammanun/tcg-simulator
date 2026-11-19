@@ -3,6 +3,16 @@
 import { actor, apply, createGame } from '../engine/actions';
 import type { PlayerPolicy } from '../bots/plans';
 import type { Action, GameState, PlayerId, Rules } from '../engine/types';
+import { redeal } from '../engine/view';
+
+/** Practice mode (hints, the threat panel, undo) or a real game (none of them). */
+export type PlayMode = 'practice' | 'real';
+
+/** An undo in practice mode: state `at` was dealt again with `seed` (engine/view.ts redeal()). */
+export interface Redeal {
+  at: number;
+  seed: number;
+}
 
 export interface SavedGame {
   /** Set by the store. */
@@ -12,6 +22,12 @@ export interface SavedGame {
   /** Bot deck slug (src/content/decks) and its name. */
   opponent: string;
   opponentName: string;
+  /** The deck plan your side is reviewed with (a deck slug; your own lists use the nearest meta deck's), and your deck's name. Games saved before you could pick a deck: 'player'. */
+  mine?: string;
+  mineName?: string;
+  mode?: PlayMode;
+  /** Undos that dealt the hidden cards again, in order (the actions after each one follow the new deal). */
+  redeals?: Redeal[];
   /** Bot difficulty of games saved before there was only one bot (unused). */
   level?: string;
   rules: Partial<Rules>;
@@ -50,7 +66,7 @@ export function readGamesFile(text: string): SavedGame[] {
   return f.games;
 }
 
-/** states[0] is the new game; states[i + 1] = apply(states[i], actions[i]). */
+/** states[0] is the new game; states[i + 1] = apply(states[i], actions[i]), each dealt again where `g.redeals` says. */
 export function replay(g: SavedGame): GameState[] {
   const states = [
     createGame({
@@ -63,7 +79,15 @@ export function replay(g: SavedGame): GameState[] {
       rules: g.rules,
     }),
   ];
-  for (const a of g.actions) states.push(apply(states[states.length - 1]!, a, { trusted: true }));
+  const redeals = g.redeals ?? [];
+  const dealt = (i: number) => {
+    for (const r of redeals) if (r.at === i) states[i] = redeal(states[i]!, 0, r.seed);
+  };
+  dealt(0);
+  for (const a of g.actions) {
+    states.push(apply(states[states.length - 1]!, a, { trusted: true }));
+    dealt(states.length - 1);
+  }
   return states;
 }
 

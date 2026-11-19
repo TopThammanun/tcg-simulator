@@ -1,8 +1,21 @@
 ---
+import MyDecks from '../../components/MyDecks.svelte';
+import { formatDecklist } from '../../data/decklist';
+import { deckKeys } from '../../engine/db';
 import Base from '../../layouts/Base.astro';
-import { loadDecks, sectionCount } from '../../lib/decks';
+import { loadDecks, metaDecks, sectionCount } from '../../lib/decks';
 
-const decks = await loadDecks();
+const decks = metaDecks(await loadDecks());
+// For your own decks: the meta lists to start from, and their plans for lists near them.
+const lists = decks.map((d) => ({
+  slug: d.slug,
+  name: d.meta.name,
+  rank: d.meta.rank,
+  metaShare: d.meta.metaShare,
+  archetype: d.meta.limitless ?? d.slug,
+  cards: deckKeys(d.lines.map((l) => l.entry)),
+  text: formatDecklist(d.lines.map((l) => l.entry)),
+}));
 const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
 // The deck's headline Pokémon: the one it is named after, then rule-box attackers, then most copies.
 // Drawn last so it sits on top of the fan.
@@ -17,40 +30,32 @@ const thumbs = (d: (typeof decks)[number]) =>
     .sort((a, b) => score(d.meta.name, b) - score(d.meta.name, a))
     .slice(0, 3)
     .reverse();
-const imageCoverage = (d: (typeof decks)[number]) => {
-  const prints = d.lines.length;
-  return `${d.lines.filter((l) => l.print.image.source !== 'none').length}/${prints}`;
-};
 ---
 
 <Base title="เด็คทั้งหมด">
-  <p class="eyebrow">เฟส 0 · decklist + ข้อมูลการ์ด</p>
+  <p class="eyebrow">เด็คใน meta</p>
   <h1>เด็คทั้งหมด</h1>
   <p class="lede">
-    เด็คของคุณ 1 เด็คกับเด็คบอท 6 archetype ตาม meta share บน Limitless (Festival Lead มี 2 list ให้เลือก)
-    กดเด็คเพื่อดูการ์ดทุกใบพร้อมรูปและข้อความ
+    เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด เลือกเล่นเด็คไหนก็ได้
+    หรือเพิ่ม list ของคุณเองที่ด้านล่าง กดเด็คเพื่อดูการ์ดทุกใบ
   </p>
 
   <ol class="decks">
     {
       decks.map((d, i) => (
-        <li class:list={['deck rise', d.meta.side]} style={`--i:${i}`}>
+        <li class="deck rise" style={`--i:${i}`}>
           <a href={`/decks/${d.slug}/`}>
-            <span class="rank">{d.meta.side === 'player' ? 'คุณ' : d.meta.rank}</span>
+            <span class="rank">{d.meta.rank}</span>
             <span class="fan" aria-hidden="true">
               {thumbs(d).map((l, j) => (
                 <img src={l.print.image.low} alt="" loading="lazy" width="245" height="342" style={`--j:${j}`} />
               ))}
             </span>
             <span class="info">
-              <span class="name">
-                {d.meta.name}
-                {d.meta.optional && <span class="opt">เสริม</span>}
-              </span>
+              <span class="name">{d.meta.name}</span>
               <span class="source">{d.meta.listSource}</span>
               <span class="counts mono">
-                P {sectionCount(d, 'pokemon')} · T {sectionCount(d, 'trainer')} · E {sectionCount(d, 'energy')} · รูป{' '}
-                {imageCoverage(d)}
+                P {sectionCount(d, 'pokemon')} · T {sectionCount(d, 'trainer')} · E {sectionCount(d, 'energy')}
               </span>
             </span>
             {d.meta.metaShare !== undefined && (
@@ -64,6 +69,8 @@ const imageCoverage = (d: (typeof decks)[number]) => {
       ))
     }
   </ol>
+
+  <MyDecks client:only="svelte" decks={lists} />
 </Base>
 
 <style>
@@ -95,23 +102,12 @@ const imageCoverage = (d: (typeof decks)[number]) => {
   .deck a:hover {
     background: var(--paper-deep);
   }
-  .deck.player a {
-    background: color-mix(in srgb, var(--stamp) 7%, transparent);
-    border-bottom: 2px solid var(--ink);
-  }
   .rank {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 2.2rem;
     line-height: 1;
     text-align: center;
-  }
-  .player .rank {
-    font-size: 1.1rem;
-    color: var(--paper);
-    background: var(--stamp);
-    padding: 6px 0;
-    transform: rotate(-4deg);
   }
   .fan {
     position: relative;
@@ -141,16 +137,6 @@ const imageCoverage = (d: (typeof decks)[number]) => {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.2rem;
-  }
-  .opt {
-    margin-left: 8px;
-    font-family: var(--font-body);
-    font-size: 0.7rem;
-    font-weight: 500;
-    padding: 1px 6px;
-    border: 1px solid var(--teal);
-    color: var(--teal);
-    vertical-align: middle;
   }
   .source {
     color: var(--ink-soft);

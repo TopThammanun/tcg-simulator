@@ -1,15 +1,17 @@
-// Phase 8 gate (game review). Your deck (normal bot) plays every bot deck; then:
-// 1. win% calibration: after each of your turns, the review's win% (winrate.ts, from what you could see) is
-//    checked against how the game really ended (scripts/lib/calibration-table.ts).
-// 2. stability: every turn of the first --stability games is reviewed twice with different seeds; the
+// Game review gate. Bot games between the meta decks (every pairing, both seats); then:
+// 1. win% calibration: after each of your turns, the review's win% (the network's value, review.ts winOf,
+//    from what you could see) is checked against how the game really ended (scripts/lib/calibration-table.ts).
+//    Two kinds of games: your side played by the network (as strong as the opponent), and by the rule-based
+//    bot (a weaker player than the network expects).
+// 2. stability: every turn of the first --stability games is reviewed twice with different re-deals; the
 //    verdict (missed-win / missed-ko / better / ok) should be the same at least 90% of the time.
 // 3. time: a whole game's review on one thread (the review page splits turns over several workers).
-//   npx tsx scripts/review-gate.ts --games 300 --stability 160 [--samples 48] [--seed 90000]
+//   npx tsx scripts/review-gate.ts --games 600 --stability 120 [--deals 16] [--seed 90000]
 import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { reviewTurn, type Verdict } from '../src/analysis/review';
-import { estimateWin } from '../src/analysis/winrate';
+import { reviewTurn, winOf, type Verdict } from '../src/analysis/review';
 import { makeBot } from '../src/bots/core';
+import { createBot } from '../src/bots/index';
 import { DEFAULT_POLICY, planFor } from '../src/bots/plans';
 import { deckKeys } from '../src/engine/db';
 import { replay, turnsOf, type SavedGame } from '../src/review/record';
@@ -18,16 +20,17 @@ import { calibrationTable, mean, pct, type Prediction } from './lib/calibration-
 import { loadDeckFiles } from './lib/decks';
 import { runTsWorker } from './lib/workers';
 
+type Side = 'net' | 'rules';
 interface Job {
   from: number;
   to: number;
   /** Games below this index are also reviewed twice (set per worker). */
   stability: number;
-  samples: number;
+  deals: number;
   base: number;
 }
 interface Result {
-  predictions: Prediction[];
+  predictions: Record<Side, Prediction[]>;
   /** Verdicts of the two reviews of each turn. */
   verdicts: [Verdict, Verdict][];
   /** Whole-game review time (ms) and your turns in it. */
@@ -36,23 +39,29 @@ interface Result {
 
 const files = loadDeckFiles('src/content/decks');
 const spec = (slug: string) => ({ name: slug, cards: deckKeys(files.find((d) => d.slug === slug)!.list.entries) });
-const opponents = files.filter((f) => f.meta.side === 'bot').map((f) => f.slug);
+const decks = files.filter((f) => f.meta.side === 'bot').map((f) => f.slug);
 
 function run(job: Job): Result {
-  const out: Result = { predictions: [], verdicts: [], times: [] };
+  const out: Result = { predictions: { net: [], rules: [] }, verdicts: [], times: [] };
   for (let i = job.from; i < job.to; i++) {
-    const opp = opponents[i % opponents.length]!;
+    // Even games: your side is the network; odd: the rule-based bot. Decks cycle through every pairing.
+    const side: Side = i % 2 === 0 ? 'net' : 'rules';
+    const k = Math.floor(i / 2);
+    const mine = decks[k % decks.length]!;
+    const opp = decks[Math.floor(k / decks.length) % decks.length]!;
     const seed = job.base + i;
-    const plans = { mine: planFor('player'), theirs: planFor(opp) };
-    const r = playGame({ seed, decks: [spec('player'), spec(opp)], bots: [makeBot(plans.mine, { seed: seed + 1 }), makeBot(plans.theirs, { seed: seed + 2 })], record: true });
+    const plans = { mine: planFor(mine), theirs: planFor(opp) };
+    const me = side === 'net' ? createBot(plans.mine, seed + 1, plans.theirs, { fast: true }) : makeBot(plans.mine, { seed: seed + 1 });
+    const r = playGame({ seed, decks: [spec(mine), spec(opp)], bots: [me, createBot(plans.theirs, seed + 2, plans.mine, { fast: true })], record: true });
     const game: SavedGame = {
       savedAt: 0,
       seed,
       opponent: opp,
       opponentName: opp,
+      mine,
       rules: {},
       policy: DEFAULT_POLICY,
-      decks: [spec('player').cards, spec(opp).cards],
+      decks: [spec(mine).cards, spec(opp).cards],
       actions: r.history!,
       winner: r.winner,
       reason: r.reason,
@@ -64,14 +73,14 @@ function run(job: Job): Result {
     for (const sp of spans) {
       const end = states[sp.end]!;
       if (end.winner !== null) continue; // a decided game says nothing about calibration
-      out.predictions.push({ p: estimateWin(end, 0, plans, { samples: job.samples, seed: seed * 13 + sp.turn }).p, y, game: i });
+      out.predictions[side].push({ p: winOf(end, 0, plans, { deals: job.deals, seed: seed * 13 + sp.turn }).p, y, game: i });
     }
     if (i < job.stability) {
       const t0 = performance.now();
-      const a = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { samples: job.samples, seed: 1, theirDeck: opp }));
+      const a = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 1 }));
       out.times.push([performance.now() - t0, spans.length]);
-      const b = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { samples: job.samples, seed: 2, theirDeck: opp }));
-      a.forEach((x, k) => out.verdicts.push([x.verdict, b[k]!.verdict]));
+      const b = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 2 }));
+      a.forEach((x, n) => out.verdicts.push([x.verdict, b[n]!.verdict]));
     }
   }
   return out;
@@ -84,25 +93,30 @@ if (!isMainThread) {
     const k = process.argv.indexOf(`--${name}`);
     return k > 0 ? Number(process.argv[k + 1]) : d;
   };
-  const games = opt('games', 300);
-  const stability = Math.min(games, opt('stability', 160));
-  const samples = opt('samples', 48);
+  const games = opt('games', 600);
+  const stability = Math.min(games, opt('stability', 120));
+  const deals = opt('deals', 16);
   const base = opt('seed', 90000);
   const threads = cpus().length;
   const started = Date.now();
   const jobs: Job[] = [];
   const per = Math.ceil(games / threads);
-  for (let t = 0; t < threads; t++) if (t * per < games) jobs.push({ from: t * per, to: Math.min(games, (t + 1) * per), stability, samples, base });
+  for (let t = 0; t < threads; t++) if (t * per < games) jobs.push({ from: t * per, to: Math.min(games, (t + 1) * per), stability, deals, base });
   // The twice-reviewed games are the slow ones: each worker takes an equal share of them, from its first game.
   const share = Math.ceil(stability / jobs.length);
   const parts = await Promise.all(jobs.map((j) => runTsWorker<Result>(import.meta.url, { ...j, stability: j.from + Math.min(share, j.to - j.from) })));
-  const predictions = parts.flatMap((p) => p.predictions);
   const verdicts = parts.flatMap((p) => p.verdicts);
   const times = parts.flatMap((p) => p.times);
 
-  console.log(`1. win% after your turns: ${games} games from seed ${base}, ${samples} played-out games each, ${predictions.length} positions`);
-  const failed = calibrationTable(predictions);
-  console.log(failed ? `   FAIL: ${failed} group(s) outside the 99.5% interval` : '   PASS: every group with n >= 50 inside the 99.5% interval (95% overall)');
+  let failed = 0;
+  for (const side of ['net', 'rules'] as const) {
+    const predictions = parts.flatMap((p) => p.predictions[side]);
+    const who = side === 'net' ? 'your side played by the network' : 'your side played by the rule-based bot';
+    console.log(`1${side === 'net' ? 'a' : 'b'}. win% after your turns, ${who}: ${predictions.length} positions, ${deals} re-deals each`);
+    const f = calibrationTable(predictions);
+    failed += f;
+    console.log(f ? `   FAIL: ${f} group(s) outside the 99.5% interval` : '   PASS: every group with n >= 50 inside the 99.5% interval (95% overall)');
+  }
 
   const same = verdicts.filter(([a, b]) => a === b).length;
   const flagged = verdicts.filter(([a, b]) => a !== 'ok' || b !== 'ok');

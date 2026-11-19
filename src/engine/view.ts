@@ -40,23 +40,46 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
   if (s.pending) throw new Error('determinize a state without a pending choice');
   const d = cloneState(s);
   let r = derive(seed, 7);
-  const redeal = (zones: CardId[][]) => {
-    // Sorted first, so the deal depends only on which cards are hidden, not on where they really are.
-    const pool = zones.flat().sort((a, b) => a - b);
-    r = shuffleInPlace(pool, r);
-    let i = 0;
-    for (const z of zones) for (let j = 0; j < z.length; j++) z[j] = pool[i++]!;
-  };
   const me = d.players[viewer];
   const them = d.players[opp(viewer)];
   const known = knownTopCards(me);
   const rest = me.deck.slice(known.length);
-  redeal([rest, me.prizes]);
+  r = redealZones([rest, me.prizes], r);
   me.deck = [...known, ...rest];
   me.knownTop = known;
-  redeal([them.hand, them.deck, them.prizes]);
+  redealZones([them.hand, them.deck, them.prizes], r);
   them.knownTop = [];
   d.rng = { shuffle: [derive(seed, 11), derive(seed, 12)], coin: derive(seed, 13) };
   d.quiet = true;
   return d;
+}
+
+/**
+ * The real game dealt again for the undo button (practice mode), so going back never shows the cards
+ * still to come: `viewer`'s deck and prizes, and the opponent's hand, deck and prizes, are re-dealt and the
+ * RNG reseeded. Cards a player knows are on top of their own deck stay there; the game goes on logging.
+ */
+export function redeal(s: GameState, viewer: PlayerId, seed: number): GameState {
+  if (s.pending) throw new Error('redeal a state without a pending choice');
+  const d = cloneState(s);
+  let r = derive(seed, 17);
+  for (const p of [viewer, opp(viewer)]) {
+    const ps = d.players[p];
+    const known = knownTopCards(ps);
+    const rest = ps.deck.slice(known.length);
+    r = redealZones(p === viewer ? [rest, ps.prizes] : [ps.hand, rest, ps.prizes], r);
+    ps.deck = [...known, ...rest];
+  }
+  d.rng = { shuffle: [derive(seed, 21), derive(seed, 22)], coin: derive(seed, 23) };
+  return d;
+}
+
+/** Shuffle the cards of `zones` among them in place, keeping each zone's size; returns the RNG state after. */
+function redealZones(zones: CardId[][], r: number): number {
+  // Sorted first, so the deal depends only on which cards are hidden, not on where they really are.
+  const pool = zones.flat().sort((a, b) => a - b);
+  r = shuffleInPlace(pool, r);
+  let i = 0;
+  for (const z of zones) for (let j = 0; j < z.length; j++) z[j] = pool[i++]!;
+  return r;
 }

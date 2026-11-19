@@ -3,24 +3,34 @@ import Review from '../components/review/Review.svelte';
 import Base from '../layouts/Base.astro';
 ---
 
-<Base title="วิจารณ์เกม">
-  <p class="eyebrow">หลังเกม · รู้ว่าพลาดตรงไหน</p>
-  <h1>วิจารณ์เกม</h1>
-  <p class="how">
-    เกมที่คุณเล่นจบจะถูกเก็บไว้ในเบราว์เซอร์นี้ แต่ละเทิร์นของคุณได้ win% หลังจบเทิร์น ป้ายพลาดชัด / น่าจะมีทางที่ดีกว่า
-    ทางที่บอทจะเล่น และสนามตอนนั้นแบบเปิดการ์ดทุกใบ กด "ลองเล่นใหม่จากตรงนี้" เพื่อเล่นเทิร์นนั้นใหม่ด้วยการ์ดชุดเดิม
-  </p>
+<Base title="ประวัติเกม">
+  <header class="page-head">
+    <p class="eyebrow">หลังเกม · เทิร์นไหนที่เกมพลิก</p>
+    <h1>ประวัติเกม</h1>
+    <p class="how">
+      เกมที่คุณเล่นจบจะถูกเก็บไว้ในเบราว์เซอร์นี้ กดทบทวนเพื่อดู win% ทุกเทิร์น เทิร์นที่ควรดูก่อน
+      และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่ได้
+    </p>
+  </header>
   <Review client:only="svelte" />
 </Base>
 
 <style>
+  .page-head {
+    margin-bottom: 8px;
+  }
+  /* One game's review has its own heading. */
+  :global(main:has(.head)) .page-head {
+    display: none;
+  }
   h1 {
     margin: 0 0 4px;
+    font-size: clamp(2rem, 5vw, 3.2rem);
   }
   .how {
-    margin: 0 0 16px;
+    margin: 0 0 8px;
     color: var(--ink-soft);
-    font-size: 0.9rem;
-    max-width: 80ch;
+    font-size: 0.95rem;
+    max-width: 70ch;
   }
 </style>

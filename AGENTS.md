@@ -32,7 +32,7 @@ npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in g
 # ppo.py --starts <tcg-sim-games-*.json> [--starts-share 0.1]: some self-play games start from those games' positions (gen.ts `starts`)
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
-npx tsx scripts/review-gate.ts --games 330 --stability 160   # phase 8 gate: review win% vs results, same verdicts on another seed, time
+npx tsx scripts/review-gate.ts --games 600 --stability 120   # review gate: win% (the network's value) vs results, same verdicts on other re-deals, time
 npm run dev        # dev server on :4321
 npm run build      # static site in dist/
 ```
@@ -44,7 +44,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
 ## Layout
 
 - `src/content/decks/*.md` — decklists (Limitless export format) with frontmatter (`src/data/deck-meta.ts`;
-  `limitless` = the archetype's id on play.limitlesstcg.com, for comparing with real results)
+  `limitless` = the archetype's id on play.limitlesstcg.com, for comparing with real results). The `bot` decks are the
+  meta decks the site offers on both sides (`metaDecks()`, `archetypes()` in `src/lib/decks.ts`); `player.md` is the
+  scripts' own list (simulator, gates, training) and is not shown on the site.
 - `data/meta/` — real tournament results (`scripts/meta/limitless.ts`) and how far the bots' matchups are from them
   (`scripts/meta/compare.ts`, `compare.md`)
 - `src/data/` — plain TypeScript shared by scripts, pages and (later) the engine; no Astro imports
@@ -80,14 +82,20 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   than they hold, and the real bot plays differently). `counts.ts` = their Trainers by the reference list vs
   seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`); shown by `ThreatPanel.svelte` and
   the KO badges on `SlotCard.svelte`. `winrate.ts` = win% by playing the game out (rule-based bots, quick; re-dealt
-  hidden cards). `review.ts` = one of your turns reviewed: win% after it, clear mistakes (`sureLine`: the attack planner's
-  line, fixed seeds, checked on several re-deals), the bot's turn on the real cards compared on the same deals;
-  run on several workers by `review-remote.ts` / `review-worker.ts`.
-- `src/review/` — `record.ts` (a finished game: seed + lists + actions; `replay()`, `turnsOf()`), `store.ts`
+  hidden cards), or `netWin` (the network's value head on re-deals: one forward pass each). `review.ts` = one of your
+  turns reviewed: win% before and after it (`winOf`: netWin, the chance if both sides play on like the bot), clear
+  mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on several re-deals), the bot's turn on the
+  real cards judged on the same re-deals, where it parts from yours and why (`explain.ts`); run on several workers by
+  `review-remote.ts` / `review-worker.ts`. Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
+- `src/review/` — `record.ts` (a finished game: seed + lists + actions, your deck's plan `mine`, `mode`, and the undos'
+  re-deals `redeals`; `replay()`, `turnsOf()`), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
   game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.
-- `src/ui/` — play-screen helpers: `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
+- `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
+  its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,
+  managed by `MyDecks.svelte` on `/decks/`; `decklist.ts` checks them and names unsupported cards),
+  `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`
   (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
@@ -97,9 +105,13 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   the overlay in `FxLayer.svelte`, finding things by `data-card` / `data-slot` / `data-zone`. The state
   changes at once; animations only show it, the bot waits for them, any input of yours skips them.
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
-- `src/sim/` — bot-vs-bot runner, stats (Wilson CI, meta-weighted and paired-difference), Web Worker.
-- Pages: `/play/` (Game.svelte; `?watch=1&seed=…&opp=…` replays a simulator game, `&save=1` saves it), `/review/`,
-  `/sim/`, `/decks/`.
+- `src/sim/` — bot-vs-bot runner and stats (Wilson CI, meta-weighted and paired-difference) for the scripts.
+- Pages: `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
+  opponent, practice or real mode — then the game; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
+  `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
+  Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
+  game's review), `/decks/` (meta decks, your own lists). Practice mode has the hints, the threat panel, the opponent's
+  Trainer count and undo (`engine/view.ts` `redeal()` deals the hidden cards again); real mode has none.
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.

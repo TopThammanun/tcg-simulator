@@ -40,3 +40,21 @@ describe('checkList', () => {
     expect(checkList(text.replace('4 Crispin PRE 105', '3 Crispin PRE 105')).errors.join(' ')).toMatch(/60/);
   });
 });
+
+describe('checkList for pasted lists', () => {
+  it('reads a list without section headings', () => {
+    const bare = text
+      .split('\n')
+      .filter((l) => /^\d/.test(l))
+      .join('\n');
+    expect(checkList(bare).cards).toHaveLength(60);
+  });
+
+  it('names every card it does not support, and says so in Thai', () => {
+    const r = checkList(text.replace('1 Judge POR 76', '1 Iono PAL 185').replace('1 Hero\'s Cape TEF 152', '1 Charizard ex OBF 125'));
+    expect(r.unsupported).toEqual(['Iono', 'Charizard ex']);
+    expect(r.errors.join(' ')).toMatch(/ยังไม่รองรับ/);
+    expect(checkList('Pokémon\nfour Dreepy').errors[0]).toMatch(/^บรรทัด 2 อ่านไม่ออก/);
+    expect(checkList('4 Dreepy TWM 128').errors[0]).toMatch(/มี 4 ใบ \(ต้องมี 60 ใบ\)/);
+  });
+});

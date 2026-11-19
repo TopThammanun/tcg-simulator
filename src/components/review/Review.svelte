@@ -1,12 +1,13 @@
 <script lang="ts">
-  // วิจารณ์เกม (PLAN.md phase 8): your saved games; for one game, every turn of yours reviewed on Web
-  // Workers (src/analysis/review.ts): win% after it, clear mistakes, the hard bot's turn from the same
-  // position, the board at the start and end of the turn with every hidden card shown, and a link to play
-  // on from that turn. Reviews are stored with the game, so opening it again is instant.
+  // ประวัติเกม + ทบทวนเกม: your saved games and your record against each deck; for one game, every turn of
+  // yours reviewed on Web Workers (src/analysis/review.ts): win% before and after it, clear mistakes, the
+  // bot's turn from the same position and where it parts from yours, the board at the start and end of the
+  // turn with every hidden card shown, and a link to play on from that turn. The turns worth a look come
+  // first. Reviews are stored with the game, so opening it again is instant.
   import type { TurnReview, Verdict } from '../../analysis/review';
   import { reviewGame, type ReviewRun } from '../../analysis/review-remote';
   import { keyOf } from '../../engine/state';
-  import type { GameState, PlayerId } from '../../engine/types';
+  import type { GameState } from '../../engine/types';
   import { gamesFile, readGamesFile, replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
   import { deleteGame, getGame, getReview, listGames, persistent, saveGame, saveReview } from '../../review/store';
   import Board from '../game/Board.svelte';
@@ -37,10 +38,35 @@
     ok: { label: '● ไม่พบจุดพลาด', cls: 'ok' },
   };
   const pct = (p: number) => `${Math.round(p * 100)}%`;
+  const points = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(Math.round(d * 100))}`;
   const sorted = $derived([...turns].sort((a, b) => a.turn - b.turn));
   const count = (v: Verdict[]) => turns.filter((t) => v.includes(t.verdict)).length;
+  /** The turns worth a look: clear mistakes first, then where the bot's turn gains the most. */
+  const key = $derived(
+    turns
+      .filter((t) => t.verdict !== 'ok')
+      .sort((a, b) => rank(a) - rank(b) || (b.alt?.diff ?? 0) - (a.alt?.diff ?? 0))
+      .slice(0, 3),
+  );
+  const rank = (t: TurnReview) => (t.verdict === 'missed-win' ? 0 : t.verdict === 'missed-ko' ? 1 : 2);
   const result = (g: SavedGame) => (g.winner === 0 ? 'ชนะ' : g.winner === 1 ? 'แพ้' : 'เสมอ');
   const date = (ms: number) => new Date(ms).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const yours = (g: SavedGame) => g.mineName ?? 'list ของคุณ';
+
+  /** Your record: games, wins, and per opponent deck (the archetype: list variants count together). */
+  const record = $derived.by(() => {
+    const done = (games ?? []).filter((g) => g.winner !== null);
+    const by = new Map<string, { name: string; won: number; lost: number }>();
+    for (const g of done) {
+      const name = g.opponentName.replace(/ \(.*\)$/, '');
+      const r = by.get(name) ?? { name, won: 0, lost: 0 };
+      if (g.winner === 0) r.won++;
+      else if (g.winner === 1) r.lost++;
+      by.set(name, r);
+    }
+    const won = done.filter((g) => g.winner === 0).length;
+    return { played: done.length, won, rows: [...by.values()].sort((a, b) => b.won + b.lost - (a.won + a.lost)) };
+  });
 
   async function load() {
     try {
@@ -79,7 +105,7 @@
   }
   void load();
 
-  /** Every saved game as one file, to keep, move to another browser, or send for analysis. */
+  /** Every saved game as one file, to keep or move to another browser. */
   function exportGames() {
     const blob = new Blob([JSON.stringify(gamesFile(games ?? []))], { type: 'application/json' });
     const a = document.createElement('a');
@@ -111,6 +137,11 @@
     games = (games ?? []).filter((x) => x.id !== g.id);
   }
 
+  function show(t: TurnReview) {
+    selected = selected === t.turn ? null : t.turn;
+    at = 'start';
+  }
+
   const pick = $derived(selected === null ? null : (sorted.find((t) => t.turn === selected) ?? null));
   /** The board at the start or end of the picked turn, every card shown. */
   const shown = $derived(pick ? states[at === 'start' ? pick.span.start : pick.span.end] : null);
@@ -119,45 +150,104 @@
   const EMPTY = new Map<number, never>();
 </script>
 
+{#snippet moves(list: string[], split: number | null)}
+  <ol class="moves">
+    {#each list.length ? list : ['จบเทิร์นโดยไม่ทำอะไร'] as m, i}
+      <li class:split={split === i}>{m}</li>
+    {/each}
+  </ol>
+{/snippet}
+
+{#snippet turnBody(t: TurnReview)}
+  <div class="row">
+    <strong>เทิร์น {t.turn}</strong>
+    <span class={`badge ${VERDICT[t.verdict].cls}`}>{VERDICT[t.verdict].label}</span>
+    <span class="mono win" title="win% ตอนเริ่มเทิร์น → หลังจบเทิร์น">{pct(t.before)} → {pct(t.win.p)}</span>
+  </div>
+  <div class="line"><span class="tag">คุณเล่น</span>{@render moves(t.played, t.alt ? t.alt.split : null)}</div>
+  {#if t.missed}
+    <p class="bad-text">
+      {t.missed.kind === 'win' ? 'มีทางชนะเกมในเทิร์นนี้' : `มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`}
+      {t.missed.at === t.span.start ? 'ตั้งแต่ต้นเทิร์น' : 'ตอนที่คุณเลือกจบเทิร์น'}: {t.missed.line.join(' → ')}
+    </p>
+  {/if}
+  {#if t.alt}
+    <div class="line"><span class="tag bot">บอทจะเล่น</span>{@render moves(t.alt.played, t.alt.split)}</div>
+    <p class="muted">
+      {#if t.alt.why}<span class="why">{t.alt.why}</span> ·{/if}
+      ถ้าเล่นแบบบอท win% {pct(t.alt.win.p)} ({points(t.alt.diff)} จุด)
+    </p>
+  {:else}
+    <p class="muted">บอทก็เล่นแบบเดียวกัน</p>
+  {/if}
+  <div class="buttons">
+    <button type="button" onclick={() => show(t)}>{selected === t.turn ? 'ซ่อนสนาม' : 'ดูสนาม'}</button>
+    <a class="button" href={`/play/?resume=${game!.id}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้ →</a>
+  </div>
+{/snippet}
+
 {#if error}<p class="error">{error}</p>{/if}
 
 {#if id === null}
   {#if games === null}
     <p class="muted">กำลังโหลด…</p>
   {:else if games.length === 0}
-    <p class="muted">ยังไม่มีเกมที่บันทึกไว้ เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้)</p>
-    <a class="cta" href="/play/">เล่นกับบอท →</a>
+    <div class="empty">
+      <p>ยังไม่มีเกม เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเทิร์นไหนที่เกมพลิก</p>
+      <a class="cta" href="/play/">เล่นกับบอท →</a>
+    </div>
   {:else}
-    <table class="games">
-      <thead><tr><th>เมื่อ</th><th>คู่แข่ง</th><th>ผล</th><th>เทิร์น</th><th></th></tr></thead>
-      <tbody>
-        {#each games as g (g.id)}
-          <tr>
-            <td>{date(g.savedAt)}</td>
-            <td>{g.opponentName}</td>
-            <td class:won={g.winner === 0} class:lost={g.winner === 1}>{result(g)}</td>
-            <td class="mono">{g.turns}</td>
-            <td class="act">
-              <a href={`/review/?id=${g.id}`}>วิจารณ์ →</a>
-              <button type="button" class="link" onclick={() => remove(g)}>ลบ</button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    {#if record.played}
+      <section class="record" aria-label="สถิติของคุณ">
+        <div class="totals">
+          <div><span class="num">{record.played}</span>เกม</div>
+          <div><span class="num">{pct(record.won / record.played)}</span>ชนะ</div>
+        </div>
+        <ol class="vs">
+          {#each record.rows as r (r.name)}
+            <li>
+              <span class="name">vs {r.name}</span>
+              <span class="bar" style:--w={`${(r.won / Math.max(1, r.won + r.lost)) * 100}%`}></span>
+              <span class="mono wl">{r.won}–{r.lost}</span>
+            </li>
+          {/each}
+        </ol>
+      </section>
+    {/if}
+    <ul class="games">
+      {#each games as g (g.id)}
+        <li>
+          <span class="res" class:won={g.winner === 0} class:lost={g.winner === 1}>{result(g)}</span>
+          <span class="match">
+            <strong>{yours(g)} <span class="vs-word">vs</span> {g.opponentName}</strong>
+            <span class="muted">
+              {g.mode === 'real' ? 'โหมดจริง' : 'โหมดฝึก'} · {g.turns} เทิร์น · {g.reason} · {date(g.savedAt)}
+            </span>
+          </span>
+          <span class="act">
+            <a class="button" href={`/review/?id=${g.id}`}>ทบทวน →</a>
+            <button type="button" class="link" onclick={() => remove(g)}>ลบ</button>
+          </span>
+        </li>
+      {/each}
+    </ul>
   {/if}
   <p class="files">
-    {#if games?.length}<button type="button" onclick={exportGames}>ดาวน์โหลดทุกเกม (.json)</button>{/if}
-    <label class="import">นำเข้าเกมจากไฟล์<input type="file" accept=".json,application/json" onchange={importGames} /></label>
+    {#if games?.length}<button type="button" class="link" onclick={exportGames}>สำรองทุกเกมเป็นไฟล์</button>{/if}
+    <label class="import">นำเข้าไฟล์สำรอง<input type="file" accept=".json,application/json" onchange={importGames} /></label>
     {#if note}<span class="muted">{note}</span>{/if}
   </p>
   {#if !persistent}<p class="muted">เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า</p>{/if}
 {:else if game}
   <section class="head">
-    <p>
-      <strong>{result(game)}</strong> vs {game.opponentName} · {game.reason} · เทิร์น {game.turns} · {date(game.savedAt)}
-    </p>
+    <a class="back" href="/review/">← ประวัติเกม</a>
+    <p class="eyebrow">{game.mode === 'real' ? 'โหมดจริง' : 'โหมดฝึก'} · {date(game.savedAt)}</p>
+    <h1>
+      <span class="res" class:won={game.winner === 0} class:lost={game.winner === 1}>{result(game)}</span>
+      {yours(game)} <span class="vs-word">vs</span> {game.opponentName}
+    </h1>
     <p class="summary">
+      {game.reason} · {game.turns} เทิร์น ·
       {#if !done}
         กำลังวิเคราะห์ {turns.length}/{spans.length} เทิร์น…
         <progress max={spans.length} value={turns.length}></progress>
@@ -166,48 +256,34 @@
         <strong class="warn">{count(['better'])}</strong> · จาก {turns.length} เทิร์นของคุณ
       {/if}
     </p>
-    <a href="/review/">← เกมทั้งหมด</a>
   </section>
+
+  {#if done}
+    {#if key.length}
+      <section class="key" aria-labelledby="key-title">
+        <h2 id="key-title">จุดที่ควรดูก่อน</h2>
+        <ol>
+          {#each key as t (t.turn)}
+            <li class:sel={selected === t.turn}>{@render turnBody(t)}</li>
+          {/each}
+        </ol>
+      </section>
+    {:else if turns.length}
+      <p class="clean">ไม่พบจุดที่เสียเปรียบชัด ๆ ในเกมนี้ ทุกเทิร์นใกล้เคียงกับที่บอทจะเล่น</p>
+    {/if}
+  {/if}
 
   {#if sorted.length}<WinChart turns={sorted} {selected} />{/if}
 
   <div class="layout">
-    <ol class="turns">
-      {#each sorted as t (t.turn)}
-        <li class:sel={selected === t.turn}>
-          <div class="row">
-            <strong>เทิร์น {t.turn}</strong>
-            <span class={`badge ${VERDICT[t.verdict].cls}`}>{VERDICT[t.verdict].label}</span>
-            <span class="mono win" title="win% หลังจบเทิร์นนี้ (± ความคลาดเคลื่อน)">{pct(t.win.p)} ±{Math.round(t.win.se * 100)}</span>
-          </div>
-          <p><span class="tag">คุณเล่น</span>{t.played.length ? t.played.join(' → ') : 'จบเทิร์นโดยไม่ทำอะไร'}</p>
-          {#if t.missed}
-            <p class="bad-text">
-              {t.missed.kind === 'win' ? 'มีทางชนะเกมในเทิร์นนี้' : `มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`}
-              {t.missed.at === t.span.start ? 'ตั้งแต่ต้นเทิร์น' : 'ตอนที่คุณเลือกจบเทิร์น'}: {t.missed.line.join(' → ')}
-            </p>
-          {/if}
-          {#if t.alt}
-            <p>
-              <span class="tag">บอทจะเล่น</span>{t.alt.played.length ? t.alt.played.join(' → ') : 'จบเทิร์นโดยไม่ทำอะไร'}
-            </p>
-            <p class="muted">
-              win% ทางของบอท {pct(t.alt.win.p)} เทียบกับของคุณ {pct(t.win.p)} · ต่าง {t.alt.diff >= 0 ? '+' : ''}{Math.round(t.alt.diff * 100)} ±{Math.round(
-                t.alt.se * 200,
-              )} จุด · ภัยเทิร์นหน้า: ของคุณ ~{t.exposure.toFixed(1)} Prize, ของบอท ~{t.alt.exposure.toFixed(1)}
-            </p>
-          {:else}
-            <p class="muted">บอทก็เล่นแบบเดียวกัน · ภัยเทิร์นหน้า ~{t.exposure.toFixed(1)} Prize</p>
-          {/if}
-          <div class="buttons">
-            <button type="button" onclick={() => ((selected = selected === t.turn ? null : t.turn), (at = 'start'))}>
-              {selected === t.turn ? 'ซ่อนสนาม' : 'ดูสนาม'}
-            </button>
-            <a class="button" href={`/play/?resume=${game.id}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้ →</a>
-          </div>
-        </li>
-      {/each}
-    </ol>
+    <section>
+      <h2>ทุกเทิร์นของคุณ</h2>
+      <ol class="turns">
+        {#each sorted as t (t.turn)}
+          <li class:sel={selected === t.turn}>{@render turnBody(t)}</li>
+        {/each}
+      </ol>
+    </section>
 
     {#if pick && shown}
       <section class="viewer" aria-label={`สนามเทิร์น ${pick.turn}`}>
@@ -240,9 +316,10 @@
   </div>
 
   <p class="note">
-    พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มการ์ดที่คุณมองไม่เห็นใหม่
-    (ตรวจด้วย engine ไม่ขึ้นกับฝีมือบอท) · น่าจะมีทางที่ดีกว่า = ทางของบอทให้ win% สูงกว่าอย่างน้อย 8 จุด และมากกว่า 2.5
-    เท่าของความคลาดเคลื่อน (เล่นต่อจนจบเกมด้วยบอทแบบกฎที่คิดเร็ว เป็นค่าประมาณ) · win% คิดจากสิ่งที่คุณเห็นตอนนั้นเท่านั้น
+    win% = โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน
+    เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่ 16 แบบ · พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มใหม่ (ตรวจด้วย engine) ·
+    น่าจะมีทางที่ดีกว่า = ถ้าเล่นเทิร์นนั้นแบบบอท win% สูงกว่าอย่างน้อย 10 จุด ตัวที่ขีดเส้นคือจุดแรกที่บอทเล่นต่างจากคุณ ·
+    เป็นค่าประมาณ ให้ใช้เป็นจุดที่ควรลองดูซ้ำ
   </p>
 {/if}
 
@@ -258,40 +335,142 @@
   .mono {
     font-family: var(--font-mono);
   }
+  h2 {
+    font-size: 1.25rem;
+    margin: 24px 0 10px;
+  }
+  .empty {
+    padding: 28px;
+    border: 1.5px dashed var(--rule);
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .cta {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 4px 4px 0 var(--stamp);
+  }
+  /* Your record: two big numbers, then a bar per opponent deck. */
+  .record {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 24px;
+    align-items: center;
+    padding: 16px 0 20px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .totals {
+    display: flex;
+    gap: 28px;
+  }
+  .totals div {
+    display: flex;
+    flex-direction: column;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+  .num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.6rem;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .vs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .vs li {
+    display: grid;
+    grid-template-columns: minmax(0, 13rem) 1fr 3.4rem;
+    gap: 10px;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 0.88rem;
+  }
+  .vs .bar {
+    height: 8px;
+    background: linear-gradient(to right, var(--teal) var(--w), color-mix(in srgb, var(--stamp) 55%, var(--paper-deep)) var(--w));
+  }
+  .wl {
+    text-align: right;
+  }
   .games {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
-  .games th,
-  .games td {
-    padding: 6px 8px;
+  .games li {
+    display: grid;
+    grid-template-columns: 4.2rem minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 4px;
     border-bottom: 1px solid var(--rule);
-    text-align: left;
   }
-  .games .won {
+  .res {
+    display: inline-block;
+    padding: 2px 0;
+    width: 4.2rem;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    border: 2px solid var(--ink-soft);
+    color: var(--ink-soft);
+  }
+  .res.won {
+    border-color: var(--teal);
     color: var(--teal);
-    font-weight: 600;
+    transform: rotate(-3deg);
   }
-  .games .lost {
+  .res.lost {
+    border-color: var(--stamp);
     color: var(--stamp);
-    font-weight: 600;
+    transform: rotate(2deg);
+  }
+  .match {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .match strong {
+    font-family: var(--font-display);
+  }
+  .match .muted {
+    font-size: 0.82rem;
+  }
+  .vs-word {
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    font-weight: 500;
+    color: var(--ink-soft);
   }
   .act {
     display: flex;
     gap: 12px;
-    justify-content: flex-end;
+    align-items: center;
   }
   .files {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    gap: 0.5rem 1.2rem;
     align-items: center;
     margin-top: 1rem;
+    font-size: 0.88rem;
   }
   .import {
+    position: relative;
     cursor: pointer;
     text-decoration: underline;
+    color: var(--ink-soft);
   }
   .import:focus-within {
     outline: 2px solid var(--ink);
@@ -312,32 +491,75 @@
     text-decoration: underline;
     cursor: pointer;
   }
-  .cta {
+  .head {
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .back {
     display: inline-block;
-    margin-top: 8px;
-    padding: 8px 16px;
-    background: var(--ink);
-    color: var(--paper);
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
     text-decoration: none;
   }
-  .head p {
+  .back:hover {
+    color: var(--stamp);
+  }
+  .head .eyebrow {
     margin: 0 0 4px;
+  }
+  .head h1 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 0 0 6px;
+    font-size: clamp(1.5rem, 3.6vw, 2.3rem);
+  }
+  .head h1 .res {
+    width: auto;
+    padding: 2px 14px;
+    font-size: 0.8em;
+  }
+  .summary {
+    margin: 0;
+    color: var(--ink-soft);
   }
   .summary progress {
     vertical-align: middle;
     width: 140px;
+    accent-color: var(--stamp);
   }
   .bad {
-    color: #d03b3b;
+    color: var(--stamp);
   }
   .warn {
     color: #b07a00;
+  }
+  .clean {
+    margin: 18px 0 0;
+    padding: 12px 14px;
+    border-left: 4px solid var(--teal);
+    background: color-mix(in srgb, var(--teal) 8%, transparent);
+  }
+  .key > ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .key > ol > li {
+    padding: 14px 16px;
+    border: 2px solid var(--ink);
+    background: var(--card-bg);
+    box-shadow: 5px 5px 0 var(--paper-deep);
+    font-size: 0.9rem;
   }
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-    margin-top: 14px;
   }
   @media (min-width: 1100px) {
     .layout:has(.viewer) {
@@ -347,6 +569,7 @@
     .viewer {
       position: sticky;
       top: 12px;
+      margin-top: 24px;
     }
   }
   .turns {
@@ -363,11 +586,13 @@
     background: var(--card-bg);
     font-size: 0.88rem;
   }
-  .turns > li.sel {
-    border-color: var(--ink);
+  .turns > li.sel,
+  .key > ol > li.sel {
+    border-color: var(--stamp);
   }
+  .key p,
   .turns p {
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     line-height: 1.5;
   }
   .row {
@@ -375,6 +600,9 @@
     flex-wrap: wrap;
     gap: 6px 10px;
     align-items: center;
+  }
+  .row strong {
+    font-family: var(--font-display);
   }
   .win {
     margin-left: auto;
@@ -386,7 +614,7 @@
     font-weight: 600;
   }
   .badge.bad {
-    background: #d03b3b;
+    background: var(--stamp);
     color: #fff;
   }
   .badge.warn {
@@ -399,22 +627,57 @@
   }
   .bad-text {
     color: var(--ink);
-    border-left: 3px solid #d03b3b;
+    border-left: 3px solid var(--stamp);
     padding-left: 8px;
   }
+  .line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 6px;
+  }
   .tag {
-    margin-right: 6px;
+    flex: 0 0 auto;
     padding: 0 5px;
-    border: 1px solid var(--teal);
-    color: var(--teal);
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
     font-size: 0.72rem;
     font-weight: 600;
+  }
+  .tag.bot {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+  .moves {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    line-height: 1.5;
+  }
+  .moves li + li::before {
+    content: '→';
+    /* inline-block keeps the split move's underline off the arrow */
+    display: inline-block;
+    margin: 0 6px;
+    color: var(--ink-soft);
+  }
+  /* Where your turn and the bot's part. */
+  .moves li.split {
+    font-weight: 600;
+    text-decoration: underline 2px var(--stamp);
+    text-underline-offset: 3px;
+  }
+  .why {
+    color: var(--ink);
   }
   .buttons {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 10px;
   }
   .buttons button,
   .button,
@@ -427,6 +690,12 @@
     font-size: 0.82rem;
     text-decoration: none;
     cursor: pointer;
+  }
+  .games .button {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 600;
   }
   .seg {
     display: flex;
@@ -459,9 +728,27 @@
     cursor: zoom-in;
   }
   .note {
-    margin-top: 16px;
+    margin-top: 20px;
     color: var(--ink-soft);
     font-size: 0.78rem;
-    line-height: 1.5;
+    line-height: 1.6;
+  }
+  @media (max-width: 640px) {
+    .record {
+      grid-template-columns: 1fr;
+    }
+    .vs li {
+      grid-template-columns: 1fr 3.4rem;
+    }
+    .vs .bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .games li {
+      grid-template-columns: 4.2rem minmax(0, 1fr);
+    }
+    .act {
+      grid-column: 2;
+    }
   }
 </style>

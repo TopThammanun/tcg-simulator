@@ -1,4 +1,4 @@
-// Validate a decklist pasted in the browser (PLAN.md v3: แก้ decklist ในหน้าเว็บ).
+// Validate a decklist pasted in the browser (your own decks, my-decks.ts).
 // Only cards the engine implements can be played; another print of a supported card is matched by name.
 import manifestJson from '../../data/cards.manifest.json';
 import type { CardDef, CardManifest } from '../data/cards';
@@ -24,18 +24,40 @@ for (const c of Object.values(manifest.cards)) {
 export interface ListCheck {
   cards?: string[];
   errors: string[];
+  /** Names of the cards the engine doesn't implement yet. */
+  unsupported: string[];
+}
+
+/** Every card the engine can play, by name (the decks page lists them for building a list). */
+export const SUPPORTED: readonly CardDef[] = Object.values(manifest.cards).sort((a, b) => a.name.localeCompare(b.name));
+
+/** The parser's message (data/decklist.ts) in Thai. */
+function thai(message: string, shift: number): string {
+  const m = message.replace(/^decklist:? ?/, '');
+  const line = m.match(/^line (\d+): cannot read "(.*)"$/);
+  if (line) return `บรรทัด ${Number(line[1]) - shift} อ่านไม่ออก: "${line[2]}" (รูปแบบ: จำนวน ชื่อการ์ด ชุด เลข เช่น 4 Dreepy TWM 128)`;
+  const total = m.match(/^has (\d+) cards, expected (\d+)$/);
+  if (total) return `มี ${total[1]} ใบ (ต้องมี ${total[2]} ใบ)`;
+  return m;
 }
 
 export function checkList(text: string): ListCheck {
   let entries;
+  let shift = 0;
   try {
-    // Heading counts ("Trainer: 26") are easy to forget when editing; only the 60 total matters.
-    const loose = text.replace(/^\s*(Pok[eé]mon|Trainer|Energy)\s*(?::\s*\d+|\(\d+\))\s*$/gim, '$1');
+    // Heading counts ("Trainer: 26") are easy to forget when editing; only the 60 total matters. A list
+    // without headings at all is read as one section (only the cards matter here).
+    let loose = text.replace(/^\s*(Pok[eé]mon|Trainer|Energy)\s*(?::\s*\d+|\(\d+\))\s*$/gim, '$1');
+    if (!/^\s*(Pok[eé]mon|Trainer|Energy)\s*$/im.test(loose)) {
+      loose = `Pokémon\n${loose}`;
+      shift = 1;
+    }
     entries = parseDecklist(loose).entries;
   } catch (e) {
-    return { errors: [(e as Error).message.replace('decklist: ', '').replace(/expected 60/, 'ต้องมี 60 ใบ')] };
+    return { errors: [thai((e as Error).message, shift)], unsupported: [] };
   }
   const errors: string[] = [];
+  const unsupported: string[] = [];
   const cards: string[] = [];
   for (const e of entries) {
     const print = manifest.prints[printKey(e)];
@@ -43,16 +65,16 @@ export function checkList(text: string): ListCheck {
     // An exact print, else the only card with this name (prints of one card share text).
     const card = print ? manifest.cards[print.card] : sameName.length === 1 ? sameName[0] : undefined;
     if (!card) {
-      errors.push(
-        sameName.length > 1
-          ? `${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุด/เลขตามเด็คที่มีอยู่`
-          : `${e.name}: ยังไม่รองรับ (v1 รองรับเฉพาะการ์ดในเด็คที่มีอยู่)`,
-      );
+      if (sameName.length > 1) errors.push(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`);
+      else {
+        unsupported.push(e.name);
+        errors.push(`${e.name}: ยังไม่รองรับ`);
+      }
       continue;
     }
     for (let i = 0; i < e.count; i++) cards.push(card.key);
   }
-  if (errors.length) return { errors };
+  if (errors.length) return { errors, unsupported };
 
   const counts = new Map<string, number>();
   for (const k of cards) {
@@ -72,5 +94,5 @@ export function checkList(text: string): ListCheck {
   })) {
     errors.push('ต้องมี Basic Pokémon อย่างน้อย 1 ใบ');
   }
-  return errors.length ? { errors } : { cards, errors: [] };
+  return errors.length ? { errors, unsupported } : { cards, errors: [], unsupported };
 }

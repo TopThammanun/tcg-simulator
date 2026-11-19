@@ -1,22 +1,23 @@
-// Game review (PLAN.md phase 8): each of your turns gets
-// - the win% after it (winrate.ts, from what you could see then),
+// Game review: each of your turns gets
+// - your win% before and after it: the bot's network judges the position (winrate.ts netWin), averaged over
+//   re-deals of what you couldn't see, so it is the same network the opponent plays with, takes moments, and
+//   gives the same answer every time (the rule-based bots' played-out games when no network is bundled),
 // - a check for clear mistakes: at the moment you chose how to end the turn (and at its start), the attack
 //   planner finds a line that wins or takes more Prizes than you took, on every re-deal of what you couldn't
 //   see ("พลาดชัด": engine-checked with fixed seeds, so it doesn't depend on luck or on how well bots play),
-// - the bot's turn (bots/index.ts) from the same position, played on the real cards, and both turns' outcomes
-//   compared on the same deals ("น่าจะดีกว่า": an estimate, shown with its error; close calls get three
-//   times the games before they are decided),
-// - "ภัยเทิร์นหน้า" after your turn and after the bot's (threat.ts), so exposure shows in numbers.
+// - the bot's turn from the same start, played on the real cards, judged on the same re-deals; where it
+//   parts from yours, and why (explain.ts). "น่าจะดีกว่า" when it gains at least BETTER_BY.
 import { actor, apply } from '../engine/actions';
 import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { choosePicks } from '../bots/choose';
+import { explainAction, explainEnd } from '../bots/explain';
 import { sureLine as sureLineFor, type Step } from '../bots/finisher';
-import { createBot } from '../bots/index';
+import { createBot, MODEL } from '../bots/index';
 import { describeAction } from '../ui/play';
 import { isFree, type TurnSpan } from '../review/record';
-import { threats, type Plans } from './threat';
-import { estimateWin, merge, pairedDiff } from './winrate';
+import type { Plans } from './threat';
+import { estimateWin, netWin, type WinEstimate } from './winrate';
 
 export type Verdict = 'missed-win' | 'missed-ko' | 'better' | 'ok';
 
@@ -36,45 +37,47 @@ export interface TurnReview {
   span: TurnSpan;
   /** Your actions this turn (labels), in order. */
   played: string[];
-  /** Win% after your turn. */
+  /** Win% when the turn began, and after it. */
+  before: number;
   win: { p: number; se: number };
-  /** Prizes the opponent is expected to take next turn after your turn (threat.ts). */
-  exposure: number;
   /** The bot's turn from the same start, when it played differently. */
   alt?: {
     played: string[];
     win: { p: number; se: number };
-    exposure: number;
-    /** Its win% minus yours, on the same deals, and the error of that difference. */
+    /** Its win% minus yours, on the same re-deals. */
     diff: number;
-    se: number;
+    /** The first of its actions that isn't yours (an index into `played` of both). */
+    split: number;
+    /** Why the bot plays that one (explain.ts). */
+    why: string;
   };
   missed?: Missed;
   verdict: Verdict;
 }
 
 export interface ReviewOptions {
-  /** Played-out games per win% (each side of a comparison uses the same deals); 48 by default. */
-  samples?: number;
+  /** Re-deals each win% averages over (16 by default; played-out games when no network is bundled). */
+  deals?: number;
   /** Re-deals a missed line must work on. */
   checks?: number;
-  /** Threat samples. */
-  threatSamples?: number;
   seed?: number;
-  /** Opponent deck slug, for the threat correction. */
-  theirDeck?: string;
 }
 
-/** Smallest win% gain, and how many standard errors, for "น่าจะดีกว่า". */
-export const BETTER_BY = 0.08;
-export const BETTER_SE = 2.5;
+/** Smallest win% gain of the bot's turn over yours for "น่าจะดีกว่า". */
+export const BETTER_BY = 0.1;
 /** The bot's seed for the suggested turn (plus the turn number). */
 const ALT_SEED = 7331;
 
-/** Labels of `me`'s own actions (not answers to choices) between two state indices. */
-function labels(states: GameState[], actions: Action[], from: number, to: number, me: PlayerId): string[] {
-  const out: string[] = [];
-  for (let i = from; i < to; i++) if (actor(states[i]!) === me && actions[i]!.t !== 'choose') out.push(describeAction(states[i]!, actions[i]!));
+/** Win% of `me` in `s`, from what `me` could see: the chance if both sides play on like the bot. */
+export function winOf(s: GameState, me: PlayerId, plans: Plans, opts: { deals?: number; seed?: number }): WinEstimate {
+  if (MODEL) return netWin(s, me, MODEL, [plans.mine.name, plans.theirs.name], opts);
+  return estimateWin(s, me, plans, { samples: 3 * (opts.deals ?? 16), seed: opts.seed });
+}
+
+/** `me`'s own actions (not answers to choices) between two state indices: their labels and where they were played. */
+function moves(states: GameState[], actions: Action[], from: number, to: number, me: PlayerId): { label: string; at: number }[] {
+  const out: { label: string; at: number }[] = [];
+  for (let i = from; i < to; i++) if (actor(states[i]!) === me && actions[i]!.t !== 'choose') out.push({ label: describeAction(states[i]!, actions[i]!), at: i });
   return out;
 }
 
@@ -114,12 +117,12 @@ function sameMoves(sa: GameState[], aa: Action[], sb: GameState[], ab: Action[],
 
 export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpan, plans: Plans, opts: ReviewOptions = {}): TurnReview {
   const me = actor(states[span.start]!);
-  const samples = opts.samples ?? 48;
   const checks = opts.checks ?? 4;
-  const seed = (opts.seed ?? 1) * 1009 + span.turn;
+  const odds = { deals: opts.deals ?? 16, seed: (opts.seed ?? 1) * 1009 + span.turn };
   const start = states[span.start]!;
   const end = states[span.end]!;
-  const played = labels(states, actions, span.start, span.end, me);
+  const mine = moves(states, actions, span.start, span.end, me);
+  const played = mine.map((m) => m.label);
 
   // Clear mistakes: first at the moment you ended the turn, then at its start.
   let missed: Missed | undefined;
@@ -136,50 +139,26 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
     }
   }
 
-  // Prizes the opponent is expected to take next turn: from the last free position, ending the turn the way
-  // it was ended (the attack and its choices), so the board the opponent faces is the one that was left.
-  const exposureOf = (ss: GameState[], aa: Action[], last: number, to: number) => {
-    const s = ss[last]!;
-    if (!isFree(s, me) || !aa[last]) return 0;
-    const picks = aa.slice(last + 1, to).flatMap((a, i) => (a.t === 'choose' && actor(ss[last + 1 + i]!) === me ? [a.picks] : []));
-    const r = threats(s, me, plans, { samples: opts.threatSamples ?? 32, seed, theirDeck: opts.theirDeck, ending: { action: aa[last]!, picks } });
-    return r.expected;
-  };
-  let mine = estimateWin(end, me, plans, { samples, seed });
-  const exposure = end.winner === null ? exposureOf(states, actions, span.last, span.end) : 0;
+  const before = winOf(start, me, plans, odds).p;
+  const win = winOf(end, me, plans, odds);
 
   // The bot's turn from the same start. Its seed is fixed, so a position always gets the same suggestion.
   let alt: TurnReview['alt'];
   const bot = botTurn(start, me, plans, ALT_SEED + span.turn);
   if (!sameMoves(states.slice(span.start, span.end), actions.slice(span.start, span.end), bot.states, bot.actions, me)) {
-    let theirs = estimateWin(bot.end, me, plans, { samples, seed });
-    let { diff, se } = pairedDiff(mine, theirs);
-    // Close to the line: twice as many more games on both sides before deciding.
-    if (diff >= BETTER_BY / 2) {
-      mine = merge(mine, estimateWin(end, me, plans, { samples: 2 * samples, seed, offset: samples }));
-      theirs = merge(theirs, estimateWin(bot.end, me, plans, { samples: 2 * samples, seed, offset: samples }));
-      ({ diff, se } = pairedDiff(mine, theirs));
-    }
-    // Its exposure, the same way: from the bot's last free position of the turn.
-    let last = 0;
-    bot.states.forEach((st, i) => {
-      if (i < bot.actions.length && isFree(st, me) && st.turn === start.turn) last = i;
-    });
-    alt = {
-      played: labels(bot.states, bot.actions, 0, bot.actions.length, me),
-      win: { p: theirs.p, se: theirs.se },
-      exposure: bot.end.winner === null ? exposureOf(bot.states, bot.actions, last, bot.actions.length) : 0,
-      diff,
-      se,
-    };
+    const theirs = winOf(bot.end, me, plans, odds);
+    const its = moves(bot.states, bot.actions, 0, bot.actions.length, me);
+    let split = 0;
+    while (split < its.length && split < mine.length && its[split]!.label === mine[split]!.label) split++;
+    const at = its[split];
+    const why = at
+      ? bot.actions[at.at]!.t === 'end'
+        ? explainEnd(bot.states[at.at]!, me).why
+        : explainAction(bot.states[at.at]!, me, { action: bot.actions[at.at]! }, plans.mine).why
+      : '';
+    alt = { played: its.map((m) => m.label), win: { p: theirs.p, se: theirs.se }, diff: theirs.p - win.p, split, why };
   }
 
-  const verdict: Verdict = missed
-    ? missed.kind === 'win'
-      ? 'missed-win'
-      : 'missed-ko'
-    : alt && alt.diff >= BETTER_BY && alt.diff > BETTER_SE * alt.se
-      ? 'better'
-      : 'ok';
-  return { turn: span.turn, span, played, win: { p: mine.p, se: mine.se }, exposure, alt, missed, verdict };
+  const verdict: Verdict = missed ? (missed.kind === 'win' ? 'missed-win' : 'missed-ko') : alt && alt.diff >= BETTER_BY ? 'better' : 'ok';
+  return { turn: span.turn, span, played, before, win: { p: win.p, se: win.se }, alt, missed, verdict };
 }

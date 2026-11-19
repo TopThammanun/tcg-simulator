@@ -1,84 +1,169 @@
 ---
 import Base from '../layouts/Base.astro';
-import { manifest } from '../data/manifest';
-import { loadDecks } from '../lib/decks';
+import { archetypes, loadDecks } from '../lib/decks';
+import limitless from '../../data/meta/limitless.json';
 
 const decks = await loadDecks();
-const prints = Object.values(manifest.prints);
-const withImage = prints.filter((p) => p.image.source !== 'none').length;
-const cards = Object.values(manifest.cards).length;
+const opponents = archetypes(decks);
+const maxShare = Math.max(...opponents.map((a) => a.metaShare));
+const updated = new Date(limitless.fetched).toLocaleDateString('th-TH', { dateStyle: 'medium' });
 
-// Milestones from PLAN.md
-const phases = [
-  { n: 0, name: 'ข้อมูลการ์ด', gate: 'รูปจริง 128/129, ข้อความครบ 117 การ์ด', done: true },
-  { n: 1, name: 'Engine: กฎ + การ์ด', gate: 'scenario test ผ่าน, fuzz 10,000 เกมไม่พัง', done: true },
-  { n: 2, name: 'หน้าเล่นเอง + บอท Basic Box', gate: 'v1 · เล่นจบเกมได้, บอทคิดไม่ถึง 20 ms ต่อเทิร์น', done: true },
-  { n: 3, name: 'บอท Dragapult ex', gate: 'v1.1 · 1,000 เกม invariant ไม่พัง', done: true },
-  { n: 4, name: 'Slowking, N’s Zoroark, Alakazam, Festival', gate: 'v1.2 · เด็คละ 1,000 เกม ไม่พัง', done: true },
-  { n: 5, name: 'ปุ่มแนะนำ + รันหลายพันเกม', gate: '600 เกมใน 2.5 วินาที, การทดลองครบ 5 ข้อ', done: true },
-  { n: 6, name: 'บอทยาก + แก้ list', gate: 'บอทยากชนะบอทปกติ 59.8% ใน 1,000 เกม', done: true },
-  // แผนรุ่นต่อไป (PLAN.md): v2 รู้ว่าพลาดตรงไหน … v6 วัดว่าเก่งขึ้นจริง
-  { n: 7, name: 'ภัยเทิร์นหน้า + นับการ์ดคู่แข่ง', gate: 'v2 · โอกาสโดน KO ที่ทายตรงกับผลจริงใน 2,400 เกม', done: true },
-  { n: 8, name: 'เก็บเกม + หน้าวิจารณ์', gate: 'v2 · คำตัดสินคงที่ 98%, win% ตรงกับผลจริงใน 2,045 สนาม', done: true },
-  { n: 9, name: 'โหมดฝึก/จริง, เล่นได้ทุกเด็ค', gate: 'v2 · ย้อนแล้วสับใหม่, เล่นจบได้ทุกเด็ค', done: false },
-  { n: 10, name: 'คลังโจทย์', gate: 'v3 · ทุกโจทย์มีคำตอบเดียว, matchup ละ 20 ข้อ', done: false },
-  { n: 11, name: 'ฝึกเปิดเกม + prize check', gate: 'v3 · อันดับทางเลือกคงที่ ≥90%', done: false },
-  { n: 12, name: 'เทียบกับ matchup จริง + tech สุ่ม', gate: 'v4 · ห่างจาก Limitless ไม่เกิน ~8 จุด', done: false },
-  { n: 13, name: 'search ที่ลึกขึ้น', gate: 'v4 · ยากใหม่ชนะยากเดิม ≥55%', done: false },
-  { n: 14, name: 'template เอฟเฟกต์ + import list', gate: 'v5 · การ์ดใหม่ ≥60% ใช้ template', done: false },
-  { n: 15, name: 'ขั้นตอนเพิ่มชุดใหม่', gate: 'v5 · เด็คใหม่ใน 1 วัน', done: false },
-  { n: 16, name: 'สถิติพัฒนาการ + Bo3', gate: 'v6', done: false },
+// The hero's fan: each archetype's headline Pokémon (the one the deck is named after, else its biggest rule-box Pokémon).
+type Line = (typeof decks)[number]['lines'][number];
+const score = (deckName: string, l: Line) =>
+  (deckName.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) + (l.card.category === 'pokemon' ? l.card.prizes * 10 : 0) + l.entry.count;
+const fan = opponents
+  .slice(0, 5)
+  .map((a) => {
+    const d = decks.find((x) => x.slug === a.slugs[0])!;
+    const best = d.lines
+      .filter((l) => l.entry.section === 'pokemon' && l.print.image.high)
+      .sort((x, y) => score(d.meta.name, y) - score(d.meta.name, x))[0];
+    return best && { src: best.print.image.high!, name: best.card.name, deck: a.name };
+  })
+  .filter((x) => !!x);
+
+const features = [
+  {
+    title: 'บอทเล่นเด็ค meta',
+    text: 'list จากทัวร์นาเมนต์ล่าสุดบน Limitless สุ่มคู่แข่งตามสัดส่วนที่เจอจริง หรือเลือกซ้อม matchup ที่อยากซ้อม',
+  },
+  {
+    title: 'โหมดฝึก',
+    text: 'บอกโอกาสที่ Pokémon แต่ละตัวโดน KO เทิร์นหน้า แนะนำ 3 ทางเลือกพร้อมเหตุผล และย้อนได้โดยสับการ์ดที่มองไม่เห็นใหม่',
+  },
+  {
+    title: 'ทบทวนเกม',
+    text: 'เล่นจบแล้วดูว่าเทิร์นไหนที่เกมพลิก บอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่',
+  },
 ];
 ---
 
 <Base title="หน้าแรก">
   <section class="hero">
-    <p class="eyebrow">Pokémon TCG · Basic Box vs meta</p>
-    <h1>เด็คของคุณ<br /><span>vs top 5 meta</span></h1>
+    <div class="pitch">
+    <p class="eyebrow">Pokémon TCG · ซ้อมกับบอท</p>
+    <h1>ซ้อม matchup<br /><span>กับเด็คใน meta</span></h1>
     <p class="lede">
-      เล่น Mega Kangaskhan / Ogerpon / Raging Bolt กับบอทที่ใช้เด็คอันดับต้นของ meta ตามกฎจริง แล้วรันหลายพันเกมเพื่อดู
-      win rate ถ่วงตาม meta share
+      เลือกเด็คที่คุณจะเล่น หรือวาง list ของคุณเอง แล้วเล่นกับบอทที่ใช้เด็คอันดับต้นของ meta ตามกฎจริง ในเบราว์เซอร์
+      ไม่ต้องสมัครสมาชิก
     </p>
     <span class="ctas">
       <a class="cta" href="/play/">เล่นกับบอท →</a>
-      <a class="cta alt" href="/review/">วิจารณ์เกม</a>
-      <a class="cta alt" href="/sim/">รันหลายพันเกม</a>
       <a class="cta alt" href="/decks/">ดูเด็คทั้งหมด</a>
     </span>
+    </div>
+    <div class="fan" aria-hidden="true">
+      {
+        fan.map((c, i) => (
+          <img src={c.src} alt="" width="600" height="825" style={`--i:${i}; --o:${i - (fan.length - 1) / 2}`} />
+        ))
+      }
+      <span class="stamp">TOP {fan.length}<br />META</span>
+    </div>
   </section>
 
-  <section class="stats" aria-label="ข้อมูลการ์ด">
-    <div><span class="num">{decks.length}</span><span>decklist</span></div>
-    <div><span class="num">{cards}</span><span>การ์ดไม่ซ้ำ</span></div>
-    <div><span class="num">{withImage}/{prints.length}</span><span>print ที่มีรูปจริง</span></div>
+  <section class="features" aria-label="ทำอะไรได้บ้าง">
+    {
+      features.map((f) => (
+        <div>
+          <h2>{f.title}</h2>
+          <p>{f.text}</p>
+        </div>
+      ))
+    }
   </section>
 
-  <section class="phases">
-    <h2>Milestones</h2>
+  <section class="meta">
+    <h2>คู่แข่งตอนนี้</h2>
     <ol>
       {
-        phases.map((p) => (
-          <li class:list={{ done: p.done }}>
-            <span class="pn mono">{p.n}</span>
-            <span class="pname">{p.name}</span>
-            <span class="pgate">{p.gate}</span>
-            <span class="pstate">{p.done ? 'ผ่านด่าน' : 'ยังไม่เริ่ม'}</span>
+        opponents.map((a) => (
+          <li>
+            <a href={`/decks/${a.slugs[0]}/`}>{a.name}</a>
+            <span class="bar" style={`--w:${(a.metaShare / maxShare) * 100}%`} />
+            <span class="mono pct">{a.metaShare.toFixed(1)}%</span>
           </li>
         ))
       }
     </ol>
+    <p class="note">สัดส่วนใน meta จาก Limitless · อัปเดต {updated}</p>
   </section>
 </Base>
 
 <style>
   .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: center;
+    gap: 24px;
     padding: 24px 0 32px;
     border-bottom: 2px solid var(--ink);
+    overflow: hidden;
+  }
+  /* Five cards fanned from a point below, like a hand held up; the stamp sits over them. */
+  .fan {
+    position: relative;
+    height: 23rem;
+  }
+  .fan img {
+    position: absolute;
+    left: calc(44% - 5.6rem + var(--o) * 3.9rem);
+    bottom: 1.2rem;
+    width: 11.2rem;
+    height: auto;
+    border-radius: 9px;
+    box-shadow: 0 1px 0 #fff8 inset, 0 18px 30px -16px #3a2f1a99;
+    transform: rotate(calc(var(--o) * 9deg)) translateY(calc(var(--o) * var(--o) * 9px));
+    transform-origin: 50% 120%;
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .fan:hover img {
+    transform: rotate(calc(var(--o) * 12deg)) translateY(calc(var(--o) * var(--o) * 11px - 6px));
+  }
+  .stamp {
+    position: absolute;
+    right: 4%;
+    top: 4%;
+    z-index: 6;
+    padding: 6px 12px;
+    border: 3px solid var(--stamp);
+    color: var(--stamp);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.1;
+    text-align: center;
+    letter-spacing: 0.06em;
+    background: color-mix(in srgb, var(--paper) 80%, transparent);
+    transform: rotate(12deg);
+    mix-blend-mode: multiply;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fan img {
+      animation: deal 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+      animation-delay: calc(120ms + var(--i) * 70ms);
+    }
+    .stamp {
+      animation: thump 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) 0.65s backwards;
+    }
+    @keyframes deal {
+      from {
+        opacity: 0;
+        transform: translateY(60px) rotate(0deg);
+      }
+    }
+    @keyframes thump {
+      from {
+        opacity: 0;
+        transform: rotate(12deg) scale(1.6);
+      }
+    }
   }
   h1 {
     font-size: clamp(2.6rem, 8vw, 5.4rem);
     margin: 0 0 16px;
-    /* room for Thai marks above and below the line (e.g. คุณ) */
+    /* room for Thai marks above and below the line */
     line-height: 1.18;
   }
   h1 span {
@@ -116,78 +201,100 @@ const phases = [
     border: 2px solid var(--ink);
     box-shadow: none;
   }
-  .stats {
+  .features {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     border-bottom: 1px solid var(--rule);
   }
-  .stats div {
-    display: flex;
-    flex-direction: column;
-    padding: 18px 12px;
-    color: var(--ink-soft);
-    font-size: 0.85rem;
+  .features div {
+    padding: 18px 16px 18px 0;
   }
-  .stats div + div {
+  .features div + div {
     border-left: 1px solid var(--rule);
+    padding-left: 16px;
   }
-  .num {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 2rem;
-    color: var(--ink);
+  .features h2 {
+    font-size: 1.1rem;
+    margin: 0 0 6px;
   }
-  .phases h2 {
+  .features p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+  .meta h2 {
     font-size: 1.2rem;
     margin: 28px 0 8px;
   }
-  .phases ol {
+  .meta ol {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  .phases li {
+  .meta li {
     display: grid;
-    grid-template-columns: 2rem minmax(0, 1.2fr) minmax(0, 1.4fr) 6.5rem;
+    grid-template-columns: minmax(0, 16rem) 1fr 4.2rem;
     gap: 12px;
-    align-items: baseline;
-    padding: 10px 4px;
+    align-items: center;
+    padding: 8px 4px;
     border-bottom: 1px solid var(--rule);
   }
-  .pn {
-    font-weight: 600;
-  }
-  .pname {
+  .meta a {
     font-family: var(--font-display);
     font-weight: 600;
+    text-decoration: none;
   }
-  .pgate {
-    color: var(--ink-soft);
+  .meta a:hover {
+    color: var(--stamp);
+  }
+  .bar {
+    height: 10px;
+    background: linear-gradient(to right, var(--stamp) var(--w), var(--paper-deep) var(--w));
+    border: 1px solid var(--ink);
+  }
+  .pct {
     font-size: 0.85rem;
+    font-weight: 600;
+    text-align: right;
   }
-  .pstate {
-    justify-self: end;
-    font-size: 0.75rem;
-    padding: 1px 8px;
-    border: 1px solid var(--rule);
+  .note {
     color: var(--ink-soft);
+    font-size: 0.8rem;
   }
-  .done .pstate {
-    border-color: var(--teal);
-    background: var(--teal);
-    color: var(--paper);
+  @media (max-width: 900px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+    .fan {
+      order: -1;
+      height: 13rem;
+      margin: -8px 0 4px;
+    }
+    .fan img {
+      width: 6.6rem;
+      left: calc(50% - 3.3rem + var(--o) * 2.6rem);
+      bottom: 0.4rem;
+    }
+    .stamp {
+      right: 2%;
+      font-size: 0.85rem;
+    }
   }
   @media (max-width: 640px) {
-    .phases li {
-      grid-template-columns: 2rem 1fr;
+    .features {
+      grid-template-columns: 1fr;
     }
-    .pgate,
-    .pstate {
-      grid-column: 2;
-      justify-self: start;
+    .features div + div {
+      border-left: 0;
+      border-top: 1px solid var(--rule);
+      padding-left: 0;
     }
-    .num {
-      font-size: 1.5rem;
+    .meta li {
+      grid-template-columns: 1fr 4.2rem;
+    }
+    .bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
     }
   }
 </style>

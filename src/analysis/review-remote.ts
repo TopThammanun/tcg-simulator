@@ -34,14 +34,14 @@ export function reviewGame(
 
   if (typeof Worker === 'undefined') {
     const states = replay(game);
-    const plans = { mine: planFor('player', game.policy), theirs: planFor(game.opponent) };
+    const plans = { mine: planFor(game.mine ?? 'player', game.policy), theirs: planFor(game.opponent) };
     const loaded = import('./review');
     const step = async () => {
       const span = queue.shift();
       if (!span || stopped) return;
       const { reviewTurn } = await loaded;
       try {
-        onturn(reviewTurn(states, game.actions, span, plans, { ...opts, theirDeck: game.opponent }));
+        onturn(reviewTurn(states, game.actions, span, plans, opts));
       } catch (e) {
         errors.push((e as Error).message);
       }

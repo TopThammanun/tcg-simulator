@@ -79,14 +79,3 @@ export function slotTitle(s: GameState, uid: SlotId): string {
   }
   return '';
 }
-
-/** Pick a deck by meta share (PLAN.md: "สุ่มตาม meta share"). */
-export function pickByShare<T extends { metaShare?: number }>(decks: T[], r: number): T {
-  const total = decks.reduce((n, d) => n + (d.metaShare ?? 0), 0);
-  let x = r * total;
-  for (const d of decks) {
-    x -= d.metaShare ?? 0;
-    if (x <= 0) return d;
-  }
-  return decks[decks.length - 1]!;
-}

@@ -26,13 +26,12 @@ async function engineState(page: Page): Promise<Snapshot> {
   });
 }
 
-for (const [opp, seed] of [
-  ['dragapult-ex', 7],
-  ['festival-lead-seaking', 11],
-  ['basic-box', 23],
-] as const) {
-  test(`a seeded game vs ${opp} plays to the end and the board matches the engine`, async ({ page }) => {
-    await page.goto(`/play/?watch=1&test=1&speed=0&seed=${seed}&opp=${opp}`);
+// Every meta deck plays a game to the end, as yours and as the bot's (each deck meets the next one).
+const DECKS = ['dragapult-ex', 'basic-box', 'slowking', 'ns-zoroark-ex', 'alakazam', 'festival-lead-seaking', 'festival-lead-dipplin'];
+for (const [i, me] of DECKS.entries()) {
+  const opp = DECKS[(i + 1) % DECKS.length]!;
+  test(`a seeded game, ${me} vs ${opp}, plays to the end and the board matches the engine`, async ({ page }) => {
+    await page.goto(`/play/?watch=1&test=1&speed=0&seed=${7 + i}&me=${me}&opp=${opp}`);
     await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
     const s = await engineState(page);
     expect(s.winner).not.toBeNull();
@@ -48,24 +47,34 @@ for (const [opp, seed] of [
   });
 }
 
-test('the decklist editor rejects unsupported cards and accepts your list', async ({ page }) => {
-  await page.goto('/play/');
-  await page.getByText('แก้ list ของคุณ').click();
+test('your own list: unsupported cards are named, a good list is saved and can be played', async ({ page }) => {
+  await page.goto('/decks/');
+  await page.getByRole('button', { name: '+ วาง list ใหม่' }).click();
+  await page.locator('.starts').getByRole('button', { name: 'Basic Box' }).click();
   const area = page.getByRole('textbox', { name: 'decklist' });
   const original = await area.inputValue();
-  await area.fill(original.replace('1 Judge POR 76', '1 Iono PAL 185'));
+  await area.fill(original.replace(/^(\d+) Boss's Orders .*$/m, '$1 Iono PAL 185'));
   await expect(page.locator('.errors')).toContainText('Iono');
   await expect(page.locator('.editor button.primary')).toBeDisabled();
   await area.fill(original);
-  await expect(page.locator('.ok')).toContainText('60');
+  await expect(page.locator('.ok')).toContainText('Basic Box');
+  await page.getByLabel('ชื่อเด็ค').fill('Box ของฉัน');
+  await page.getByRole('button', { name: 'บันทึก' }).click();
+  await expect(page.locator('.list li')).toContainText('Box ของฉัน');
+
+  await page.locator('.list li').getByRole('link', { name: /เล่น/ }).click();
+  await expect(page.getByLabel('เด็คของคุณ')).toHaveValue(/^my:/);
+  await page.getByRole('combobox', { name: /^คู่แข่ง/ }).selectOption('basic-box');
+  await page.getByRole('button', { name: /เริ่มเกม/ }).click();
+  await expect(page.locator('.status')).toContainText('Box ของฉัน vs Basic Box');
 });
 
 test('you can set up, attach Energy and end the turn; the bot then plays', async ({ page }) => {
-  await page.goto('/play/?test=1');
-  await page.locator('select').first().selectOption('basic-box');
+  await page.goto('/play/?test=1&seed=101');
+  await page.getByLabel('เด็คของคุณ').selectOption('basic-box');
+  await page.getByRole('combobox', { name: /^คู่แข่ง/ }).selectOption('basic-box');
   await page.getByLabel('ความเร็วบอท').selectOption('150');
-  await page.locator('input[type=number]').fill('101');
-  await page.getByRole('button', { name: 'เริ่มเกม' }).click();
+  await page.getByRole('button', { name: /เริ่มเกม/ }).click();
 
   await setUp(page);
   const before = await engineState(page);
@@ -103,12 +112,11 @@ async function setUp(page: Page) {
   await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
 }
 
-/** Start a seeded game vs Basic Box and set up (Active = first Basic, no Bench). */
-async function startGame(page: Page, seed: number) {
-  await page.goto('/play/?test=1');
-  await page.locator('select').first().selectOption('basic-box');
-  await page.locator('input[type=number]').fill(String(seed));
-  await page.getByRole('button', { name: 'เริ่มเกม' }).click();
+/** Start a seeded game, Basic Box vs Basic Box, and set up (Active = first Basic, no Bench). */
+async function startGame(page: Page, seed: number, mode: 'practice' | 'real' = 'practice') {
+  await page.goto(`/play/?test=1&seed=${seed}&me=basic-box&opp=basic-box`);
+  await page.getByRole('radio', { name: mode === 'real' ? /โหมดจริง/ : /โหมดฝึก/ }).check();
+  await page.getByRole('button', { name: /เริ่มเกม/ }).click();
   await setUp(page);
 }
 
@@ -134,7 +142,7 @@ test('drag an Energy from your hand onto your Active Pokémon (mouse)', async ({
   await page.mouse.move(a.x + a.width / 2, a.y - 30, { steps: 4 });
   const b = await faceUp(page, '.side.mine .slot.active .card');
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
-  await expect(page.locator('.ghost-label')).toContainText('ติด Grass Energy ให้');
+  await expect(page.locator('.ghost-label')).toContainText(/ติด \w+ Energy ให้/);
   await page.mouse.up();
   await expect.poll(() => energyOnActive(page)).toBe(1);
   await expect(page.locator('.drag-ghost')).toHaveCount(0);
@@ -190,6 +198,36 @@ test('tapping your Active opens a pop-up with its attacks and retreating', async
   await expect(menu).toHaveCount(0);
 });
 
+test('a real game has no hints, threat panel or undo', async ({ page }) => {
+  await startGame(page, 101, 'real');
+  await expect(page.locator('.status .chip')).toHaveText('โหมดจริง');
+  await expect(page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' })).toHaveCount(0);
+  await expect(page.locator('.threat')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'ย้อน' })).toHaveCount(0);
+});
+
+test('undo in practice mode takes the move back and deals what you cannot see again', async ({ page }) => {
+  await startGame(page, 101);
+  const zones = () =>
+    page.evaluate(() => {
+      const s = (window as unknown as { __tcg: { state: () => any } }).__tcg.state();
+      const ps = s.players[0];
+      return { hand: ps.hand as number[], deck: ps.deck as number[], unseen: [...ps.deck, ...ps.prizes].sort() as number[], active: ps.active.energy.length as number };
+    });
+  const before = await zones();
+  const card = page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first();
+  await card.click();
+  await page.locator('.side.mine .slot.target .card').first().click();
+  await expect.poll(() => energyOnActive(page)).toBe(1);
+  await page.getByRole('button', { name: 'ย้อน' }).click();
+  const after = await zones();
+  expect(after.active).toBe(0);
+  expect(after.hand).toEqual(before.hand);
+  // Your deck and Prize cards are dealt again together.
+  expect(after.unseen).toEqual(before.unseen);
+  expect(after.deck).not.toEqual(before.deck);
+});
+
 test('the hint button explains each suggestion', async ({ page }) => {
   await startGame(page, 101);
   await page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' }).click();
@@ -217,7 +255,7 @@ test('the threat panel shows what the opponent can do next turn, and goes away w
 
 test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {
   // A seeded game (your deck played by the bot) saved like one of yours.
-  await page.goto('/play/?watch=1&test=1&speed=0&seed=7&opp=dragapult-ex&save=1');
+  await page.goto('/play/?watch=1&test=1&speed=0&seed=7&me=basic-box&opp=dragapult-ex&save=1');
   await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
   // The game-over dialog covers the table; its link opens the review.
   const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /วิจารณ์เกมนี้/ });
@@ -259,7 +297,8 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
 
   // The game list has it.
   await page.goto('/review/');
-  await expect(page.locator('table.games tbody tr').first()).toContainText('Dragapult ex');
+  await expect(page.locator('.games li').first()).toContainText('Basic Box vs Dragapult ex');
+  await expect(page.locator('.record')).toContainText('1');
 });
 
 test.describe('on a phone', () => {

@@ -1,10 +1,12 @@
-// Chance to win from a position, as `me` sees it: re-deal what `me` can't see (determinize), play the rest
-// of the game with the rule-based bot (core.ts, quick) on both sides, count the wins (a draw is half).
-// The review page's win%.
+// Chance to win from a position, as `me` sees it: re-deal what `me` can't see (determinize), then either
+// play the rest of the game with the rule-based bot (core.ts, quick) on both sides and count the wins
+// (a draw is half), or ask the bot's network (netWin, the review page's win%).
 import { actor, apply } from '../engine/actions';
 import type { GameState, PlayerId } from '../engine/types';
 import { determinize } from '../engine/view';
 import { makeBot } from '../bots/core';
+import { encode } from '../bots/learn/encode';
+import { run, type Model } from '../bots/learn/model';
 import type { Plans } from './threat';
 
 const MAX_ACTIONS = 3000;
@@ -52,4 +54,22 @@ export function pairedDiff(a: WinEstimate, b: WinEstimate): { diff: number; se: 
   const d = b.results.map((x, i) => x - (a.results[i] ?? 0));
   const s = summarize(d);
   return { diff: s.p, se: s.se };
+}
+
+/**
+ * Chance to win as the bot's network judges it (its value head, learn/model.ts): the position re-dealt
+ * `deals` times from what `me` could see, each judged by whoever acts next. One forward pass per deal, so a
+ * whole game's review takes moments, and the same deals (`seed`) give the same answer. `decks` are the plan
+ * names [mine, theirs] the network is told.
+ */
+export function netWin(s: GameState, me: PlayerId, model: Model, decks: readonly [string, string], opts: { deals?: number; seed?: number } = {}): WinEstimate {
+  if (s.winner !== null) return summarize([s.winner === me ? 1 : s.winner === 'draw' ? 0.5 : 0]);
+  const n = s.pending ? 1 : (opts.deals ?? 16);
+  const results = Array.from({ length: n }, (_, i) => {
+    const d = s.pending ? s : determinize(s, me, rolloutSeed(opts.seed ?? 1, i));
+    const who = actor(d);
+    const v = run(model, encode(d, { decks: who === me ? decks : [decks[1], decks[0]] }), false).value;
+    return who === me ? v : 1 - v;
+  });
+  return summarize(results);
 }

@@ -4,35 +4,30 @@ import CardText from '../../components/CardText.astro';
 import CardTile from '../../components/CardTile.astro';
 import type { DeckSection } from '../../data/decklist';
 import Base from '../../layouts/Base.astro';
-import { loadDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../lib/decks';
+import { loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../lib/decks';
 
 export const getStaticPaths = (async () => {
-  const decks = await loadDecks();
+  const decks = metaDecks(await loadDecks());
   return decks.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
 }) satisfies GetStaticPaths;
 
 const { deck } = Astro.props as { deck: DeckView };
 const sections: DeckSection[] = ['pokemon', 'trainer', 'energy'];
-const SOURCE_NOTE = {
-  tcgdex: 'รูปจาก TCGdex',
-  'pokemontcg.io': 'รูปจาก pokemontcg.io',
-  'alt-print': 'รูปจาก print อื่นที่ข้อความเหมือนกัน',
-  none: 'ไม่มีรูปในทั้งสอง API — แสดงเป็นกรอบข้อความ',
-};
 let tileIndex = 0;
 ---
 
 <Base title={deck.meta.name}>
   <a class="back" href="/decks/">← เด็คทั้งหมด</a>
   <header class="deck-head">
-    <p class="eyebrow">
-      {deck.meta.side === 'player' ? 'เด็คของคุณ' : `บอท · อันดับ ${deck.meta.rank} · meta share ${deck.meta.metaShare?.toFixed(2)}%`}
-      {deck.meta.optional && ' · เสริม'}
-    </p>
+    <p class="eyebrow">อันดับ {deck.meta.rank} · meta share {deck.meta.metaShare?.toFixed(1)}%</p>
     <h1>{deck.meta.name}</h1>
     <p class="source">
       {deck.meta.listSource}
       {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">list บน Limitless ↗</a>}
+    </p>
+    <p class="play">
+      <a class="button" href={`/play/?me=${deck.slug}`}>เล่นด้วยเด็คนี้ →</a>
+      <a class="button alt" href={`/play/?opp=${deck.slug}`}>ซ้อมกับเด็คนี้ →</a>
     </p>
   </header>
 
@@ -103,10 +98,6 @@ let tileIndex = 0;
           )}
           <div class="detail-text">
             <CardText card={l.card} />
-            <p class="detail-meta mono">
-              {l.print.key} · {SOURCE_NOTE[l.print.image.source]}
-              {l.print.image.altOf && ` (${l.print.image.altOf})`}
-            </p>
           </div>
         </div>
       </template>
@@ -161,6 +152,26 @@ let tileIndex = 0;
   .source a {
     margin-left: 10px;
     color: var(--teal);
+  }
+  .play {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0 0;
+  }
+  .button {
+    display: inline-block;
+    padding: 6px 14px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid var(--ink);
+  }
+  .button.alt {
+    background: transparent;
+    color: var(--ink);
   }
   .layout {
     display: grid;
@@ -296,11 +307,6 @@ let tileIndex = 0;
     font-size: 1.1rem;
     /* keep the name/HP line clear of the close button */
     padding-right: 32px;
-  }
-  .dialog-body :global(.detail-meta) {
-    margin: 16px 0 0;
-    font-size: 0.75rem;
-    color: var(--ink-soft);
   }
 
   @media (max-width: 760px) {

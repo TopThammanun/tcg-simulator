@@ -32,6 +32,21 @@ export async function loadDecks() {
 
 export type DeckView = Awaited<ReturnType<typeof loadDecks>>[number];
 
+/** The decks anyone can play and play against: the meta decks the bots use (the player deck is the scripts' own list). */
+export const metaDecks = (decks: DeckView[]) => decks.filter((d) => d.meta.side === 'bot');
+
+/** The bots' archetypes by meta share; an archetype with several lists (Festival Lead) is one row. */
+export function archetypes(decks: DeckView[]) {
+  const rows = new Map<string, { name: string; metaShare: number; slugs: string[] }>();
+  for (const d of metaDecks(decks)) {
+    const id = d.meta.limitless ?? d.slug;
+    const row = rows.get(id) ?? { name: d.meta.name.replace(/ \(.*\)$/, ''), metaShare: d.meta.metaShare ?? 0, slugs: [] };
+    row.slugs.push(d.slug);
+    rows.set(id, row);
+  }
+  return [...rows.values()].sort((a, b) => b.metaShare - a.metaShare);
+}
+
 export function sectionCount(deck: DeckView, section: DeckSection): number {
   return deck.lines.filter((l) => l.entry.section === section).reduce((n, l) => n + l.entry.count, 0);
 }

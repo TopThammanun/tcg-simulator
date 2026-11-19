@@ -16,8 +16,8 @@ self.onmessage = (e: MessageEvent<ToReview>) => {
   try {
     const key = `${game.id}:${game.seed}:${game.actions.length}`;
     if (cached?.key !== key) cached = { key, states: replay(game) };
-    const plans = { mine: planFor('player', game.policy), theirs: planFor(game.opponent) };
-    const review = reviewTurn(cached.states, game.actions, span, plans, { ...opts, theirDeck: game.opponent });
+    const plans = { mine: planFor(game.mine ?? 'player', game.policy), theirs: planFor(game.opponent) };
+    const review = reviewTurn(cached.states, game.actions, span, plans, opts);
     (self as unknown as Worker).postMessage({ type: 'turn', job, review } satisfies FromReview);
   } catch (err) {
     (self as unknown as Worker).postMessage({ type: 'error', job, message: String((err as Error).message ?? err) } satisfies FromReview);
