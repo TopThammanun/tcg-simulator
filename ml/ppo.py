@@ -219,12 +219,15 @@ def main():
         return out, start_gen(gen_config(it, out, weights), os.path.join(a.dir, f"gen-{it % 2}.json"), server)
 
     pending = None
+    data = None
     for n_iter in range(a.iters):
         it = state["iter"]
         t0 = time.time()
         out, gen = pending or start(it)
         res = gen.wait()
         t1 = time.time()
+        # The last iteration's rows go before these load (both at once would need twice the GPU memory).
+        data = adv = ret = None
         data = Data(sorted(globmod.glob(os.path.join(out, "*.bin"))))
         # The next iteration's games, played meanwhile by the weights before this update (one iteration behind;
         # PPO's ratio to the recorded move probabilities corrects for it).
