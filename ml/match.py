@@ -4,8 +4,8 @@
     ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b net:src/bots/learn/weights.json
 
 Bots: normal, hard, bot / bot-search (the game's bot: bundled network and specialists, without / with look-ahead),
-net:<weights> (no look-ahead), search:<weights>[:width:samples:horizon] (look-ahead with the
-attack planner's line among the options, as the game uses it), search-np:<weights> (look-ahead on policy options only),
+net:<weights> (no look-ahead), search:<weights>[@<rollout weights>][:width:samples:horizon] (look-ahead with the
+attack planner's line among the options, as the game uses it; @: a faster network plays the rollouts), search-np:<weights> (look-ahead on policy options only),
 search-ng:<weights> (planner's first step only, without the sure-line checks: the bot of round 2).
 """
 import argparse
@@ -26,7 +26,10 @@ def spec(s: str) -> dict:
     if kind in ("search", "search-np", "search-ng"):
         parts = rest[0].rsplit(":", 3) if rest[0].count(":") >= 3 else [rest[0]]
         # The play screen's time limit per decision (src/bots/index.ts SEARCH).
-        out = {"kind": "search", "weights": parts[0], "tactics": kind != "search-np", "guards": kind == "search", "deadlineMs": 2500}
+        weights, _, roll = parts[0].partition("@")
+        out = {"kind": "search", "weights": weights, "tactics": kind != "search-np", "guards": kind == "search", "deadlineMs": 2500}
+        if roll:
+            out["rolloutWeights"] = roll
         if len(parts) == 4:
             out.update(width=int(parts[1]), samples=int(parts[2]), horizon=parts[3])
         return out

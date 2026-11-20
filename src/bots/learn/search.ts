@@ -39,6 +39,11 @@ export interface NetSearchOptions {
   plan?: DeckPlan;
   /** With the plan: play a line that wins on every re-deal at once (default). Off = no such check (comparisons). */
   guards?: boolean;
+  /**
+   * A faster network that plays the rollouts (both sides), while `model` still picks the options and scores where
+   * each rollout ends (AlphaGo's rollout policy): for a network too slow to play hundreds of moves a decision.
+   */
+  rollout?: Model;
 }
 
 const MAX_ROLLOUT_ACTIONS = 200;
@@ -67,7 +72,8 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
   const rollout = (s: GameState, me: PlayerId, step: Step, seed: number): number => {
     const dealt = determinize(s, me, seed);
     let st = step.picks && o.plan ? runStep(dealt, step, o.plan) : apply(dealt, step.action, { trusted: true });
-    const bots = { [me]: makeNetBot(model, { decks: o.decks, temperature: 0 }), [opp(me)]: makeNetBot(model, { decks: theirDecks, temperature: 0 }) };
+    const player = o.rollout ?? model;
+    const bots = { [me]: makeNetBot(player, { decks: o.decks, temperature: 0 }), [opp(me)]: makeNetBot(player, { decks: theirDecks, temperature: 0 }) };
     for (let n = 0; st.winner === null && n < MAX_ROLLOUT_ACTIONS; n++) {
       if (!st.pending && st.phase === 'main') {
         if (horizon === 'turn' && st.current !== me) break;

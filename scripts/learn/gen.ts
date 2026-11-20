@@ -36,7 +36,7 @@ export type PlayerSpec =
   | { kind: 'net'; weights: string; temperature?: number; record?: boolean }
   /** The game's bot (src/bots/index.ts createBot: bundled network and specialists); fast = without look-ahead. */
   | { kind: 'bot'; fast?: boolean; record?: boolean }
-  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan'>);
+  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>);
 
 export interface GenConfig {
   out: string;
@@ -146,7 +146,13 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
     spec.kind === 'bot'
       ? createBot(plan, seed, oppPlan, { fast: spec.fast ?? true })
       : spec.kind === 'search'
-      ? makeSearchNetBot(model(spec.weights), { ...spec, decks, seed, plan: spec.tactics === false ? undefined : plan })
+      ? makeSearchNetBot(model(spec.weights), {
+          ...spec,
+          decks,
+          seed,
+          plan: spec.tactics === false ? undefined : plan,
+          rollout: spec.rolloutWeights ? model(spec.rolloutWeights) : undefined,
+        })
       : spec.kind === 'hard'
         ? makeHardBot(plan, oppPlan, { seed })
         : makeBot(plan, { seed });
