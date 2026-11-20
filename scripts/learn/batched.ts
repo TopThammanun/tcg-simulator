@@ -6,7 +6,7 @@
 import { connect } from 'node:net';
 import { encode, type Encoded, type OptionRef } from '../../src/bots/learn/encode';
 import { softmax } from '../../src/bots/learn/model';
-import { MAX_ACTIONS_PER_TURN, turnCounter, type Decision } from '../../src/bots/learn/netbot';
+import { MAX_ACTIONS_PER_TURN, oppHand, turnCounter, type Decision } from '../../src/bots/learn/netbot';
 import { planFor } from '../../src/bots/plans';
 import { makeRand } from '../../src/bots/random';
 import type { Bot } from '../../src/bots/types';
@@ -70,6 +70,8 @@ export interface BatchedResult<M extends BatchedMatch> {
   resigned?: PlayerId;
   /** Kept playing although this side would have resigned (resign check). */
   wouldResign?: PlayerId;
+  /** Prize cards each player had taken when the game ended (or was resigned). */
+  taken?: [number, number];
 }
 
 interface Side {
@@ -104,7 +106,7 @@ function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first
   }
   if (sv.record) {
     const p = softmax(out.logits);
-    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice() });
+    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice(), oppHand: oppHand(s, me) });
   }
   // The first network decision of each own turn counts toward resigning.
   if (resign && first && side.lowTurn !== s.turn) {
@@ -132,6 +134,8 @@ function* netAct(s: GameState, me: PlayerId, side: Side, rows: Decision[], resig
   const i = yield* choose(enc, me, side, rows, s.phase === 'main', s, resign);
   return (enc.refs[i] as Extract<OptionRef, { t: 'action' }>).action;
 }
+
+const taken = (s: GameState): [number, number] => [6 - s.players[0].prizes.length, 6 - s.players[1].prizes.length];
 
 /** One game; yields every decision a served network must make. `rows` gets the recorded decisions. */
 export function* playGame<M extends BatchedMatch, S>(
@@ -171,13 +175,13 @@ export function* playGame<M extends BatchedMatch, S>(
     } else {
       a = yield* netAct(s, p, side, rows, resign);
       if (resign && side.low >= resign.turns) {
-        if (!keepPlaying) return { m, winner: opp(p), maxThinkMs: think, resigned: p };
+        if (!keepPlaying) return { m, winner: opp(p), maxThinkMs: think, resigned: p, taken: taken(s) };
         wouldResign ??= p;
       }
     }
     s = apply(s, a, { trusted: true });
   }
-  return { m, winner: s.winner, maxThinkMs: think, wouldResign };
+  return { m, winner: s.winner, maxThinkMs: think, wouldResign, taken: taken(s) };
 }
 
 /**
@@ -208,7 +212,7 @@ export async function playBatched<M extends BatchedMatch, S>(
     if (out) {
       out.beginGame(g.m.id);
       for (const d of g.rows) out.add(d);
-      out.endGame(r.winner);
+      out.endGame(r.winner, r.taken);
     }
     results.push(r);
   };

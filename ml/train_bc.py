@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--id-drop", type=float, default=0.15, help="v2: share of cards trained without their own vector (as if new)")
     ap.add_argument("--v3", action="store_true", help="a new version-3 network (the transformer of ml/net3.py)")
     ap.add_argument("--bf16", action="store_true", help="bfloat16 autocast (v3: faster, less memory)")
+    ap.add_argument("--aux-weight", type=float, default=0.25, help="v3: weight of the training-only targets (opponent's hand, Prize difference)")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -84,8 +85,12 @@ def main():
         for i in range(0, len(perm) - a.bs + 1, a.bs):
             j = perm[i : i + a.bs]
             b = data.batch(j)
+            aux = None
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
-                logits, value = net(b)
+                if hasattr(net, "forward_aux"):
+                    logits, value, aux = net.forward_aux(b)
+                else:
+                    logits, value = net(b)
             logits, value = logits.float(), value.float()
             w = torch.where(data.searched[j], a.searched_weight, 1.0)
             pol = F.cross_entropy(logits, data.chosen[j], reduction="none")
@@ -96,6 +101,10 @@ def main():
                 pol = torch.where(data.soft[j], soft, pol)
             ce = (pol * w).sum() / w.sum()
             loss = ce + a.value_weight * F.binary_cross_entropy_with_logits(value, data.outcome[j])
+            if aux is not None:
+                from net3 import aux_loss
+
+                loss = loss + a.aux_weight * aux_loss(aux, b)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)

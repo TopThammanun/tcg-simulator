@@ -81,6 +81,10 @@ export class ShardWriter {
   /** The deciding network's logit per option, when it gave them (row flag `soft`). */
   private optLogit = new Grow((n) => new Uint16Array(n));
   private soft = new Grow((n) => new Uint8Array(n));
+  /** Training-only labels (row flag `aux`): the opponent's hand by card, and the Prize difference at the end. */
+  private oppHand = new Grow((n) => new Uint8Array(n));
+  private aux = new Grow((n) => new Uint8Array(n));
+  private prizeDiff = new Grow((n) => new Int8Array(n));
   private open: { game: number; from: number } | null = null;
   rows = 0;
 
@@ -112,15 +116,26 @@ export class ShardWriter {
     if (d.logits) this.optLogit.pushHalf(d.logits);
     else this.optLogit.pushAll(new Uint16Array(e.optCard.length));
     this.soft.push(d.logits ? 1 : 0);
+    if (d.oppHand) this.oppHand.pushAll(d.oppHand);
+    else this.oppHand.pushAll(new Uint8Array(VOCAB));
+    this.aux.push(d.oppHand ? 1 : 0);
+    this.prizeDiff.push(0);
     this.rows++;
   }
 
-  /** Label the open game's rows with who won (1 = that row's player won, 0.5 = draw / unfinished). */
-  endGame(winner: PlayerId | 'draw' | null): void {
+  /**
+   * Label the open game's rows with who won (1 = that row's player won, 0.5 = draw / unfinished), and with the
+   * Prize cards each player had taken at the end (row player's minus the other's), when given.
+   */
+  endGame(winner: PlayerId | 'draw' | null, taken?: [number, number]): void {
     if (!this.open) return;
     const out = this.outcome.buf;
     const pl = this.player.buf;
-    for (let i = this.open.from; i < this.rows; i++) out[i] = winner === 'draw' || winner === null ? 0.5 : winner === pl[i] ? 1 : 0;
+    const pd = this.prizeDiff.buf;
+    for (let i = this.open.from; i < this.rows; i++) {
+      out[i] = winner === 'draw' || winner === null ? 0.5 : winner === pl[i] ? 1 : 0;
+      if (taken) pd[i] = taken[pl[i]!]! - taken[1 - pl[i]!]!;
+    }
     this.open = null;
   }
 
@@ -138,7 +153,8 @@ export class ShardWriter {
     this.slotCards.n = rows * SLOTS * 2;
     this.bags.n = rows * BAGS * VOCAB;
     this.glob.n = rows * GLOB_F;
-    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft]) g.n = rows;
+    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft, this.aux, this.prizeDiff]) g.n = rows;
+    this.oppHand.n = rows * VOCAB;
     this.optX.n = optFrom * OPT_F;
     this.optCard.n = optFrom;
     this.optSlot.n = optFrom;
@@ -179,6 +195,9 @@ export class ShardWriter {
       ['optSlot', 'i1', [m], this.optSlot.view()],
       ['optLogit', 'f2', [m], this.optLogit.view()],
       ['soft', 'u1', [n], this.soft.view()],
+      ['oppHand', 'u1', [n, VOCAB], this.oppHand.view()],
+      ['aux', 'u1', [n], this.aux.view()],
+      ['prizeDiff', 'i1', [n], this.prizeDiff.view()],
       ...extra,
     ];
     const header: Record<string, { dtype: string; shape: number[]; offset: number }> = {};

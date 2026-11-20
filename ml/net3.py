@@ -85,6 +85,10 @@ class Net3(nn.Module):
         self.q = nn.Linear(D, D, bias=False)
         self.k = nn.Linear(D, D)
         self.score = nn.Linear(D, 1)
+        # Training only (KataGo-style targets, not written to the JSON): how many of each card the opponent holds
+        # (per card token), and the Prize difference at the end of the game / 6 (from the global token).
+        self.aux_hand = nn.Linear(D, 1)
+        self.aux_prize = nn.Linear(D, 1)
 
     def card_vectors(self) -> torch.Tensor:
         """Version 2's card vectors: id_emb[row] + feat(features); row 0 = no card, 1 = unknown."""
@@ -102,8 +106,8 @@ class Net3(nn.Module):
         with torch.no_grad():
             return {"cv": self.card_vectors()}
 
-    def tokens(self, b: dict[str, torch.Tensor], cv: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, int]:
-        """All tokens [B, T, D], which are live [B, T], and where the options start."""
+    def tokens(self, b: dict[str, torch.Tensor], cv: torch.Tensor):
+        """All tokens [B, T, D], which are live [B, T], where the options start, and the card tokens' cards [B, C]."""
         slots, sc = b["slots"], b["slot_cards"]
         present = slots[:, :, 0] > 0
         slot_x = self.slot_in(torch.cat([cv[sc[:, :, 0]], cv[sc[:, :, 1]], slots], -1)) + self.kind[1]
@@ -121,14 +125,33 @@ class Net3(nn.Module):
         opt_x = self.opt_in(torch.cat([cv[b["opt_card"]], b["opt_x"], target], -1)) + self.kind[3]
         x = torch.cat([g, slot_x, card_x, opt_x], 1)
         keep = torch.cat([torch.ones_like(present[:, :1]), present, card_keep, b["mask"]], 1)
-        return x, keep, 1 + SLOTS + self.dims["C"]
+        return x, keep, 1 + SLOTS + self.dims["C"], order, card_keep
 
-    def forward(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
+    def trunk(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
         cv = frozen["cv"] if frozen else self.card_vectors()
-        x, keep, first_opt = self.tokens(b, cv)
+        x, keep, first_opt, order, card_keep = self.tokens(b, cv)
         for blk in self.blocks:
             x = blk(x, keep)
-        x = self.norm(x)
+        return self.norm(x), keep, first_opt, order, card_keep
+
+    def forward(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
+        x, keep, first_opt, _, _ = self.trunk(b, frozen)
+        return self.heads(x, keep, first_opt, b)
+
+    def forward_aux(self, b: dict[str, torch.Tensor]):
+        """forward() plus the training-only predictions and the targets they are compared with (aux_loss)."""
+        x, keep, first_opt, order, card_keep = self.trunk(b)
+        logits, value = self.heads(x, keep, first_opt, b)
+        cards = x[:, 1 + SLOTS : first_opt]
+        aux = {
+            "hand": F.softplus(self.aux_hand(cards).squeeze(-1)),
+            "order": order,
+            "card_keep": card_keep,
+            "prize": self.aux_prize(x[:, 0]).squeeze(-1),
+        }
+        return logits, value, aux
+
+    def heads(self, x: torch.Tensor, keep: torch.Tensor, first_opt: int, b: dict[str, torch.Tensor]):
         g = x[:, 0]
         w = keep.to(x.dtype)[..., None]
         mean = (x * w).sum(1) / w.sum(1)
@@ -144,9 +167,23 @@ def new_net3(glob_f: int = 83, opt_f: int = 30, dims: dict | None = None, id_dro
     return Net3(card_features(), glob_f, opt_f, dims, id_drop).to(DEVICE)
 
 
-# Tensors written to the JSON file: every parameter, by its PyTorch name (model3.ts reads the same names).
+def aux_loss(aux: dict[str, torch.Tensor], b: dict[str, torch.Tensor]) -> torch.Tensor:
+    """Squared error of the training-only predictions, on rows that have the labels (Data: oppHand, prizeDiff)."""
+    if "opp_hand" not in b:
+        return torch.zeros((), device=aux["prize"].device)
+    rows = b["aux"]
+    want = torch.gather(b["opp_hand"], 1, aux["order"])
+    m = (aux["card_keep"] & rows[:, None]).to(want.dtype)
+    hand = (((aux["hand"].float() - want) ** 2) * m).sum() / m.sum().clamp(min=1)
+    r = rows.to(want.dtype)
+    prize = (((aux["prize"].float() - b["prize_diff"] / 6) ** 2) * r).sum() / r.sum().clamp(min=1)
+    return hand + prize
+
+
+# Tensors written to the JSON file: every parameter but the training-only heads, by its PyTorch name (model3.ts
+# reads the same names).
 def tensors3(net: Net3) -> dict[str, torch.Tensor]:
-    return {k: v for k, v in net.state_dict().items() if k not in ("feats", "glob_keep")}
+    return {k: v for k, v in net.state_dict().items() if k not in ("feats", "glob_keep") and not k.startswith("aux_")}
 
 
 def param_count(net: nn.Module) -> int:

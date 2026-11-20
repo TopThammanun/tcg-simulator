@@ -89,6 +89,11 @@ class Data:
         has_soft = all("soft" in p for p in parts)
         self.soft = t(cat("soft"), torch.bool) if has_soft else torch.zeros(self.n, dtype=torch.bool, device=device)
         self.opt_logit = t(cat("optLogit")) if has_soft else None
+        # Training-only labels (shard.ts): the opponent's hand by card, the Prize difference at the end of the game.
+        has_aux = all("aux" in p for p in parts)
+        self.aux = t(cat("aux"), torch.bool) if has_aux else torch.zeros(self.n, dtype=torch.bool, device=device)
+        self.opp_hand = t(cat("oppHand")) if has_aux else None
+        self.prize_diff = t(cat("prizeDiff")) if has_aux else None
         assert self.slots.shape[1:] == (SLOTS, SLOT_F), self.slots.shape
 
     def batch(self, idx: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -112,6 +117,10 @@ class Data:
         if self.opt_logit is not None:
             # The recorded network's logits (imitation targets); rows without them have zeros (Data.soft says which).
             out["teacher"] = self.opt_logit[oi].float().masked_fill(~mask, -1e9)
+        if self.opp_hand is not None:
+            out["opp_hand"] = self.opp_hand[idx].float()
+            out["prize_diff"] = self.prize_diff[idx].float()
+            out["aux"] = self.aux[idx]
         return out
 
 
@@ -391,7 +400,9 @@ def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
             t["id_emb.weight"] = t["id_emb.weight"][[0, 1] + [old.get(k, 1) for k in feats["cards"]]]
         dims = {k: j["dims"][k] for k in ("E", "D", "L", "HEADS", "FF", "C")}
         net3 = Net3(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop)
-        net3.load_state_dict({**t, "feats": net3.feats, "glob_keep": net3.glob_keep})
+        # The training-only heads (aux_*) are not in the file; they start again.
+        missing, _ = net3.load_state_dict({**t, "feats": net3.feats, "glob_keep": net3.glob_keep}, strict=False)
+        assert all(k.startswith("aux_") for k in missing), missing
         return net3.to(DEVICE)
     if j.get("version") == 2:
         feats = card_features()

@@ -71,6 +71,9 @@ export const VOCAB = CARD_KEYS.length + 1;
 const CARD_INDEX = new Map(CARD_KEYS.map((k, i) => [k, i + 1]));
 const cardIndex = (k: string | undefined) => (k === undefined ? 0 : (CARD_INDEX.get(k) ?? 0));
 
+/** A card's number in the network's vocabulary (0 = not a card it knows). */
+export const cardNumber = (key: string): number => cardIndex(key);
+
 /** What an option does when chosen: a main-phase action, a pick (option value) or ending the picks. */
 export type OptionRef = { t: 'action'; action: Action } | { t: 'pick'; value: number } | { t: 'stop' };
 

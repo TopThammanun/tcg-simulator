@@ -58,14 +58,18 @@ def gae(data: Data, lam: float) -> tuple[torch.Tensor, torch.Tensor]:
 
 def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
     n = data.n
-    stats = {"pg": 0.0, "v": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "steps": 0}
+    stats = {"pg": 0.0, "v": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "aux": 0.0, "steps": 0}
     for _ in range(a.epochs):
         perm = torch.randperm(n, device=adv.device)
         for i in range(0, n - a.mb // 2, a.mb):
             j = perm[i : i + a.mb]
             b = data.batch(j)
+            aux = None
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
-                logits, value = net(b)
+                if hasattr(net, "forward_aux"):
+                    logits, value, aux = net.forward_aux(b)
+                else:
+                    logits, value = net(b)
             logits, value = logits.float(), value.float()
             logp_all = F.log_softmax(logits, -1)
             logp = logp_all.gather(1, data.chosen[j][:, None]).squeeze(1)
@@ -77,6 +81,12 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             p = logp_all.exp() * b["mask"]
             ent = -(p * logp_all.masked_fill(~b["mask"], 0)).sum(-1).mean()
             loss = pg + a.vcoef * vloss - a.ent * ent
+            al = torch.zeros((), device=adv.device)
+            if aux is not None:
+                from net3 import aux_loss
+
+                al = aux_loss(aux, b)
+                loss = loss + a.aux_weight * al
             kl = torch.zeros((), device=adv.device)
             if anchor is not None and kl_coef > 0:
                 with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
@@ -93,6 +103,7 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             stats["ent"] += ent.item()
             stats["kl"] += kl.item()
             stats["clip"] += ((ratio - 1).abs() > a.clip).float().mean().item()
+            stats["aux"] += al.item()
             stats["steps"] += 1
     s = stats.pop("steps")
     return {k: round(v / max(1, s), 4) for k, v in stats.items()}
@@ -130,6 +141,7 @@ def main():
     ap.add_argument("--resign-turns", type=int, default=2)
     ap.add_argument("--keep-playing", type=float, default=0.1, help="share of games where nobody resigns (checks how often resigning was wrong)")
     ap.add_argument("--bf16", action="store_true", help="bfloat16 autocast in the update (version 3: faster, less memory)")
+    ap.add_argument("--aux-weight", type=float, default=0.25, help="version 3: weight of the training-only targets (opponent's hand, Prize difference)")
     ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.

@@ -6,7 +6,7 @@ import { keyOf } from '../../engine/state';
 import type { Action, GameState, PlayerId } from '../../engine/types';
 import { makeRand } from '../random';
 import type { Bot } from '../types';
-import { encode, type Encoded, type OptionRef } from './encode';
+import { cardNumber, encode, VOCAB, type Encoded, type OptionRef } from './encode';
 import { run, softmax, type Model } from './model';
 
 export const MAX_ACTIONS_PER_TURN = 60;
@@ -24,6 +24,8 @@ export interface Decision {
   searched?: boolean;
   /** The deciding network's logits for every option (soft targets for imitation, ml/train_bc.py). */
   logits?: Float32Array;
+  /** Training-only labels the player can't see: how many of each card (by number) the opponent holds now. */
+  oppHand?: Uint8Array;
 }
 
 /** A bot that can say whether its last main-phase move came out of a search (search.ts). */
@@ -61,11 +63,18 @@ export function turnCounter() {
   };
 }
 
+/** How many of each card (by number) the opponent of `me` holds: a training label the player can't see. */
+export function oppHand(s: GameState, me: PlayerId): Uint8Array {
+  const out = new Uint8Array(VOCAB);
+  for (const c of s.players[me === 0 ? 1 : 0].hand) out[cardNumber(keyOf(s, c))]!++;
+  return out;
+}
+
 export function makeNetBot(model: Model, o: NetBotOptions): Bot {
   const rand = makeRand(o.seed ?? 1);
   const temperature = o.temperature ?? 0;
   const count = turnCounter();
-  const pick = (enc: Encoded, me: PlayerId): number => {
+  const pick = (enc: Encoded, me: PlayerId, s: GameState): number => {
     if (enc.refs.length === 1) return 0;
     const out = run(model, enc);
     let i = 0;
@@ -85,7 +94,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
     }
     if (o.onDecision) {
       const p = softmax(out.logits);
-      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits });
+      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits, oppHand: oppHand(s, me) });
     }
     return i;
   };
@@ -97,7 +106,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
         const picks: number[] = [];
         for (;;) {
           const enc = encode(s, { decks: o.decks }, picks);
-          const ref = enc.refs[pick(enc, me)]!;
+          const ref = enc.refs[pick(enc, me, s)]!;
           if (ref.t !== 'pick') break;
           picks.push(ref.value);
         }
@@ -106,7 +115,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
       const n = count(s, me);
       if (n >= MAX_ACTIONS_PER_TURN) return { t: 'end' };
       const enc = encode(s, { decks: o.decks, actionsThisTurn: n });
-      return (enc.refs[pick(enc, me)] as Extract<OptionRef, { t: 'action' }>).action;
+      return (enc.refs[pick(enc, me, s)] as Extract<OptionRef, { t: 'action' }>).action;
     },
   };
 }

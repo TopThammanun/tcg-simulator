@@ -218,7 +218,7 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
     out?.dropGame();
     throw e;
   }
-  out?.endGame(s.winner);
+  out?.endGame(s.winner, [6 - s.players[0].prizes.length, 6 - s.players[1].prizes.length]);
   return { names: m.names, decks: m.decks, winner: s.winner, maxThinkMs: think };
 }
 
