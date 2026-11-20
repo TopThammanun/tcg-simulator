@@ -1,7 +1,7 @@
 <script lang="ts">
-  // The play screen: the match sheet (your deck, the opponent, practice or real mode), then you (player 0)
-  // vs a bot (player 1). Practice mode has the hints, the threat panel, the opponent's Trainer count and
-  // undo, which deals the hidden cards again (engine/view.ts redeal()); a real game has none of them.
+  // The play screen: the match sheet (your deck, the opponent), then you (player 0) vs a bot (player 1), played
+  // as at a real table: no hints or take-backs. A saved game picked up again ("play on from here") has the cards
+  // you couldn't see dealt again (engine/view.ts redeal()).
   // Every change of state is animated (src/ui/anim): the state changes at once, the animations only
   // show it, the bot waits for them, and anything you do skips them.
   import { untrack } from 'svelte';
@@ -15,7 +15,7 @@
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
-  import { describeAction, handActions, targetOf } from '../../ui/play';
+  import { actionLabel, describeAction, handActions, targetOf } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -24,11 +24,7 @@
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
-  import { canAnalyse } from '../../analysis/can-analyse';
-  import type { ThreatReport } from '../../analysis/threat';
-  import { threatClient, type ThreatClient } from '../../analysis/remote';
-  import { trainerCounts } from '../../analysis/counts';
-  import { replay, type PlayMode, type Redeal, type SavedGame } from '../../review/record';
+  import { replay, type Redeal, type SavedGame } from '../../review/record';
   import { getGame, saveGame } from '../../review/store';
   import Board, { type BoardDrag } from './Board.svelte';
   import CardBack from './CardBack.svelte';
@@ -37,9 +33,7 @@
   import ChoicePanel from './ChoicePanel.svelte';
   import HandView from './HandView.svelte';
   import LogPanel from './LogPanel.svelte';
-  import Coach from './Coach.svelte';
   import PokemonMenu from './PokemonMenu.svelte';
-  import ThreatPanel from './ThreatPanel.svelte';
   import FxLayer from './FxLayer.svelte';
   import GameOver from './GameOver.svelte';
   import HowTo from './HowTo.svelte';
@@ -75,7 +69,6 @@
   let speed = $state(params.has('speed') ? Number(params.get('speed')) : SPEEDS.includes(saved.speed as number) ? (saved.speed as number) : 500);
   const fixedSeed = params.has('seed') ? Number(params.get('seed')) : null;
   let seed = fixedSeed ?? Math.floor(Math.random() * 1e9);
-  let mode = $state<PlayMode>(saved.mode === 'real' ? 'real' : 'practice');
 
   // Your deck: a meta deck, or one of your own lists (played with the plan of the meta deck nearest to it).
   interface DeckChoice {
@@ -96,8 +89,7 @@
   let mineId = $state<string>([params.get('me'), saved.mine].find(usable) ?? meta[0]!.slug);
   const mineChoice = $derived(choices.find((c) => c.id === mineId)!);
   const oppChoice = $derived(decks.find((d) => d.slug === opponent));
-  /** This game's mode, your deck's plan (a meta deck slug) and its name. */
-  let gameMode = $state<PlayMode>('practice');
+  /** Your deck's plan (a meta deck slug) and its name. */
   let minePlan = $state('');
   let mineName = $state('');
   /** Undos that dealt the hidden cards again (saved with the game, so it replays). */
@@ -105,8 +97,6 @@
   let howto = $state(false);
   /** Where each card of a deck's fan sits: the headline Pokémon in the middle, the next two either side. */
   const FAN = [0, -1, 1];
-  /** "ภัยเทิร์นหน้า" (practice mode): the chance each of your Pokémon is Knocked Out next turn, on the table and in the side column. */
-  let showThreat = $state(params.get('threat') !== '0' && ((saved.threat as boolean) ?? true));
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let animLevel = $state<AnimLevel>((params.get('anim') as AnimLevel) ?? (saved.anim as AnimLevel) ?? (reducedMotion ? 'off' : 'full'));
   // Replays at full bot speed (and the end-to-end games) skip animations.
@@ -181,6 +171,11 @@
   const req = $derived(myTurn && cur!.pending ? cur!.pending.request : null);
   const legal = $derived(myTurn && !cur!.pending ? legalActions(cur!) : []);
   const hand = $derived(myTurn && !cur!.pending ? handActions(cur!) : new Map());
+  /** The card picked up from the hand, when it is played without a target (the dock shows its button). */
+  const selectedNow = $derived.by(() => {
+    const ca = selected !== null ? hand.get(selected) : undefined;
+    return ca?.kind === 'now' ? ca : null;
+  });
   const menu = $derived(menuFor !== null && myTurn && !cur!.pending ? slotMenu(cur!, legal, menuFor) : null);
   /** Your Pokémon with something to do now (an attack or an Ability): they glow on the table. */
   const ready = $derived.by(() => {
@@ -235,37 +230,10 @@
       : new Map<SlotId, number>(),
   );
   const botDeck = $derived(decks.find((d) => d.slug === botSlug));
-  const practice = $derived(gameMode === 'practice' && !watch);
-  /** The opponent's Trainers by their archetype's reference list: seen so far / in the list. */
-  const oppCounts = $derived(practice && cur && botDeck ? trainerCounts(cur, 1, botDeck.cards) : []);
-
-  // "ภัยเทิร์นหน้า" is sampled in a Web Worker (src/analysis/worker.ts) after every move on your turn.
-  // Each turn uses the same deals, so the numbers change with your moves, not with the luck of the draw.
-  const THREAT_SAMPLES = 64;
-  let threatWorker: ThreatClient | null = null;
-  let threat = $state.raw<{ report: ThreatReport; done: boolean; state: GameState } | null>(null);
-  $effect(() => () => threatWorker?.dispose());
-  const analysable = $derived(practice && showThreat && live && !!cur && canAnalyse(cur, 0));
-  $effect(() => {
-    const s = cur;
-    if (!analysable || !s) {
-      threatWorker?.stop();
-      return;
-    }
-    threatWorker ??= threatClient((report, done, state) => (threat = { report, done, state }));
-    untrack(() =>
-      threatWorker!.ask({ state: s, me: 0, mine: minePlan, theirs: botSlug, policy: DEFAULT_POLICY, samples: THREAT_SAMPLES, seed: seed + s.turn }),
-    );
-  });
-  /** The report on show: this position's, or (dimmed) the one for your previous move this turn. */
-  const threatShown = $derived(analysable && threat && threat.state.turn === cur!.turn && threat.state.seed === cur!.seed ? threat : null);
-  const threatStale = $derived(!!threatShown && threatShown.state !== cur);
-  const danger = $derived(new Map<SlotId, number>(threatShown?.report.slots.map((x) => [x.uid, x.chance]) ?? []));
-  const expectedPrizes = $derived(threatShown?.report.expected ?? 0);
 
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, mode, anim: animLevel, threat: showThreat }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel }));
     } catch {
       /* ignore */
     }
@@ -279,11 +247,9 @@
     const pick =
       opponent === 'random' ? pickOpponent(decks, (seed % 10007) / 10007, (Math.floor(seed / 10007) % 7919) / 7919) : oppChoice!;
     botSlug = pick.slug;
-    gameMode = mode;
     minePlan = mineChoice.plan;
     mineName = mineChoice.name;
     redeals = [];
-    threat = null;
     savedId = null;
     resumedFrom = null;
     bot?.dispose();
@@ -331,11 +297,9 @@
     const upto = Math.max(0, Math.min(at, g.actions.length));
     seed = g.seed;
     botSlug = g.opponent;
-    gameMode = g.mode ?? 'practice';
     minePlan = g.mine ?? 'player';
     mineName = g.mineName ?? 'list ของคุณ';
     gameDecks = g.decks;
-    threat = null;
     savedId = null;
     showOver = false;
     error = '';
@@ -368,7 +332,7 @@
       opponentName: botDeck?.name ?? botSlug,
       mine: minePlan,
       mineName,
-      mode: gameMode,
+      mode: 'real',
       redeals: redeals.slice(),
       rules: { ...s.rules },
       policy: { ...DEFAULT_POLICY },
@@ -474,7 +438,7 @@
     const t = setTimeout(async () => {
       try {
         const a = p === 1 ? await opponent!.act(s) : mine!.act(s);
-        // Ignore an answer for a position that is gone (undo, new game).
+        // Ignore an answer for a position that is gone (a new game).
         if (!stale && cur === s) step(a);
       } catch (e) {
         if (!stale) error = `บอทผิดพลาด: ${(e as Error).message}`;
@@ -497,15 +461,17 @@
       if (o) pick(o.value);
       return;
     }
-    if (selected === c) {
-      selected = null;
-      return;
-    }
     menuFor = null;
     const ca = hand.get(c);
+    // As at a real table, a tap picks the card up; a card that needs no target is played by tapping it again (or
+    // the button in the dock), one that does by tapping the Pokémon. Dragging plays it at once.
+    if (selected === c) {
+      if (ca?.kind === 'now') step(ca.action);
+      else selected = null;
+      return;
+    }
     if (!ca) return;
-    if (ca.kind === 'now') step(ca.action);
-    else selected = c;
+    selected = c;
   }
 
   function onSlot(uid: SlotId) {
@@ -597,36 +563,6 @@
     }
     press(e, topKey(shown, sl), drops);
   }
-
-  /** "ทำตามนี้": the suggested move, then its planned choices (e.g. which Pokémon Boss's Orders brings up). */
-  function follow(a: Action, planned: number[][] = []) {
-    step(a);
-    const queue = planned.map((p) => p.slice());
-    while (cur && cur.pending && cur.winner === null && actor(cur) === 0 && queue.length) {
-      const r = cur.pending.request;
-      const f = queue.shift()!;
-      if (!f.every((v) => r.options.some((o) => o.value === v)) || f.length < r.min || f.length > r.max) break;
-      step({ t: 'choose', picks: f });
-    }
-  }
-
-  function undo() {
-    // Back to your previous decision point (before your last action and the bot's replies), with the cards
-    // you can't see dealt again: going back never shows what you would draw.
-    for (let i = states.length - 2; i >= 0; i--) {
-      const s = states[i]!;
-      if (s.winner === null && !s.pending && actor(s) === 0 && s.phase === 'main') {
-        const r = Math.floor(Math.random() * 1e9);
-        states = [...states.slice(0, i), redeal(s, 0, r)];
-        history = history.slice(0, i);
-        redeals = [...redeals.filter((x) => x.at <= i), { at: i, seed: r }];
-        bot?.dispose();
-        bot = remoteBot({ slug: botSlug, oppSlug: minePlan, seed: seed ^ 0x2545f491 ^ r, policy: DEFAULT_POLICY });
-        viewing = null;
-        return;
-      }
-    }
-  }
 </script>
 
 {#if !cur}
@@ -692,20 +628,6 @@
       </div>
     </div>
 
-    <fieldset class="modes">
-      <legend>โหมด</legend>
-      <label class="mode" class:on={mode === 'practice'}>
-        <input type="radio" name="mode" value="practice" bind:group={mode} />
-        <strong>โหมดฝึก</strong>
-        <span>โอกาสโดน KO เทิร์นหน้า, ปุ่มแนะนำ, นับการ์ดคู่แข่ง และย้อนได้</span>
-      </label>
-      <label class="mode" class:on={mode === 'real'}>
-        <input type="radio" name="mode" value="real" bind:group={mode} />
-        <strong>โหมดจริง</strong>
-        <span>ไม่มีตัวช่วย ย้อนไม่ได้ เหมือนแข่งจริง</span>
-      </label>
-    </fieldset>
-
     <div class="prefs">
       <label>
         ความเร็วบอท
@@ -751,7 +673,6 @@
         {:else if watch}
           <strong>ดูบอทเล่น · เทิร์น {cur.turn}</strong>
         {:else}
-          <span class="chip" class:real={gameMode === 'real'}>{gameMode === 'real' ? 'โหมดจริง' : 'โหมดฝึก'}</span>
           <strong>เทิร์น {cur.turn} · {actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}</strong>
           <span class="opp">{mineName} vs {botDeck?.name}</span>
           {#if resumedFrom}<span class="opp">เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น {resumedFrom.turn})</span>{/if}
@@ -776,8 +697,6 @@
         onghost={(i) => (picks = picks.filter((v) => v !== benchPicks[i]!.value))}
         onslot={onSlot}
         {ready}
-        {danger}
-        dangerStale={threatStale}
         onzoom={(k) => (zoom = k)}
         ondiscard={(p) => (discardOf = p)}
         onpress={onSlotPress}
@@ -793,24 +712,23 @@
       </div>
 
       <div class="dock">
-        {#if practice && narrow && myTurn && !req && cur.phase === 'main'}
-          <Coach s={cur} onapply={follow} mine={minePlan} botPlan={planFor(botSlug).name} compact />
-        {/if}
         {#if req && !setupReq && choiceKind === 'slot'}
           {@render choice()}
         {:else if myTurn && !req}
           <div class="bar">
             <button type="button" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
-            {#if practice}
-              <button type="button" class="ghost" onclick={undo} disabled={history.length === 0} title="การ์ดที่มองไม่เห็นจะถูกสับใหม่">ย้อน</button>
-            {/if}
-            {#if narrow && threatShown}
-              <button type="button" class="small threat-chip" class:hot={expectedPrizes >= 1} onclick={() => (sideOpen = true)}>
-                ภัยเทิร์นหน้า ~{expectedPrizes.toFixed(1)} Prize
-              </button>
+            {#if selectedNow}
+              <button type="button" class="primary play" onclick={() => step(selectedNow!.action)}>{actionLabel(cur, selectedNow.action)}</button>
+              <button type="button" class="ghost" onclick={() => (selected = null)}>ยกเลิก</button>
+            {:else if selected !== null}
+              <button type="button" class="ghost" onclick={() => (selected = null)}>ยกเลิก</button>
             {/if}
             <span class="hint">
-              {selected !== null ? 'แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง' : 'แตะ Pokémon ของคุณเพื่อโจมตี · ถอย · ใช้ Ability'}
+              {selectedNow
+                ? 'แตะการ์ดอีกครั้ง หรือลากลงสนามเพื่อใช้'
+                : selected !== null
+                  ? 'แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง'
+                  : 'แตะการ์ดในมือเพื่อหยิบ · แตะ Pokémon ของคุณเพื่อโจมตี · ถอย · ใช้ Ability'}
             </span>
           </div>
         {:else if setupReq}
@@ -850,28 +768,9 @@
       {#if narrow}
         <button type="button" class="small close-side" onclick={() => (sideOpen = false)}>ปิด ✕</button>
       {/if}
-      {#if practice && !narrow && myTurn && !req && cur.phase === 'main'}
-        <Coach s={cur} onapply={follow} mine={minePlan} botPlan={planFor(botSlug).name} />
-      {/if}
-      {#if analysable}
-        <ThreatPanel report={threatShown?.report ?? null} done={threatShown?.done ?? false} stale={threatStale} />
-      {/if}
       <section class="panel">
         <h3>ข้อมูลคู่แข่ง</h3>
         <p>มือบอท {cur.players[1].hand.length} ใบ · เด็ค {cur.players[1].deck.length} ใบ · Prize {cur.players[1].prizes.length} ใบ</p>
-        {#if oppCounts.length}
-          <details class="counts" open>
-            <summary>Trainer ของเขา (เห็นแล้ว/ใน list)</summary>
-            <p class="muted">เห็นแล้ว = ในกองทิ้งหรือบนสนาม ที่เหลืออยู่ในมือ เด็ค หรือ Prize ของเขา</p>
-            <ul class="used">
-              {#each oppCounts as c (c.key)}
-                <li class:gone={c.seen >= c.total}>
-                  <span>{c.name}</span><span class="mono">{c.seen}/{c.total}{c.seen < c.total ? ` · เหลือ ${c.total - c.seen}` : ''}</span>
-                </li>
-              {/each}
-            </ul>
-          </details>
-        {/if}
       </section>
       <LogPanel log={cur.log} {viewing} onview={(st) => (viewing = st)} />
       <div class="tools">
@@ -885,11 +784,6 @@
           </select>
         </label>
         <button type="button" onclick={() => (howto = true)}>วิธีเล่น</button>
-        {#if practice}
-          <label class="check threat-pick">
-            <input type="checkbox" bind:checked={showThreat} onchange={saveSettings} /> ภัยเทิร์นหน้า
-          </label>
-        {/if}
       </div>
     </aside>
   </div>
@@ -964,7 +858,7 @@
 {/if}
 
 <style>
-  /* The match sheet: your corner, VS, the bot's corner, then the mode and start. */
+  /* The match sheet: your corner, VS, the bot's corner, then the settings and start. */
   .setup {
     max-width: 920px;
     margin: 8px auto 0;
@@ -1089,63 +983,6 @@
     transform: rotate(-8deg);
     box-shadow: 3px 3px 0 var(--stamp);
   }
-  .modes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 0;
-    padding: 16px 20px;
-    border: 0;
-    border-bottom: 1px solid var(--rule);
-  }
-  .modes legend {
-    float: left;
-    grid-column: 1 / -1;
-    margin-bottom: 2px;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-  }
-  label.mode {
-    position: relative;
-    gap: 2px;
-    padding: 12px 14px 12px 40px;
-    border: 1.5px solid var(--rule);
-    background: var(--paper);
-    cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  }
-  .mode input {
-    position: absolute;
-    left: 14px;
-    top: 15px;
-    margin: 0;
-    accent-color: var(--stamp);
-  }
-  .mode strong {
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-  }
-  .mode span {
-    font-weight: 400;
-    font-size: 0.85rem;
-    color: var(--ink-soft);
-  }
-  .mode:hover {
-    border-color: var(--ink-soft);
-  }
-  .mode.on {
-    border: 2px solid var(--ink);
-    padding: 11px 13px 11px 39px;
-    box-shadow: 4px 4px 0 var(--stamp);
-    transform: translate(-1px, -1px);
-  }
-  .mode:focus-within {
-    outline: 2px solid var(--stamp);
-    outline-offset: 2px;
-  }
   .prefs {
     display: flex;
     flex-wrap: wrap;
@@ -1195,9 +1032,6 @@
       width: 2.6rem;
       height: 2.6rem;
       font-size: 0.95rem;
-    }
-    .modes {
-      grid-template-columns: 1fr;
     }
     .start {
       width: 100%;
@@ -1306,6 +1140,10 @@
     width: min(780px, 100%);
     max-height: 100%;
     overflow-y: auto;
+  }
+  /* Looking through a pile (the whole deck for a search) takes the table. */
+  .choice-layer :global(.choice.zone) {
+    width: min(1060px, 100%);
   }
   .result {
     color: var(--stamp);
@@ -1434,36 +1272,6 @@
   }
   .panel p {
     margin: 0 0 4px;
-  }
-  .used {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .used li {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    border-bottom: 1px dashed var(--rule);
-  }
-  .counts summary {
-    cursor: pointer;
-    margin-bottom: 2px;
-  }
-  .used li.gone {
-    color: var(--ink-soft);
-    text-decoration: line-through;
-  }
-  .threat-pick {
-    font-size: 0.85rem;
-  }
-  .threat-chip {
-    border-color: var(--stamp);
-    color: var(--stamp);
-  }
-  .threat-chip.hot {
-    background: var(--stamp);
-    color: #fff;
   }
   .muted {
     color: var(--ink-soft);

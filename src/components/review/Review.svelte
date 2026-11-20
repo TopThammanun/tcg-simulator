@@ -221,7 +221,7 @@
           <span class="match">
             <strong>{yours(g)} <span class="vs-word">vs</span> {g.opponentName}</strong>
             <span class="muted">
-              {g.mode === 'real' ? 'โหมดจริง' : 'โหมดฝึก'} · {g.turns} เทิร์น · {g.reason} · {date(g.savedAt)}
+              {g.mode === 'practice' ? 'โหมดฝึก · ' : ''}{g.turns} เทิร์น · {g.reason} · {date(g.savedAt)}
             </span>
           </span>
           <span class="act">
@@ -241,7 +241,7 @@
 {:else if game}
   <section class="head">
     <a class="back" href="/review/">← ประวัติเกม</a>
-    <p class="eyebrow">{game.mode === 'real' ? 'โหมดจริง' : 'โหมดฝึก'} · {date(game.savedAt)}</p>
+    <p class="eyebrow">{game.mode === 'practice' ? 'โหมดฝึก · ' : ''}{date(game.savedAt)}</p>
     <h1>
       <span class="res" class:won={game.winner === 0} class:lost={game.winner === 1}>{result(game)}</span>
       {yours(game)} <span class="vs-word">vs</span> {game.opponentName}

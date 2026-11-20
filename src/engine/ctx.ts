@@ -21,6 +21,8 @@ export interface PickOpts {
   source?: string;
   hint?: string;
   ordered?: boolean;
+  /** The cards looked at (ChoiceRequest.view). */
+  view?: CardId[];
 }
 
 export class Ctx {
@@ -96,6 +98,7 @@ export class Ctx {
       hint: o.hint,
       secret: o.secret,
       ordered: o.ordered,
+      ...(o.view ? { view: o.view } : {}),
       options: cards.map((c) => ({ value: c, label: nameOf(this.s, c), card: c })),
       min: o.min ?? 1,
       max: o.max ?? 1,
@@ -206,6 +209,7 @@ export class Ctx {
       purpose: 'search',
       secret: true,
       min: 0,
+      view: ps.deck.slice(),
       ...o,
     });
   }

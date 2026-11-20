@@ -1,6 +1,7 @@
 // Scenario tests from PLAN.md ("Scenario test ชุดแรก") plus per-deck mechanics.
 import { describe, expect, it } from 'vitest';
 import { apply, legalActions } from '../../src/engine/actions';
+import { viewFor } from '../../src/engine/view';
 import { active, bench, choose, handCard, optionFor, scenario } from './helpers';
 
 const attack = (s: ReturnType<typeof scenario>, name: string) => apply(s, { t: 'attack', name });
@@ -247,6 +248,21 @@ describe('answers to a choice', () => {
     expect(() => structuredClone(s)).not.toThrow();
     picks.length = 0;
     expect(s.pending!.answers[0]).toHaveLength(2);
+  });
+});
+
+describe('what a choice shows', () => {
+  it('a deck search shows the whole deck; the options are the cards it may take; the opponent sees neither', () => {
+    let s = scenario({ p0: { active: 'abra', hand: ['buddy-buddy-poffin'], deck: ['dreepy', 'dreepy', 'meowth-ex', 'psychic-energy', 'ultra-ball'] }, p1: { active: 'abra' } });
+    s = apply(s, { t: 'trainer', card: handCard(s, 0, 'buddy-buddy-poffin') });
+    const req = s.pending!.request;
+    expect([...req.view!].sort()).toEqual([...s.players[0].deck].sort());
+    for (const o of req.options) expect(req.view).toContain(o.card);
+    expect(req.options.length).toBeLessThan(req.view!.length);
+    const theirs = viewFor(s, 1).pending!.request;
+    expect(theirs.options).toEqual([]);
+    expect(theirs.view).toBeUndefined();
+    expect(viewFor(s, 0).pending!.request.view).toEqual(req.view);
   });
 });
 

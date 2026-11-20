@@ -113,9 +113,8 @@ async function setUp(page: Page) {
 }
 
 /** Start a seeded game, Basic Box vs Basic Box, and set up (Active = first Basic, no Bench). */
-async function startGame(page: Page, seed: number, mode: 'practice' | 'real' = 'practice') {
+async function startGame(page: Page, seed: number) {
   await page.goto(`/play/?test=1&seed=${seed}&me=basic-box&opp=basic-box`);
-  await page.getByRole('radio', { name: mode === 'real' ? /โหมดจริง/ : /โหมดฝึก/ }).check();
   await page.getByRole('button', { name: /เริ่มเกม/ }).click();
   await setUp(page);
 }
@@ -198,79 +197,54 @@ test('tapping your Active opens a pop-up with its attacks and retreating', async
   await expect(menu).toHaveCount(0);
 });
 
-test('a real game has no hints, threat panel or undo', async ({ page }) => {
-  await startGame(page, 101, 'real');
-  await expect(page.locator('.status .chip')).toHaveText('โหมดจริง');
+test('a game is played as at a real table: no hints, threat panel or undo', async ({ page }) => {
+  await startGame(page, 101);
   await expect(page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' })).toHaveCount(0);
   await expect(page.locator('.threat')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'ย้อน' })).toHaveCount(0);
 });
 
-test('undo in practice mode takes the move back and deals what you cannot see again', async ({ page }) => {
-  await startGame(page, 101);
-  const zones = () =>
-    page.evaluate(() => {
-      const s = (window as unknown as { __tcg: { state: () => any } }).__tcg.state();
-      const ps = s.players[0];
-      return { hand: ps.hand as number[], deck: ps.deck as number[], unseen: [...ps.deck, ...ps.prizes].sort() as number[], active: ps.active.energy.length as number };
-    });
-  const before = await zones();
-  const card = page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first();
-  await card.click();
-  await page.locator('.side.mine .slot.target .card').first().click();
-  await expect.poll(() => energyOnActive(page)).toBe(1);
-  await page.getByRole('button', { name: 'ย้อน' }).click();
-  const after = await zones();
-  expect(after.active).toBe(0);
-  expect(after.hand).toEqual(before.hand);
-  // Your deck and Prize cards are dealt again together.
-  expect(after.unseen).toEqual(before.unseen);
-  expect(after.deck).not.toEqual(before.deck);
-});
+test('a deck search shows your whole deck, the cards you may take lit; a tap picks a card up, a second tap plays it', async ({ page }) => {
+  // Dragapult ex, seed 2024: Buddy-Buddy Poffin in hand on your first turn.
+  await page.goto('/play/?test=1&seed=2024&me=dragapult-ex&opp=basic-box');
+  await page.getByRole('button', { name: /เริ่มเกม/ }).click();
+  await setUp(page);
+  const poffin = page.locator('.hcard.grab').filter({ has: page.locator('img[alt="Buddy-Buddy Poffin"]') }).first();
+  await poffin.click();
+  // Picked up, not played: the dock offers to play it.
+  await expect(page.getByRole('button', { name: 'ใช้ Buddy-Buddy Poffin' })).toBeVisible();
+  await expect(page.locator('.choice')).toHaveCount(0);
+  await poffin.click();
 
-test('the hint button explains each suggestion', async ({ page }) => {
-  await startGame(page, 101);
-  await page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' }).click();
-  const tips = page.locator('.coach .tips > li');
-  await expect(tips.first()).toBeVisible();
-  await expect(tips.first().locator('.why')).toContainText('เพราะ');
-  expect((await tips.first().locator('.why').innerText()).length).toBeGreaterThan(12);
-});
-
-test("a hint's move is kept as plain data, so the bot's worker and the saved game can take it", async ({ page }) => {
-  // It used to go in as a Svelte $state proxy: "บอทผิดพลาด: … could not be cloned" once the bot had to answer in the
-  // middle of it (a new Active after your attack), and a finished game could not be saved.
-  await startGame(page, 101);
-  await page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' }).click();
-  await page.locator('.coach .tips > li .go').first().click();
+  const choice = page.locator('.choice.zone');
+  await expect(choice).toBeVisible();
+  const deck = await page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state().players[0].deck.length as number);
+  await expect(choice.locator('.opt')).toHaveCount(deck);
+  const lit = choice.locator('.opt:not(.off)');
+  expect(await lit.count()).toBeGreaterThan(0);
+  expect(await choice.locator('.opt.off').count()).toBeGreaterThan(0);
+  // A dimmed card can't be picked; two lit ones can.
+  await choice.locator('.opt.off').first().dispatchEvent('click');
+  await expect(choice.locator('.opt.on')).toHaveCount(0);
+  const bench = await page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state().players[0].bench.length as number);
+  await lit.nth(0).click();
+  await lit.nth(1).click();
+  await expect(choice.locator('.opt.on')).toHaveCount(2);
+  await choice.getByRole('button', { name: 'ยืนยัน' }).click();
+  await expect(choice).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state().players[0].bench.length as number)).toBe(bench + 2);
+  // The picks went in as plain data (a $state proxy could not be posted to the bot's worker or saved).
   const cloned = await page.evaluate(() => {
     const t = (window as unknown as { __tcg: { state: () => unknown; history: () => unknown[] } }).__tcg;
     try {
       structuredClone(t.history());
       structuredClone(t.state());
-      return t.history().length;
+      return 'ok';
     } catch (e) {
       return String(e);
     }
   });
-  expect(cloned).toBeGreaterThan(0);
-  await expect(page.locator('.error', { hasText: 'บอทผิดพลาด' })).toHaveCount(0);
-});
-
-test('the threat panel shows what the opponent can do next turn, and goes away when turned off', async ({ page }) => {
-  await startGame(page, 101);
-  const panel = page.locator('.threat');
-  await expect(panel).toContainText('ภัยเทิร์นหน้า');
-  // 64 samples in the worker, reported a batch at a time; the last report says it is done.
-  await expect(panel.locator('.note')).toContainText('จำลอง 64 แบบ ', { timeout: 30_000 });
-  const rows = await panel.locator('.rows li').count();
-  const mine = await page.evaluate(() => {
-    const s = (window as unknown as { __tcg: { state: () => any } }).__tcg.state();
-    return 1 + s.players[0].bench.length;
-  });
-  expect(rows).toBe(mine);
-  await page.locator('.threat-pick input').uncheck();
-  await expect(panel).toHaveCount(0);
+  expect(cloned).toBe('ok');
 });
 
 test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {

@@ -25,7 +25,7 @@ export function viewFor(s: GameState, viewer: PlayerId): GameState {
     }
   }
   if (v.pending && v.pending.request.secret && v.pending.request.player !== viewer) {
-    v.pending = { ...v.pending, request: { ...v.pending.request, options: [] } };
+    v.pending = { ...v.pending, request: { ...v.pending.request, options: [], view: undefined } };
   }
   return v;
 }
@@ -55,7 +55,7 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
 }
 
 /**
- * The real game dealt again for the undo button (practice mode), so going back never shows the cards
+ * The real game dealt again when a saved game is picked up ("play on from here"), so going back never shows the cards
  * still to come: `viewer`'s deck and prizes, and the opponent's hand, deck and prizes, are re-dealt and the
  * RNG reseeded. Cards a player knows are on top of their own deck stay there; the game goes on logging.
  */

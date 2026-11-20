@@ -243,7 +243,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
         const k = key(ctx.s, c);
         return (isPokemon(k) && pokemon(k).types.includes('Grass')) || basicEnergyOfType('Grass')(k);
       });
-      const picked = ctx.pickCards(p, ok, { purpose: 'take', prompt: 'Bug Catching Set: เลือก Pokémon {G} หรือ Grass Energy (สูงสุด 2)', min: 0, max: 2, secret: true, source: 'bug-catching-set' });
+      const picked = ctx.pickCards(p, ok, { purpose: 'take', prompt: 'Bug Catching Set: เลือก Pokémon {G} หรือ Grass Energy (สูงสุด 2)', min: 0, max: 2, secret: true, source: 'bug-catching-set', view: top });
       ctx.toHand(p, picked);
       ctx.shuffle(p);
     },
@@ -283,7 +283,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       const s = ctx.s;
       // "of different types": one option per type.
       const types = uniqueByKey(s, ctx.ps(p).deck.filter((c) => isBasicEnergy(keyOf(s, c))));
-      const distinct = ctx.pickCards(p, types, { purpose: 'search', prompt: 'Crispin: ค้นพลังงานพื้นฐานต่างชนิดกัน (สูงสุด 2)', min: 0, max: 2, secret: true, source: 'crispin' });
+      const distinct = ctx.pickCards(p, types, { purpose: 'search', prompt: 'Crispin: ค้นพลังงานพื้นฐานต่างชนิดกัน (สูงสุด 2)', min: 0, max: 2, secret: true, source: 'crispin', view: ctx.ps(p).deck.slice() });
       if (distinct.length === 0) {
         ctx.shuffle(p);
         return;

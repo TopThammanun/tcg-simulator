@@ -78,16 +78,16 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) + `choose.ts` (pending
   choices) + `plans/<deck>.ts`; `params.ts` holds their weights, tuned by SPSA (`scripts/tune.ts`);
   `hard.ts` adds Monte Carlo. On the play screen the bot runs in a Web Worker (`worker.ts`, `remote.ts`).
-  `coach.ts` = hint button (the network's best three when bundled), `explain.ts` = its reasons (read from the
-  position + the move played out on a determinized copy). Bots plan on `determinize()` so they never see hidden
+  `coach.ts` = the network's best three moves with reasons (`explain.ts`: read from the position + the move played out
+  on a determinized copy); its hint button was removed from the play screen with practice mode (20 Nov), only tests use it now. Bots plan on `determinize()` so they never see hidden
   cards (it deals from the sorted hidden cards, so the result depends only on public information).
 - `src/analysis/` — the analyser (PLAN.md, แผนรุ่นต่อไป). `threat.ts` = "ภัยเทิร์นหน้า": re-deal what you can't see,
   end your turn, let the rule-based bot play theirs (quick, and it plans exact Knock Out lines); the share of
   samples where each Pokémon is Knocked Out, corrected per opponent deck by `calibration.ts` (Platt scaling fitted
   by `scripts/threat-gate.ts --fit` against the real bot, because uniform re-deals give the opponent better hands
   than they hold, and the real bot plays differently). `counts.ts` = their Trainers by the reference list vs
-  seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`); shown by `ThreatPanel.svelte` and
-  the KO badges on `SlotCard.svelte`. `winrate.ts` = win% by playing the game out (rule-based bots, quick; re-dealt
+  seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`). The play screen no longer shows them
+  (practice mode was removed, 20 Nov); the code and its gate are kept for analysis. `winrate.ts` = win% by playing the game out (rule-based bots, quick; re-dealt
   hidden cards), or `netWin` (the network's value head on re-deals: one forward pass each). `review.ts` = one of your
   turns reviewed: win% before and after it (`winOf`: netWin, the chance if both sides play on like the bot), clear
   mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on several re-deals), the bot's turn on the
@@ -113,11 +113,14 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
 - `src/sim/` — bot-vs-bot runner and stats (Wilson CI, meta-weighted and paired-difference) for the scripts.
 - Pages: `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
-  opponent, practice or real mode — then the game; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
+  opponent — then the game, played as at a real table; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
   Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
-  game's review), `/decks/` (meta decks, your own lists). Practice mode has the hints, the threat panel, the opponent's
-  Trainer count and undo (`engine/view.ts` `redeal()` deals the hidden cards again); real mode has none.
+  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo; a tap picks a hand card up
+  (a second tap or the dock's button plays it, a drag plays it at once). A choice shows the card whose effect asks,
+  and an effect that looks at a pile (`ChoiceRequest.view`: a deck search shows the whole deck, "look at the top N"
+  those cards) shows all of it, the cards you may take lit (`ChoicePanel.svelte`). A saved game picked up again has
+  the hidden cards dealt again (`engine/view.ts` `redeal()`).
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.

@@ -120,6 +120,11 @@ export interface ChoiceRequest {
   ordered?: boolean;
   /** Options show cards only the chooser may see (deck search). */
   secret?: boolean;
+  /**
+   * The cards the chooser is looking at, of which `options` are the ones it may take: the whole deck for a deck
+   * search, the top cards for "look at the top N". The play screen shows them all, as at a real table.
+   */
+  view?: CardId[];
   /** Card key whose effect asked. */
   source?: string;
   /** Free-form hint for bots, e.g. what the chosen thing will be used for. */

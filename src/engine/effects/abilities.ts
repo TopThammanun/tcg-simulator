@@ -56,7 +56,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     use: (ctx, p) => {
       const ps = ctx.ps(p);
       const top = ps.deck.slice(0, 2);
-      const [keep] = ctx.pickCards(p, top, { purpose: 'take', prompt: 'Recon Directive: เลือก 1 ใบขึ้นมือ', secret: true, source: 'drakloak' });
+      const [keep] = ctx.pickCards(p, top, { purpose: 'take', prompt: 'Recon Directive: เลือก 1 ใบขึ้นมือ', secret: true, source: 'drakloak', view: top });
       ctx.toHand(p, [keep!]);
       for (const c of top) if (c !== keep) ps.deck.push(ctx.take(p, c));
     },
@@ -72,6 +72,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
         prompt: 'Attract Customers: เลือก Supporter',
         min: 0,
         secret: true,
+        view: top,
         source: 'tatsugiri',
       });
       ctx.toHand(p, picked);
