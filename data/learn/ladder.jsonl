@@ -1,0 +1,3 @@
+{"a": "search:.cache/learn/v2-600.json", "b": "search:.cache/learn/v2-150.json", "score": 1084.5, "n": 1920, "base": 66000000, "seconds": 6977, "date": "2026-11-20 01:44", "note": "match.py --b bot-search (weights.json = v2-150) before L2"}
+{"a": "net:.cache/learn/v2-600.json", "b": "net:.cache/learn/v2-150.json", "score": 1113, "n": 1920, "base": 80000000, "seconds": 19, "date": "2026-11-20 16:09", "note": "L0 baseline"}
+{"a": "net:.cache/learn/v2-150.json", "b": "hard", "score": 1506, "n": 1920, "base": 80000000, "seconds": 170, "date": "2026-11-20 16:12", "note": "L0 baseline"}

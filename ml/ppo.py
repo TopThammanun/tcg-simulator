@@ -64,7 +64,9 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
         for i in range(0, n - a.mb // 2, a.mb):
             j = perm[i : i + a.mb]
             b = data.batch(j)
-            logits, value = net(b)
+            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
+                logits, value = net(b)
+            logits, value = logits.float(), value.float()
             logp_all = F.log_softmax(logits, -1)
             logp = logp_all.gather(1, data.chosen[j][:, None]).squeeze(1)
             ratio = torch.exp(logp - data.logp[j])
@@ -77,9 +79,9 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             loss = pg + a.vcoef * vloss - a.ent * ent
             kl = torch.zeros((), device=adv.device)
             if anchor is not None and kl_coef > 0:
-                with torch.no_grad():
+                with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
                     lb, _ = anchor(b)
-                    lpb = F.log_softmax(lb, -1)
+                lpb = F.log_softmax(lb.float(), -1)
                 kl = (p * (logp_all - lpb).masked_fill(~b["mask"], 0)).sum(-1).mean()
                 loss = loss + kl_coef * kl
             opt.zero_grad(set_to_none=True)
@@ -127,6 +129,7 @@ def main():
     ap.add_argument("--resign", type=float, default=0.0, help="a side whose value is below this at the start of --resign-turns own turns in a row resigns (0 = never)")
     ap.add_argument("--resign-turns", type=int, default=2)
     ap.add_argument("--keep-playing", type=float, default=0.1, help="share of games where nobody resigns (checks how often resigning was wrong)")
+    ap.add_argument("--bf16", action="store_true", help="bfloat16 autocast in the update (version 3: faster, less memory)")
     ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.

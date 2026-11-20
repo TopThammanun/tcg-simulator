@@ -265,6 +265,9 @@ class Graphed:
         self.frozen = net.frozen() if hasattr(net, "frozen") else None
         self.graphs: dict[tuple[int, int], tuple[torch.cuda.CUDAGraph, dict[str, torch.Tensor], torch.Tensor]] = {}
         self.cuda = torch.device(device).type == "cuda" and self.frozen is not None
+        # Version 3 (a transformer: attention over ~150 tokens a row) keeps batches to 512 rows (GPU memory).
+        if getattr(net, "version", 1) >= 3:
+            self.ROWS = tuple(r for r in Graphed.ROWS if r <= 512)
         # The graphs of one network run one at a time, so they can share their working memory.
         self.pool = torch.cuda.graph_pool_handle() if self.cuda else None
 
