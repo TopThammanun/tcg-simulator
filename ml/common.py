@@ -85,6 +85,10 @@ class Data:
         self.opt_x = t(cat("optX"))
         self.opt_card = t(cat("optCard"), torch.long)
         self.opt_slot = t(cat("optSlot"), torch.long)
+        # The deciding network's logits per option (soft targets for imitation), in shards that have them.
+        has_soft = all("soft" in p for p in parts)
+        self.soft = t(cat("soft"), torch.bool) if has_soft else torch.zeros(self.n, dtype=torch.bool, device=device)
+        self.opt_logit = t(cat("optLogit")) if has_soft else None
         assert self.slots.shape[1:] == (SLOTS, SLOT_F), self.slots.shape
 
     def batch(self, idx: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -94,7 +98,7 @@ class Data:
         mask = ar[None, :] < count[:, None]
         oi = (self.opt_start[idx][:, None] + ar[None, :]).clamp(max=self.opt_card.shape[0] - 1)
         oi = torch.where(mask, oi, torch.zeros_like(oi))
-        return {
+        out = {
             "slots": self.slots[idx].float(),
             "slot_cards": self.slot_cards[idx],
             "bags": self.bags[idx].float() / 4,
@@ -105,6 +109,10 @@ class Data:
             "opt_slot": torch.where(mask, self.opt_slot[oi], torch.full_like(oi, -1)),
             "mask": mask,
         }
+        if self.opt_logit is not None:
+            # The recorded network's logits (imitation targets); rows without them have zeros (Data.soft says which).
+            out["teacher"] = self.opt_logit[oi].float().masked_fill(~mask, -1e9)
+        return out
 
 
 def load(dirs: list[str]) -> Data:
@@ -313,6 +321,13 @@ def new_net(data: Data | None = None, dims: dict | None = None) -> Net:
 
 def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
     sd = {k: v.detach().float().cpu().numpy() for k, v in net.state_dict().items()}
+    if getattr(net, "version", 1) == 3:
+        from net3 import tensors3
+
+        dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1])}
+        tensors = {k: b64(v.detach().float().cpu().numpy()) for k, v in tensors3(net).items()}
+        write_json({"version": 3, "cards": net.cards, "dims": dims, "tensors": tensors, "meta": meta or {}}, path)
+        return
     if isinstance(net, Net2):
         dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1])}
         tensors = {k: b64(sd[v]) for k, v in V2_NAMES.items()}
@@ -367,6 +382,17 @@ def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
     with open(path) as f:
         j = json.load(f)
     t = {k: torch.from_numpy(np.frombuffer(base64.b64decode(v["data"]), dtype="<f4").reshape(v["shape"]).copy()) for k, v in j["tensors"].items()}
+    if j.get("version") == 3:
+        from net3 import Net3
+
+        feats = card_features()
+        if feats["cards"] != j["cards"]:
+            old = {k: i + 2 for i, k in enumerate(j["cards"])}
+            t["id_emb.weight"] = t["id_emb.weight"][[0, 1] + [old.get(k, 1) for k in feats["cards"]]]
+        dims = {k: j["dims"][k] for k in ("E", "D", "L", "HEADS", "FF", "C")}
+        net3 = Net3(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop)
+        net3.load_state_dict({**t, "feats": net3.feats, "glob_keep": net3.glob_keep})
+        return net3.to(DEVICE)
     if j.get("version") == 2:
         feats = card_features()
         if feats["cards"] != j["cards"]:

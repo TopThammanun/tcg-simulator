@@ -104,7 +104,7 @@ function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first
   }
   if (sv.record) {
     const p = softmax(out.logits);
-    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value });
+    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice() });
   }
   // The first network decision of each own turn counts toward resigning.
   if (resign && first && side.lowTurn !== s.turn) {

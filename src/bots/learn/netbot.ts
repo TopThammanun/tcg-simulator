@@ -22,6 +22,8 @@ export interface Decision {
   value: number;
   /** The recorded bot searched this decision (look-ahead), rather than playing its first instinct. */
   searched?: boolean;
+  /** The deciding network's logits for every option (soft targets for imitation, ml/train_bc.py). */
+  logits?: Float32Array;
 }
 
 /** A bot that can say whether its last main-phase move came out of a search (search.ts). */
@@ -83,7 +85,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
     }
     if (o.onDecision) {
       const p = softmax(out.logits);
-      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value });
+      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits });
     }
     return i;
   };

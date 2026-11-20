@@ -12,6 +12,7 @@
 // shapes. Its layer sizes come from the file, and it skips the deck-name globals.
 import { CARD_F, featureTable } from './card-features';
 import { BAGS, CARD_KEYS, DECK_NAMES, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
+import { loadV3, run3, type Model3 } from './model3';
 
 export const E = 16;
 export const SH = 64;
@@ -21,8 +22,8 @@ export const OH = 128;
 export const TRUNK_IN = 6 * SH + BAGS * BAGD + GLOB_F + E;
 
 export interface ModelJson {
-  /** 2: card vectors from features (above); absent: version 1. */
-  version?: 2;
+  /** 2: card vectors from features (above); 3: the transformer of model3.ts; absent: version 1. */
+  version?: 2 | 3;
   /** Version 1: card keys in embedding order (index + 1), must match CARD_KEYS. Version 2: the keys of id.emb rows 2+ (row 0 = no card, 1 = unknown). */
   cards: string[];
   dims: { E: number; SH: number; BAGD: number; H: number; OH: number; SLOT_F: number; GLOB_F: number; OPT_F: number; CARD_F?: number };
@@ -37,6 +38,8 @@ export interface Model {
   dims: { E: number; SH: number; BAGD: number; H: number; OH: number };
   /** Globals the trunk reads (version 2 leaves the deck names out); null = all. */
   glob: Int32Array | null;
+  /** Version 3: the transformer (model3.ts); t and dims are then unused. */
+  v3?: Model3;
 }
 
 /** Version 2 drops the deck-name block of the globals (encode.ts: 2 + 2 × 19 numbers come before it). */
@@ -109,6 +112,7 @@ function decode(b64: string): Float32Array {
 }
 
 export function loadModel(j: ModelJson): Model {
+  if (j.version === 3) return { t: {}, meta: j.meta ?? {}, dims: V1_DIMS, glob: GLOB_KEEP, v3: loadV3(j, GLOB_KEEP) };
   if (j.version === 2) return loadV2(j);
   const t: Record<string, Float32Array> = {};
   // Shapes as saved: the per-card tables have the vocabulary the network was trained with (j.cards).
@@ -228,6 +232,7 @@ export interface Output {
 
 /** Forward pass; `policy: false` skips the option scores (value only). */
 export function run(m: Model, x: Encoded, policy = true): Output {
+  if (m.v3) return run3(m.v3, x, policy);
   const t = m.t;
   const emb = t.emb!;
   // The model's own sizes (version 2 files carry theirs).

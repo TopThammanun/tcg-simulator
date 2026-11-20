@@ -78,6 +78,9 @@ export class ShardWriter {
   private optX = new Grow((n) => new Uint16Array(n));
   private optCard = new Grow((n) => new Int16Array(n));
   private optSlot = new Grow((n) => new Int8Array(n));
+  /** The deciding network's logit per option, when it gave them (row flag `soft`). */
+  private optLogit = new Grow((n) => new Uint16Array(n));
+  private soft = new Grow((n) => new Uint8Array(n));
   private open: { game: number; from: number } | null = null;
   rows = 0;
 
@@ -106,6 +109,9 @@ export class ShardWriter {
     this.optX.pushHalf(e.optX);
     this.optCard.pushAll(e.optCard);
     this.optSlot.pushAll(e.optSlot);
+    if (d.logits) this.optLogit.pushHalf(d.logits);
+    else this.optLogit.pushAll(new Uint16Array(e.optCard.length));
+    this.soft.push(d.logits ? 1 : 0);
     this.rows++;
   }
 
@@ -132,10 +138,11 @@ export class ShardWriter {
     this.slotCards.n = rows * SLOTS * 2;
     this.bags.n = rows * BAGS * VOCAB;
     this.glob.n = rows * GLOB_F;
-    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome]) g.n = rows;
+    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft]) g.n = rows;
     this.optX.n = optFrom * OPT_F;
     this.optCard.n = optFrom;
     this.optSlot.n = optFrom;
+    this.optLogit.n = optFrom;
   }
 
   /** Empty again (one writer reused for many batches). */
@@ -170,6 +177,8 @@ export class ShardWriter {
       ['optX', 'f2', [m, OPT_F], this.optX.view()],
       ['optCard', 'i2', [m], this.optCard.view()],
       ['optSlot', 'i1', [m], this.optSlot.view()],
+      ['optLogit', 'f2', [m], this.optLogit.view()],
+      ['soft', 'u1', [n], this.soft.view()],
       ...extra,
     ];
     const header: Record<string, { dtype: string; shape: number[]; offset: number }> = {};

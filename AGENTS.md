@@ -19,7 +19,7 @@ npx tsx scripts/hard-gate.ts --games 1000   # v3 gate: hard bot vs normal bot (m
 npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA self-play tuning of src/bots/params.ts
 # The bot's network (BOT-RESEARCH.md). Python lives in ml/.venv (PyTorch CUDA build for the RTX 5060 Ti); run from the repo root.
 npx tsx scripts/learn/gen.ts <config.json>   # bot games on every CPU thread -> training shards (format in scripts/learn/shard.ts)
-ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn/bc.json   # imitation of the recorded bot
+ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn/bc.json   # imitation of the recorded bot (soft targets: a recorded network's logits, shard optLogit)
 ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn/ppo   # self-play PPO; resumes; log.jsonl
 #   the networks' moves run batched on the GPU (ml/serve.py <- scripts/learn/batched.ts, ~8x the games; --no-server = old way);
 #   --overlap plays the next iteration while this one trains, --resign 0.03 lets hopeless sides give up (BOT-LEAP.md L1)
@@ -71,7 +71,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `learn/`: `encode.ts` (what the network sees: a token per Pokémon in play, card-count bags, globals, one row
   per legal action or pick; hidden zones only as combined counts), `model.ts` (forward pass; same layers as
   `ml/common.py`; version 2 files build card vectors from `card-features.ts`, the printed features, plus a vector
-  per trained card, so new cards and changed lists keep the shapes: `ml/common.py` Net2, `train_bc.py --v2`), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
+  per trained card, so new cards and changed lists keep the shapes: `ml/common.py` Net2, `train_bc.py --v2`; version 3 is a transformer over every Pokémon, card with a count and option, on the
+  same rows: `model3.ts` = `ml/net3.py`, `train_bc.py --v3 --bf16`; BOT-LEAP.md L3), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
   into training rows). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
   `scripts/learn/gen.ts`). The rule-based bots stay as teachers, sparring partners and quick internal models:
   `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) + `choose.ts` (pending

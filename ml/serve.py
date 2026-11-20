@@ -48,7 +48,7 @@ class Server:
         self.port = port
         self.device = device
         self.keep = keep
-        self.models: dict[str, tuple[float, float, Graphed]] = {}
+        self.models: dict[str, Graphed] = {}
         self.batches = 0
         self.rows = 0
 
@@ -130,24 +130,36 @@ class Server:
                     pass
 
     def model(self, path: str) -> "Graphed":
-        # The file is looked at again at most twice a second (a stat per batch costs more than the batch's math).
+        """The network in this weights file, ready to run. A network's CUDA graphs are never destroyed (destroying
+        and capturing graphs while serving crashed with illegal memory accesses): a changed file, or a new file
+        once `keep` networks are loaded, has its weights copied into the least recently used loaded network of the
+        same shape, whose graphs then compute the new weights."""
         now = time.monotonic()
         got = self.models.get(path)
-        if got is not None and now - got[1] < 0.5:
-            return got[2]
+        # The file is looked at again at most twice a second (a stat per batch costs more than the batch's math).
+        if got is not None and now - got.checked < 0.5:
+            got.used = now
+            return got
         mtime = os.path.getmtime(path)
-        if got is None or got[0] != mtime:
-            net = import_json(path, id_drop=0.0).to(self.device)
-            net.train(False)
-            got = (mtime, now, Graphed(net, self.device))
-            # Keep the networks used most recently (ppo.py's league changes every iteration; graphs hold GPU memory).
-            for old in sorted(self.models, key=lambda p: self.models[p][1])[: max(0, len(self.models) - self.keep + 1)]:
-                if old != path:
-                    del self.models[old]
+        if got is not None and got.mtime == mtime:
+            got.checked = got.used = now
+            return got
+        net = import_json(path, id_drop=0.0).to(self.device)
+        net.train(False)
+        sig = Graphed.signature(net)
+        slot = got if got is not None and got.sig == sig else None
+        if slot is None and len(self.models) >= self.keep:
+            same = [p for p, g in self.models.items() if g.sig == sig and p != path]
+            if same:
+                old = min(same, key=lambda p: self.models[p].used)
+                slot = self.models.pop(old)
+        if slot is not None:
+            slot.load(net)
         else:
-            got = (got[0], now, got[2])
-        self.models[path] = got
-        return got[2]
+            slot = Graphed(net, self.device)
+        slot.mtime, slot.checked, slot.used = mtime, now, now
+        self.models[path] = slot
+        return slot
 
     def infer(self, payloads: list[bytes]) -> list[bytes]:
         parts: list[dict[str, np.ndarray]] = []
@@ -248,11 +260,26 @@ class Graphed:
     def __init__(self, net: torch.nn.Module, device):
         self.net = net
         self.device = device
+        self.sig = self.signature(net)
+        self.mtime = self.checked = self.used = 0.0
         self.frozen = net.frozen() if hasattr(net, "frozen") else None
         self.graphs: dict[tuple[int, int], tuple[torch.cuda.CUDAGraph, dict[str, torch.Tensor], torch.Tensor]] = {}
         self.cuda = torch.device(device).type == "cuda" and self.frozen is not None
         # The graphs of one network run one at a time, so they can share their working memory.
         self.pool = torch.cuda.graph_pool_handle() if self.cuda else None
+
+    @staticmethod
+    def signature(net: torch.nn.Module) -> tuple:
+        """Networks with the same signature can take each other's weights (same tensors, same shapes)."""
+        return tuple((k, tuple(v.shape)) for k, v in net.state_dict().items())
+
+    def load(self, net: torch.nn.Module) -> None:
+        """Copy another network's weights into this one's tensors, which the captured graphs read."""
+        with torch.no_grad():
+            self.net.load_state_dict(net.state_dict())
+            if self.frozen is not None:
+                for k, v in self.net.frozen().items():
+                    self.frozen[k].copy_(v)
 
     def forward(self, raw: dict[str, torch.Tensor]) -> torch.Tensor:
         """[value (chance to win) | logits] per row."""

@@ -1,0 +1,165 @@
+"""Network version 3 (BOT-LEAP.md, L3): a transformer over every card the acting player can reason about.
+
+It reads the same rows as version 2 (scripts/learn/shard.ts, src/bots/learn/encode.ts), so games, shards and the
+inference server need nothing new; only the network differs. Tokens, each projected to D numbers by a small MLP
+plus a learned type vector:
+  global   1   the position's numbers (globals v2 keeps) + the card whose effect asks
+  Pokémon  18  my Active and Bench, theirs (card, Tool, the 44 numbers of encode.ts); empty slots masked
+  cards    64  one per card with a count in any zone (my hand, deck + Prizes, discard, theirs, Stadium, known top of
+               my deck): the card's vector + its 8 counts. In card order; a position has at most 56 (measured)
+  options  ≤K  one per legal action or pick: card, its 30 numbers, and the Pokémon token it points at
+Every token attends to every live token (pre-LN blocks, GELU). Value: [global ‖ mean of live tokens] → MLP.
+Policy: score = w·GELU(Wq global + Wk option + b) + c per option, like version 2.
+src/bots/learn/model3.ts computes the same in TypeScript (scripts/learn/parity.ts checks it).
+"""
+from __future__ import annotations
+
+import math
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from common import BAGS, SLOT_F, SLOTS
+
+V3_DIMS = {"E": 64, "D": 128, "L": 3, "HEADS": 4, "FF": 256, "C": 64}
+
+
+def gelu(x: torch.Tensor) -> torch.Tensor:
+    # The tanh form: model3.ts computes it with Math.tanh.
+    return F.gelu(x, approximate="tanh")
+
+
+class MLP(nn.Module):
+    def __init__(self, n_in: int, hidden: int, n_out: int):
+        super().__init__()
+        self.a = nn.Linear(n_in, hidden)
+        self.b = nn.Linear(hidden, n_out)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.b(gelu(self.a(x)))
+
+
+class Block(nn.Module):
+    def __init__(self, d: int, heads: int, ff: int):
+        super().__init__()
+        self.heads = heads
+        self.ln1 = nn.LayerNorm(d)
+        self.qkv = nn.Linear(d, 3 * d)
+        self.out = nn.Linear(d, d)
+        self.ln2 = nn.LayerNorm(d)
+        self.ff1 = nn.Linear(d, ff)
+        self.ff2 = nn.Linear(ff, d)
+
+    def forward(self, x: torch.Tensor, keep: torch.Tensor) -> torch.Tensor:
+        """`keep`: [B, T] bool, the live tokens (every token attends to the live ones only)."""
+        B, T, D = x.shape
+        q, k, v = self.qkv(self.ln1(x)).view(B, T, 3, self.heads, D // self.heads).permute(2, 0, 3, 1, 4)
+        y = F.scaled_dot_product_attention(q, k, v, attn_mask=keep[:, None, None, :])
+        x = x + self.out(y.transpose(1, 2).reshape(B, T, D))
+        return x + self.ff2(gelu(self.ff1(self.ln2(x))))
+
+
+class Net3(nn.Module):
+    version = 3
+
+    def __init__(self, feats: dict, glob_f: int, opt_f: int, dims: dict | None = None, id_drop: float = 0.0):
+        super().__init__()
+        d = {**V3_DIMS, **(dims or {})}
+        self.dims, self.glob_f, self.opt_f, self.id_drop = d, glob_f, opt_f, id_drop
+        self.cards = list(feats["cards"])
+        self.register_buffer("feats", feats["table"].clone())
+        self.register_buffer("glob_keep", torch.tensor(feats["globKeep"], dtype=torch.long))
+        E, D = d["E"], d["D"]
+        self.id_emb = nn.Embedding(len(self.cards) + 2, E)
+        nn.init.normal_(self.id_emb.weight, std=0.1)
+        self.feat = nn.Linear(self.feats.shape[1], E)
+        self.glob_in = MLP(len(feats["globKeep"]) + E, D, D)
+        self.slot_in = MLP(2 * E + SLOT_F, D, D)
+        self.card_in = MLP(E + BAGS, D, D)
+        self.opt_in = MLP(E + opt_f + D, D, D)
+        self.kind = nn.Parameter(torch.zeros(4, D))
+        self.blocks = nn.ModuleList(Block(D, d["HEADS"], d["FF"]) for _ in range(d["L"]))
+        self.norm = nn.LayerNorm(D)
+        self.value = MLP(2 * D, 2 * D, 1)
+        self.q = nn.Linear(D, D, bias=False)
+        self.k = nn.Linear(D, D)
+        self.score = nn.Linear(D, 1)
+
+    def card_vectors(self) -> torch.Tensor:
+        """Version 2's card vectors: id_emb[row] + feat(features); row 0 = no card, 1 = unknown."""
+        v = self.feats.shape[0]
+        ids = torch.arange(v, device=self.feats.device) + 1
+        ids[0] = 0
+        if self.training and self.id_drop > 0:
+            drop = torch.rand(v, device=ids.device) < self.id_drop
+            drop[0] = False
+            ids = torch.where(drop, torch.ones_like(ids), ids)
+        return self.id_emb(ids) + self.feat(self.feats)
+
+    def frozen(self) -> dict[str, torch.Tensor]:
+        """Card vectors, fixed while the weights don't change (the inference server passes them in)."""
+        with torch.no_grad():
+            return {"cv": self.card_vectors()}
+
+    def tokens(self, b: dict[str, torch.Tensor], cv: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, int]:
+        """All tokens [B, T, D], which are live [B, T], and where the options start."""
+        slots, sc = b["slots"], b["slot_cards"]
+        present = slots[:, :, 0] > 0
+        slot_x = self.slot_in(torch.cat([cv[sc[:, :, 0]], cv[sc[:, :, 1]], slots], -1)) + self.kind[1]
+        # Cards with a count anywhere, in card order (stable sort puts them first), C of them.
+        bags = b["bags"]
+        has = bags.sum(1) > 0
+        has[:, 0] = False
+        order = torch.argsort(has.to(torch.int8), dim=1, descending=True, stable=True)[:, : self.dims["C"]]
+        card_keep = torch.gather(has, 1, order)
+        counts = torch.gather(bags, 2, order[:, None, :].expand(-1, bags.shape[1], -1)).transpose(1, 2)
+        card_x = self.card_in(torch.cat([cv[order], counts], -1)) + self.kind[2]
+        g = self.glob_in(torch.cat([b["glob"][:, self.glob_keep], cv[b["source"]]], -1))[:, None] + self.kind[0]
+        slot = b["opt_slot"]
+        target = torch.gather(slot_x, 1, slot.clamp(min=0)[..., None].expand(-1, -1, slot_x.shape[-1])) * (slot >= 0)[..., None]
+        opt_x = self.opt_in(torch.cat([cv[b["opt_card"]], b["opt_x"], target], -1)) + self.kind[3]
+        x = torch.cat([g, slot_x, card_x, opt_x], 1)
+        keep = torch.cat([torch.ones_like(present[:, :1]), present, card_keep, b["mask"]], 1)
+        return x, keep, 1 + SLOTS + self.dims["C"]
+
+    def forward(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
+        cv = frozen["cv"] if frozen else self.card_vectors()
+        x, keep, first_opt = self.tokens(b, cv)
+        for blk in self.blocks:
+            x = blk(x, keep)
+        x = self.norm(x)
+        g = x[:, 0]
+        w = keep.to(x.dtype)[..., None]
+        mean = (x * w).sum(1) / w.sum(1)
+        value = self.value(torch.cat([g, mean], -1)).squeeze(-1)
+        u = gelu(self.q(g)[:, None, :] + self.k(x[:, first_opt:]))
+        logits = self.score(u).squeeze(-1).masked_fill(~b["mask"], -1e9)
+        return logits, value
+
+
+def new_net3(glob_f: int = 83, opt_f: int = 30, dims: dict | None = None, id_drop: float = 0.15) -> Net3:
+    from common import DEVICE, card_features
+
+    return Net3(card_features(), glob_f, opt_f, dims, id_drop).to(DEVICE)
+
+
+# Tensors written to the JSON file: every parameter, by its PyTorch name (model3.ts reads the same names).
+def tensors3(net: Net3) -> dict[str, torch.Tensor]:
+    return {k: v for k, v in net.state_dict().items() if k not in ("feats", "glob_keep")}
+
+
+def param_count(net: nn.Module) -> int:
+    return sum(p.numel() for p in net.parameters())
+
+
+def attention_check() -> None:
+    """SDPA with a boolean mask = softmax over the live keys (model3.ts does it by hand)."""
+    q = torch.randn(2, 4, 5, 8)
+    k = torch.randn(2, 4, 5, 8)
+    v = torch.randn(2, 4, 5, 8)
+    keep = torch.tensor([[True, True, False, True, False], [True] * 5])
+    a = F.scaled_dot_product_attention(q, k, v, attn_mask=keep[:, None, None, :])
+    s = (q @ k.transpose(-1, -2)) / math.sqrt(8)
+    s = s.masked_fill(~keep[:, None, None, :], float("-inf"))
+    assert torch.allclose(a, s.softmax(-1) @ v, atol=1e-5)
