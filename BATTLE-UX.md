@@ -26,7 +26,7 @@ styling only.
 | 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | done 21 Nov |
 | 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | done 21 Nov (with #7) |
 | 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | done 21 Nov |
-| 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | |
+| 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | done 21 Nov |
 
 ## Log
 
@@ -78,3 +78,9 @@ styling only.
   confirms the marked picks / plays the card picked up / ends after the warning, Esc closes the topmost thing (zoom,
   discard pile, pop-up, warning, picked-up card, recap). Ignored with Ctrl/Alt/⌘, while typing in a field, and Enter
   on a focused button presses that button. "วิธีเล่น" lists them; the end button has `aria-keyshortcuts="E"`.
+- **21 Nov, #11 done.** `ui/sound.ts`: twelve short sounds made with Web Audio oscillators and filtered noise (card,
+  played card, shuffle, attack, Ability / evolution, hit, heal, Knock Out, coin, new turn, win, lose), no files.
+  `fx.ts` cues each event as it schedules it (`Fx.cue`), so a sound starts with its animation; with animations off
+  only attack / Knock Out / coin / turn / end play, at once. Repeats of a kind are spaced (a dealt hand is a few
+  ticks). "เสียง" switch in the side column, on by default, saved; never while watching the bots. Checked in the
+  browser by counting started sources: 79 over one animated bot turn, 6 with animations off.

@@ -24,6 +24,7 @@
   import { previewAttack } from '../../ui/preview';
   import { slotInfo } from '../../ui/slot-info';
   import { lastOpponentTurn, shortRecap } from '../../ui/recap';
+  import { cue as cueSound, KEY_VOICES, playVoice, setSound, voiceFor } from '../../ui/sound';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
@@ -105,6 +106,8 @@
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** Your hand sorted by kind and name (on unless turned off; saved with the other settings). */
   let sortHand = $state(saved.sortHand !== false);
+  /** Sounds (ui/sound.ts); on unless turned off, never while watching the bots (the end-to-end tests). */
+  let soundOn = $state(saved.sound !== false);
   let animLevel = $state<AnimLevel>((params.get('anim') as AnimLevel) ?? (saved.anim as AnimLevel) ?? (reducedMotion ? 'off' : 'full'));
   // Replays at full bot speed (and the end-to-end games) skip animations.
   const effectiveAnim = $derived<AnimLevel>(watch && speed === 0 ? 'off' : animLevel);
@@ -340,7 +343,7 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel, sortHand }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel, sortHand, sound: soundOn }));
     } catch {
       /* ignore */
     }
@@ -481,6 +484,8 @@
     picks = [];
   }
 
+  $effect(() => setSound(soundOn && !watch));
+
   // Animations: where everything was is read before the DOM updates, then the change is played.
   let fxLayer: HTMLDivElement | undefined = $state();
   let fx: Fx | null = null;
@@ -492,7 +497,10 @@
   let showOver = $state(false);
   let overTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
-    if (fxLayer && !fx) fx = new Fx(fxLayer, document.body);
+    if (fxLayer && !fx) {
+      fx = new Fx(fxLayer, document.body);
+      fx.cue = (e, inMs) => cueSound(e, inMs);
+    }
     setAnimLevel(effectiveAnim);
     if (fx) {
       fx.level = effectiveAnim;
@@ -529,7 +537,17 @@
             : list.slice(from, idx).flatMap((s, i) => animEvents(s, list[from + i + 1]!, history[from + i]));
         fx.finish();
         total = fx.play(events, { prev: from === null ? next : list[from]!, next, before: snap });
-      } else fx?.finish();
+      } else {
+        fx?.finish();
+        // Nothing animated: the sounds that matter, at once.
+        if (soundOn && !watch && v === null && animated >= 0 && idx > animated) {
+          const from = animated;
+          for (const e of list.slice(from, idx).flatMap((s, i) => animEvents(s, list[from + i + 1]!, history[from + i]))) {
+            const voice = voiceFor(e);
+            if (voice && KEY_VOICES.has(voice)) playVoice(voice);
+          }
+        }
+      }
       animated = idx;
       // A short beat after the animations before the bot moves again.
       busyUntil = total ? performance.now() + total + 150 : 0;
@@ -1027,6 +1045,10 @@
         <label class="anim-pick">
           <input type="checkbox" bind:checked={sortHand} onchange={saveSettings} />
           เรียงการ์ดในมือ
+        </label>
+        <label class="anim-pick">
+          <input type="checkbox" bind:checked={soundOn} onchange={saveSettings} />
+          เสียง
         </label>
         <button type="button" onclick={() => (howto = true)}>วิธีเล่น</button>
       </div>

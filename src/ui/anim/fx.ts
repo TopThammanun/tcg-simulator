@@ -81,6 +81,8 @@ interface Ctx {
 
 export class Fx {
   level: AnimLevel = 'full';
+  /** Called as each event's animation is scheduled, with how many ms from now it starts (the sounds, ui/sound.ts). */
+  cue: ((e: AnimEvent, inMs: number) => void) | null = null;
   private anims: Animation[] = [];
   private nodes: HTMLElement[] = [];
 
@@ -232,31 +234,45 @@ export class Fx {
       case 'move':
       case 'ko':
         for (const e of group) {
-          if (e.t === 'ko') span(this.knockOut(e, t, c));
-          else if (e.t === 'move') {
+          if (e.t === 'ko') {
+            this.cue?.(e, t);
+            span(this.knockOut(e, t, c));
+          } else if (e.t === 'move') {
             if (phase === 'ko' && e.from.zone === 'pokemon') continue; // the stand-in goes instead
             const d = nextDelay(phase === 'ko' ? 520 * k : 0);
+            this.cue?.(e, t + d);
             span(d + this.move(e, t + d, c));
-          } else if (e.t === 'evolve') span(this.evolve(e, t + 380 * k, c) + 380 * k);
-          else if (e.t === 'shuffle') span(this.shuffle(e.player, t));
+          } else if (e.t === 'evolve') {
+            this.cue?.(e, t + 380 * k);
+            span(this.evolve(e, t + 380 * k, c) + 380 * k);
+          } else if (e.t === 'shuffle') {
+            this.cue?.(e, t);
+            span(this.shuffle(e.player, t));
+          }
         }
         break;
       case 'act':
         for (const e of group) {
+          this.cue?.(e, t);
           if (e.t === 'attack') span(this.banner(e.name, e.player, typeColor(e.type), t, c));
           if (e.t === 'ability') span(this.ability(e, t, c));
         }
         break;
       case 'coin':
         group.forEach((e, n) => {
-          if (e.t === 'coin') span(n * 720 * k + this.coin(e.heads, n, group.length, t + n * 720 * k, c));
+          if (e.t !== 'coin') return;
+          this.cue?.(e, t + n * 720 * k);
+          span(n * 720 * k + this.coin(e.heads, n, group.length, t + n * 720 * k, c));
         });
         break;
       case 'hit': {
         const lunge = c.attack ? this.lunge(c.attack, t) : 0;
         span(lunge);
         for (const e of group) {
-          if (e.t === 'damage') span(lunge + this.damage(e, t + lunge, c));
+          if (e.t === 'damage') {
+            this.cue?.(e, t + lunge);
+            span(lunge + this.damage(e, t + lunge, c));
+          }
           if (e.t === 'condition') span(lunge + this.condition(e, t + lunge, c));
         }
         break;
@@ -265,19 +281,23 @@ export class Fx {
         let lag = 0;
         for (const e of group) {
           if (e.t === 'reveal') {
+            this.cue?.(e, t);
             span(this.reveal(t));
             lag = Math.max(lag, 300 * k);
           } else if (e.t === 'turn') {
+            this.cue?.(e, t);
             span(this.turn(e.turn, e.player, t, c));
             lag = 620 * k;
           } else if (e.t === 'move') {
             const d = nextDelay(lag);
+            this.cue?.(e, t + d);
             span(d + this.move(e, t + d, c));
           }
         }
         break;
       }
       case 'end':
+        for (const e of group) this.cue?.(e, t);
         break;
     }
     return end;
