@@ -85,6 +85,8 @@
   } = $props();
 
   const PRIZES = 6;
+  /** Few enough cards left that decking out is near (no draw at the start of a turn loses the game). */
+  const LOW_DECK = 5;
   const stadium = $derived(stadiumKey(s));
   const accepts = (zone: string) => drag?.drops.has(zone) ?? false;
   const isOver = (zone: string) => drag?.over === zone;
@@ -146,7 +148,11 @@
     </div>
 
     <div class="piles">
-      <div class="pile deck" title={`การ์ดในเด็ค ${ps.deck.length} ใบ`}>
+      <div
+        class="pile deck"
+        class:low={ps.deck.length <= LOW_DECK}
+        title={`การ์ดในเด็ค ${ps.deck.length} ใบ${ps.deck.length <= LOW_DECK ? ' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที' : ''}`}
+      >
         <span class="spot" data-zone={`deck-${p}`}>
           {#if ps.deck.length}<span class="stack" style:box-shadow={stackShadow(ps.deck.length)}><CardBack /></span>{/if}
           <span class="n mono">{ps.deck.length}</span>
@@ -259,6 +265,17 @@
 </div>
 
 <style>
+  /* The deck nearly empty: its count turns red and pulses. */
+  .pile.deck.low .n {
+    background: var(--stamp);
+    color: #fff;
+    animation: low-deck 1.4s ease-in-out infinite;
+  }
+  @keyframes low-deck {
+    50% {
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--stamp) 45%, transparent);
+    }
+  }
   .board {
     --mat-ink: #e8efe9;
     --line: #ffffff26;

@@ -349,13 +349,16 @@
     }
   }
 
-  function start() {
+  /** A new game from the match sheet; `again`: against the same bot deck as the game just played (a new deal). */
+  function start(again = false) {
     // Watching (the end-to-end tests) doesn't change your settings.
     if (!watch) saveSettings();
     showOver = false;
     if (fixedSeed === null) seed = Math.floor(Math.random() * 1e9);
+    const same = again ? decks.find((d) => d.slug === botSlug) : undefined;
     const pick =
-      opponent === 'random' ? pickOpponent(decks, (seed % 10007) / 10007, (Math.floor(seed / 10007) % 7919) / 7919) : oppChoice!;
+      same ??
+      (opponent === 'random' ? pickOpponent(decks, (seed % 10007) / 10007, (Math.floor(seed / 10007) % 7919) / 7919) : oppChoice!);
     botSlug = pick.slug;
     minePlan = mineChoice.plan;
     mineName = mineChoice.name;
@@ -841,7 +844,7 @@
           <option value="off">ปิด</option>
         </select>
       </label>
-      <button type="button" class="primary start" onclick={start}>เริ่มเกม →</button>
+      <button type="button" class="primary start" onclick={() => start()}>เริ่มเกม →</button>
     </div>
   </section>
 {:else if shown}
@@ -1067,6 +1070,7 @@
     botDeck={botDeck?.name ?? ''}
     botHref={`/decks/${botSlug}/`}
     reviewHref={savedId !== null ? `/review/?id=${savedId}` : null}
+    onagain={resumedFrom === null ? () => start(true) : undefined}
     onnew={() => ((states = []), (showOver = false))}
     onclose={() => (showOver = false)}
   />

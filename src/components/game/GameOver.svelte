@@ -11,6 +11,7 @@
     botDeck,
     botHref,
     reviewHref = null,
+    onagain,
     onnew,
     onclose,
   }: {
@@ -20,6 +21,8 @@
     botHref: string;
     /** The saved game's review page (null until it is saved). */
     reviewHref?: string | null;
+    /** Play the same two decks again, a new deal (none for a game picked up from a saved one). */
+    onagain?: () => void;
     onnew: () => void;
     onclose: () => void;
   } = $props();
@@ -49,7 +52,8 @@
     <p class="title">{title}</p>
     <p class="reason">{reason}</p>
     <div class="buttons">
-      <button type="button" class="primary" onclick={onnew}>เกมใหม่</button>
+      {#if onagain}<button type="button" class="primary" onclick={onagain}>เล่นอีกครั้ง (เด็คเดิม)</button>{/if}
+      <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? 'เลือกเด็คใหม่' : 'เกมใหม่'}</button>
       <button type="button" onclick={onclose}>ดูสนาม</button>
     </div>
     {#if reviewHref}<a class="review" href={reviewHref}>วิจารณ์เกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}

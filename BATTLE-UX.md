@@ -27,6 +27,9 @@ styling only.
 | 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | done 21 Nov (with #7) |
 | 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | done 21 Nov |
 | 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | done 21 Nov |
+| 12 | Play the same decks again | Game over only offered "เกมใหม่" (back to the match sheet) | done 21 Nov |
+| 13 | A deck about to run out | Its count looked the same at 3 as at 40; no draw at the start of a turn loses | done 21 Nov |
+| 14 | Concede | Not worth it: a recorded loss needs a new engine action that bots, replays and saved games all read; "เกมใหม่" already leaves a game | dropped |
 
 ## Log
 
@@ -84,3 +87,11 @@ styling only.
   only attack / Knock Out / coin / turn / end play, at once. Repeats of a kind are spaced (a dealt hand is a few
   ticks). "เสียง" switch in the side column, on by default, saved; never while watching the bots. Checked in the
   browser by counting started sources: 79 over one animated bot turn, 6 with animations off.
+- **21 Nov, research and #12–#13 done.** Looked for what is still missing: Pokémon changing places (retreat, Boss's
+  Orders) already slide (`reflow` in fx.ts); the bot's Pokémon can be read; the discard piles open. Found two small
+  gaps and did them: "เล่นอีกครั้ง (เด็คเดิม)" at the end (`start(true)`: the same bot deck, a new deal; not for a game
+  picked up from a saved one), and the deck count turns red and pulses at 5 cards or fewer, its tooltip saying why.
+  On the way: the match sheet's "เริ่มเกม" passed its click event to `start()`, which would now have read as "again".
+  Dropped #14 (concede), see the table.
+- **21 Nov, stopping here.** What is left is taste rather than missing play: music, more card art in the
+  animations, a turn timer. The loop stops; restart it with `/loop` when there is something new to look at.

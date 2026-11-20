@@ -306,6 +306,15 @@ const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg:
 
 test('the keyboard: 1–9 picks up a hand card, A opens the attacks, E asks then ends the turn, Esc closes', async ({ page }) => {
   await loadPosition(page);
+  // A deck of 5 or fewer cards: its count turns red.
+  await expect(page.locator('.side.mine .pile.deck.low')).toHaveCount(0);
+  await page.evaluate(() => {
+    const t = (window as unknown as { __tcg: { state: () => any; load: (s: unknown) => void } }).__tcg;
+    const s = structuredClone(t.state());
+    s.players[0].deck = s.players[0].deck.slice(0, 3);
+    t.load(s);
+  });
+  await expect(page.locator('.side.mine .pile.deck.low')).toBeVisible();
   // The animation menu was just used: keys typed into a field are its own.
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('1');
@@ -391,6 +400,16 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect(recap).toContainText('บอท');
   await recap.getByRole('button', { name: 'ปิด' }).click();
   await expect(recap).toHaveCount(0);
+});
+
+test('at the end, "เล่นอีกครั้ง" plays the same two decks again', async ({ page }) => {
+  await page.goto('/play/?watch=1&test=1&speed=0&seed=9&me=basic-box&opp=dragapult-ex');
+  const over = page.getByRole('dialog', { name: 'จบเกม' });
+  await expect(over).toBeVisible({ timeout: 90_000 });
+  await over.getByRole('button', { name: 'เล่นอีกครั้ง (เด็คเดิม)' }).click();
+  await expect(over).toHaveCount(0);
+  await expect.poll(async () => (await engineState(page)).turn < 3 && (await engineState(page)).winner === null).toBe(true);
+  await expect(page.locator('.status')).toContainText('Dragapult ex');
 });
 
 test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {
