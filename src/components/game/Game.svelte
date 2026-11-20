@@ -15,7 +15,7 @@
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
-  import { describeAction, handActions, targetOf } from '../../ui/play';
+  import { describeAction, handActions, targetOf, turnUses } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -863,6 +863,11 @@
               <button type="button" class="end" onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}
                 >จบเทิร์น</button
               >
+              <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
+                {#each turnUses(cur) as u (u.label)}
+                  <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
+                {/each}
+              </span>
               <span class="hint">
                 {selected !== null
                   ? 'แตะการ์ดอีกครั้งเพื่อใช้ · แตะ Pokémon ที่สว่าง · หรือลากการ์ดลงสนาม'
@@ -1326,6 +1331,31 @@
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+  }
+  /* The once-a-turn plays: free ones outlined, used ones ticked and faded, a barred one struck through. */
+  .uses {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .use {
+    padding: 1px 9px;
+    border: 1.5px solid var(--primary);
+    border-radius: 999px;
+    color: var(--primary);
+    font-size: 0.74rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .use.used {
+    border-color: var(--line);
+    background: var(--paper-deep);
+    color: var(--ink-soft);
+  }
+  .use.barred {
+    border-color: var(--line);
+    color: var(--ink-soft);
+    text-decoration: line-through;
   }
   /* Ending the turn while an attack is still there: asked in the dock, the attack first. */
   .end-warn {

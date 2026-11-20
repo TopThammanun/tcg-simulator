@@ -79,3 +79,28 @@ export function slotTitle(s: GameState, uid: SlotId): string {
   }
   return '';
 }
+
+export interface TurnUse {
+  label: string;
+  /** used: done this turn; free: still yours; barred: not allowed this turn (the first player's Supporter on turn 1). */
+  state: 'used' | 'free' | 'barred';
+  title: string;
+}
+
+/** What the player whose turn it is has used of the once-a-turn plays (the chips beside "จบเทิร์น"). */
+export function turnUses(s: GameState): TurnUse[] {
+  const ps = s.players[s.current];
+  return [
+    ps.supporterPlayed
+      ? { label: 'Supporter', state: 'used', title: 'เล่น Supporter ไปแล้วเทิร์นนี้' }
+      : s.turn === 1
+        ? { label: 'Supporter', state: 'barred', title: 'คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก' }
+        : { label: 'Supporter', state: 'free', title: 'ยังเล่น Supporter ได้ 1 ใบ' },
+    ps.energyAttached
+      ? { label: 'ติดพลังงาน', state: 'used', title: 'ติดพลังงานจากมือไปแล้วเทิร์นนี้' }
+      : { label: 'ติดพลังงาน', state: 'free', title: 'ยังติดพลังงานจากมือได้ 1 ใบ' },
+    ps.retreated
+      ? { label: 'ถอย', state: 'used', title: 'ถอยไปแล้วเทิร์นนี้' }
+      : { label: 'ถอย', state: 'free', title: 'ยังถอยได้ 1 ครั้ง' },
+  ];
+}

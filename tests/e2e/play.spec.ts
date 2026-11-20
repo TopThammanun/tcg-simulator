@@ -186,10 +186,14 @@ test('animations can be turned off', async ({ page }) => {
   await page.locator('.anim-pick select').selectOption('off');
   await expect(page.locator('html')).toHaveAttribute('data-anim', 'off');
   const card = page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first();
+  // Beside "จบเทิร์น": nothing used yet (you went first: no Supporter on turn 1).
+  await expect(page.locator('.uses .use.used')).toHaveCount(0);
+  await expect(page.locator('.uses .use.barred')).toHaveText('Supporter');
   await card.click();
   await page.locator('.side.mine .slot.target .card').first().click();
   expect(await energyOnActive(page)).toBe(1);
   await expect(page.locator('.fx-layer > *')).toHaveCount(0);
+  await expect(page.locator('.uses .use.used')).toHaveText('✓ ติดพลังงาน');
 });
 
 test('tapping your Active opens a pop-up with its attacks and retreating', async ({ page }) => {

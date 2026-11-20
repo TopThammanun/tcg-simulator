@@ -19,7 +19,7 @@ styling only.
 | 1 | Why a hand card can't be played | "ใช้การ์ดนี้ตอนนี้ไม่ได้" alone leaves you guessing (Supporter already played, first turn, Bench full, card condition) | done 21 Nov |
 | 2 | Real damage on the attack button | Printed damage only; Weakness/Resistance and effects change it; say when it Knocks Out | done 21 Nov |
 | 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | done 21 Nov |
-| 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | |
+| 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | done 21 Nov |
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | |
 | 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | |
 
@@ -42,3 +42,6 @@ styling only.
   "ยังโจมตีได้อยู่ (ชื่อท่า) จะจบเทิร์นโดยไม่โจมตีไหม?" with "กลับไปโจมตี" (opens the Active's pop-up) and "จบเทิร์นเลย".
   No browser dialog (they block the page). Any action clears it. e2e: the helper `endTurn()` answers it; the table
   test checks the bar, going back, and that the turn didn't end.
+- **21 Nov, #4 done.** `turnUses()` in `ui/play.ts`: Supporter / ติดพลังงาน / ถอย as chips beside "จบเทิร์น" — free
+  (blue outline), used (✓, faded), barred (struck through: the first player's Supporter on turn 1); a tooltip says
+  which. Fits one row on a 390px phone. Unit test (free → used → free next turn, turn-1 bar) and e2e (attach an Energy).
