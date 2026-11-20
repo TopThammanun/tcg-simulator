@@ -15,7 +15,7 @@
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
-  import { describeAction, handActions, targetOf, turnUses } from '../../ui/play';
+  import { describeAction, handActions, keyCommand, sortedHand, targetOf, turnUses } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -683,6 +683,52 @@
     press(e, keyOf(cur, c), drops, c);
   }
 
+  /** Keyboard on a computer (ui/play.ts keyCommand): E end turn, A attacks, 1–9 hand card, Enter confirm, Esc close. */
+  function onKey(e: KeyboardEvent) {
+    const el = e.target as HTMLElement | null;
+    const typing = !!el && (!!el.closest('input, select, textarea') || el.isContentEditable);
+    const cmd = keyCommand({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, typing });
+    if (!cmd || !cur || howto || drag) return;
+    if (cmd.t === 'close') {
+      // The topmost thing first.
+      if (zoom) (zoom = null), (zoomSlot = null);
+      else if (discardOf !== null) discardOf = null;
+      else if (menuFor !== null) menuFor = null;
+      else if (confirmEnd) confirmEnd = false;
+      else if (selected !== null) selected = null;
+      else if (recap.length) recapClosed = cur.turn;
+      return;
+    }
+    if (!myTurn || zoom || discardOf !== null) return;
+    // Enter on a focused button presses that button.
+    if (cmd.t === 'confirm' && el?.closest('button, a, [role="button"]')) return;
+    e.preventDefault();
+    if (cmd.t === 'end') {
+      if (req || menuFor !== null) return;
+      if (confirmEnd || !attacksLeft.length) step({ t: 'end' });
+      else confirmEnd = true;
+    } else if (cmd.t === 'attack') {
+      const a = cur.players[0].active;
+      if (req || !a || !slotMenu(cur, legal, a.uid)) return;
+      selected = null;
+      menuFor = a.uid;
+      menuAnchor = document.querySelector(`[data-slot="${a.uid}"] .card`)?.getBoundingClientRect() ?? null;
+    } else if (cmd.t === 'confirm') {
+      if (req && !setupReq) {
+        if (picks.length > 0 && picks.length >= req.min && picks.length <= req.max) step({ t: 'choose', picks });
+      } else if (confirmEnd) step({ t: 'end' });
+      else if (selected !== null) {
+        const ca = hand.get(selected);
+        if (ca?.kind === 'now') step(ca.action);
+      }
+    } else if (cmd.t === 'hand') {
+      if (req && !setupReq) return;
+      const own = cur.players[0].hand;
+      const c = (sortHand ? sortedHand(cur, own) : own)[cmd.index];
+      if (c !== undefined) onHand(c);
+    }
+  }
+
   function onSlotPress(uid: SlotId, e: PointerEvent) {
     if (!shown || !cur) return;
     const sl = [0, 1].flatMap((p) => slotsOf(shown!.players[p as PlayerId])).find((x) => x.uid === uid);
@@ -694,6 +740,8 @@
     press(e, topKey(shown, sl), drops, undefined, uid);
   }
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 {#if !cur}
   <section class="setup" aria-labelledby="setup-title">
@@ -904,8 +952,12 @@
             </div>
           {:else}
             <div class="bar">
-              <button type="button" class="end" onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}
-                >จบเทิร์น</button
+              <button
+                type="button"
+                class="end"
+                aria-keyshortcuts="E"
+                title="จบเทิร์น (E)"
+                onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}>จบเทิร์น</button
               >
               <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
                 {#each turnUses(cur) as u (u.label)}

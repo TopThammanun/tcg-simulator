@@ -304,6 +304,29 @@ async function loadPosition(page: Page) {
 
 const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state());
 
+test('the keyboard: 1–9 picks up a hand card, A opens the attacks, E asks then ends the turn, Esc closes', async ({ page }) => {
+  await loadPosition(page);
+  // The animation menu was just used: keys typed into a field are its own.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('1');
+  await expect(page.locator('.detail-layer')).toContainText('Judge');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.detail-layer')).toHaveCount(0);
+  await page.keyboard.press('a');
+  await expect(page.locator('.pmenu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.pmenu')).toHaveCount(0);
+  const warn = page.getByRole('alertdialog', { name: 'ยังโจมตีได้' });
+  await page.keyboard.press('e');
+  await expect(warn).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(warn).toHaveCount(0);
+  expect((await state(page)).turn).toBe(5);
+  await page.keyboard.press('e');
+  await page.keyboard.press('e');
+  await expect.poll(async () => (await state(page)).turn).toBeGreaterThan(5);
+});
+
 test('a hand card is read before it is played; Energy Switch is answered on the table; you pick your Prize card', async ({ page }) => {
   await loadPosition(page);
   // The hand is shown sorted: the Supporter first, then the Items by name.

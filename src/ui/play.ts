@@ -125,3 +125,20 @@ export function sortedHand(s: GameState, cards: readonly CardId[]): CardId[] {
     .sort((a, b) => a.r - b.r || a.n.localeCompare(b.n) || a.i - b.i)
     .map((x) => x.c);
 }
+
+export type KeyCommand = { t: 'end' } | { t: 'attack' } | { t: 'confirm' } | { t: 'close' } | { t: 'hand'; index: number };
+
+/**
+ * The play screen's keyboard (a computer): E end the turn, A your Active's attacks, 1–9 the Nth card of your hand as
+ * shown, Enter confirm / play the card picked up, Esc close. Nothing with Ctrl/Alt/⌘ or while typing in a field.
+ */
+export function keyCommand(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean; typing?: boolean }): KeyCommand | null {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.typing) return null;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (k === 'e') return { t: 'end' };
+  if (k === 'a') return { t: 'attack' };
+  if (k === 'Enter') return { t: 'confirm' };
+  if (k === 'Escape') return { t: 'close' };
+  if (/^[1-9]$/.test(k)) return { t: 'hand', index: Number(k) - 1 };
+  return null;
+}

@@ -25,7 +25,7 @@ styling only.
 | 7 | A Pokémon in play, zoomed, shows its state | The card alone: no HP left, no Energy/Tool names, no conditions, nothing of the cards under it (a real table lets you look at the pile); the pips on the board are tiny | done 21 Nov |
 | 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | done 21 Nov |
 | 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | done 21 Nov (with #7) |
-| 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | |
+| 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | done 21 Nov |
 | 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | |
 
 ## Log
@@ -73,3 +73,8 @@ styling only.
   declared above the `cur` / `legal` they use — correct at run time, wrong for TypeScript) and 2 unused CSS rules
   (the old `aria-disabled` hand style, `label.check`). Fixed; the check now exits 0. Checks go by the exit code from
   now on. A `{@const}` misplaced in the recap was only caught by loading the page (Vite 500), not by the check.
+- **21 Nov, #10 done.** `keyCommand()` in `ui/play.ts` + `onKey` in Game.svelte: E end the turn (with an attack
+  left it asks; E again ends), A your Active's attacks, 1–9 the Nth hand card as shown (sorted or not), Enter
+  confirms the marked picks / plays the card picked up / ends after the warning, Esc closes the topmost thing (zoom,
+  discard pile, pop-up, warning, picked-up card, recap). Ignored with Ctrl/Alt/⌘, while typing in a field, and Enter
+  on a focused button presses that button. "วิธีเล่น" lists them; the end button has `aria-keyshortcuts="E"`.
