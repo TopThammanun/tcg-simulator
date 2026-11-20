@@ -98,8 +98,10 @@ test('you can set up, attach Energy and end the turn; the bot then plays', async
  * the first Basic in the hand for the Active Spot, then confirm the Bench without adding any.
  */
 async function setUp(page: Page) {
-  for (let i = 0; i < 8; i++) {
-    if (await page.locator('.bar:not(.setup-bar)').isVisible()) break;
+  // The engine's phase, not the status line: "ตาคุณ" shows during setup too, so a stuck setup would only show up
+  // later as a timeout somewhere else.
+  const phase = () => page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state()?.phase as string | undefined);
+  for (let i = 0; i < 30 && (await phase()) !== 'main'; i++) {
     const choice = page.locator('.choice');
     const setup = page.locator('.setup-bar');
     if (await choice.isVisible()) await choice.locator('button').first().click();
@@ -109,6 +111,7 @@ async function setUp(page: Page) {
     }
     await page.waitForTimeout(300);
   }
+  expect(await phase(), 'setup did not finish').toBe('main');
   await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
 }
 

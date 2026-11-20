@@ -21,7 +21,12 @@ styling only.
 | 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | done 21 Nov |
 | 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | done 21 Nov |
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | done 21 Nov |
-| 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | |
+| 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | done 21 Nov |
+| 7 | A Pokémon in play, zoomed, shows its state | The card alone: no HP left, no Energy/Tool names, no conditions, nothing of the cards under it (a real table lets you look at the pile); the pips on the board are tiny | |
+| 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | |
+| 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | |
+| 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | |
+| 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | |
 
 ## Log
 
@@ -49,3 +54,8 @@ styling only.
   Special Energy; by name inside each; copies together in the order drawn. Only the view is sorted (the engine's hand
   order is untouched, so the bot, replays and saved games don't change). "เรียงการ์ดในมือ" checkbox in the side
   column, on by default, saved with the other settings.
+- **21 Nov, #6 done.** `setUp()` in the e2e tests loops until the engine's phase is `main` and fails with "setup did
+  not finish". Checked by putting the setup-tap bug back: 11 s and that message, where it used to be a 2-minute
+  timeout in a later step.
+- **21 Nov, research.** Tapping the bot's Pokémon already opens the card large (CardInfo), so their attacks can be
+  read. Added #7–#11 above.
