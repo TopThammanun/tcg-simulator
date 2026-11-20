@@ -121,6 +121,9 @@
   let selected = $state<CardId | null>(null);
   /** The pop-up for one of your Pokémon (attacks, Abilities, retreat), opened by tapping it. */
   let menuFor = $state<SlotId | null>(null);
+  /** "จบเทิร์น" pressed while an attack can still be used: the dock asks first (an attack lost by a slip is a turn). */
+  let confirmEnd = $state(false);
+  const attacksLeft = $derived([...new Set(legal.filter((a) => a.t === 'attack').map((a) => (a as { name: string }).name))]);
   let menuAnchor = $state<DOMRect | null>(null);
   let picks = $state<number[]>([]);
   let zoom = $state<string | null>(null);
@@ -429,6 +432,7 @@
   function step(a: Action) {
     fx?.finish();
     drag = null;
+    confirmEnd = false;
     // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
     // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
     a = $state.snapshot(a);
@@ -841,14 +845,31 @@
             onzoom={(k) => (zoom = k)}
           />
         {:else if myTurn && !req}
-          <div class="bar">
-            <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
-            <span class="hint">
-              {selected !== null
-                ? 'แตะการ์ดอีกครั้งเพื่อใช้ · แตะ Pokémon ที่สว่าง · หรือลากการ์ดลงสนาม'
-                : 'แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability'}
-            </span>
-          </div>
+          {#if confirmEnd}
+            <div class="bar end-warn" role="alertdialog" aria-label="ยังโจมตีได้">
+              <span class="warn-text"><strong>ยังโจมตีได้อยู่</strong> ({attacksLeft.join(', ')}) จะจบเทิร์นโดยไม่โจมตีไหม?</span>
+              <button
+                type="button"
+                class="primary"
+                onclick={() => {
+                  confirmEnd = false;
+                  menuFor = cur.players[0].active?.uid ?? null;
+                }}>กลับไปโจมตี</button
+              >
+              <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์นเลย</button>
+            </div>
+          {:else}
+            <div class="bar">
+              <button type="button" class="end" onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}
+                >จบเทิร์น</button
+              >
+              <span class="hint">
+                {selected !== null
+                  ? 'แตะการ์ดอีกครั้งเพื่อใช้ · แตะ Pokémon ที่สว่าง · หรือลากการ์ดลงสนาม'
+                  : 'แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability'}
+              </span>
+            </div>
+          {/if}
         {:else if setupReq}
           <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
             {#if setupReq.purpose === 'setup-active'}
@@ -1305,6 +1326,20 @@
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+  }
+  /* Ending the turn while an attack is still there: asked in the dock, the attack first. */
+  .end-warn {
+    padding: 8px 10px;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--accent) 16%, var(--card-bg));
+  }
+  .warn-text {
+    flex: 1 1 260px;
+    font-size: 0.88rem;
+  }
+  .warn-text strong {
+    color: var(--stamp);
   }
   /* Ending the turn: the one big button, as on a game screen. */
   .bar .end {

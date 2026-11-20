@@ -85,7 +85,7 @@ test('you can set up, attach Energy and end the turn; the bot then plays', async
     await energy.click();
     await page.locator('.side.mine .slot.target .card').first().click();
   }
-  await page.getByRole('button', { name: 'จบเทิร์น' }).click();
+  await endTurn(page);
   await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 30_000 });
   const after = await engineState(page);
   expect(after.turn).toBe(before.turn + 2);
@@ -110,6 +110,16 @@ async function setUp(page: Page) {
     await page.waitForTimeout(300);
   }
   await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 20_000 });
+}
+
+/** End the turn; when an attack is still usable the dock asks first, and the answer is to end it. */
+async function endTurn(page: Page) {
+  const end = page.getByRole('button', { name: 'จบเทิร์น', exact: true });
+  const warn = page.getByRole('alertdialog', { name: 'ยังโจมตีได้' });
+  await end.click();
+  // Either the turn ended (the button goes with it) or the dock asks.
+  await expect.poll(async () => (await warn.isVisible()) || !(await end.isVisible())).toBe(true);
+  if (await warn.isVisible()) await warn.getByRole('button', { name: 'จบเทิร์นเลย' }).click();
 }
 
 /** Start a seeded game, Basic Box vs Basic Box, and set up (Active = first Basic, no Bench). */
@@ -167,7 +177,7 @@ test('a played card flies to its place, and acting meanwhile skips the animation
   // The state changes at once; a copy of the card flies over the board.
   expect(await energyOnActive(page)).toBe(1);
   await expect(page.locator('.fx-layer .fx-card')).not.toHaveCount(0);
-  await page.getByRole('button', { name: 'จบเทิร์น' }).click();
+  await endTurn(page);
   await expect(page.locator('.status')).toContainText('ตาคุณ', { timeout: 30_000 });
 });
 
@@ -314,7 +324,13 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect.poll(async () => (await state(page)).players[0].bench[1].energy.length).toBe(1);
 
   // Attack: its own button in the pop-up. Budew is Knocked Out and you pick the 4th Prize card (a Dreepy here).
-  await page.locator('.side.mine .slot.active .card').click();
+  // Ending the turn with an attack still there asks first; going back opens the attacks.
+  await page.getByRole('button', { name: 'จบเทิร์น', exact: true }).click();
+  const warn = page.getByRole('alertdialog', { name: 'ยังโจมตีได้' });
+  await expect(warn).toContainText('Jet Headbutt');
+  await warn.getByRole('button', { name: 'กลับไปโจมตี' }).click();
+  await expect(warn).toHaveCount(0);
+  expect((await state(page)).turn).toBe(5);
   // The attack says what it would do: Budew has 30 HP left.
   const headbutt = page.locator('.pmenu .attack').filter({ hasText: 'Jet Headbutt' });
   await expect(headbutt.locator('.pv')).toHaveText('KO ตัวหลักได้แน่นอน');

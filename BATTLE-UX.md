@@ -18,7 +18,7 @@ styling only.
 |---|------|-----|-------|
 | 1 | Why a hand card can't be played | "ใช้การ์ดนี้ตอนนี้ไม่ได้" alone leaves you guessing (Supporter already played, first turn, Bench full, card condition) | done 21 Nov |
 | 2 | Real damage on the attack button | Printed damage only; Weakness/Resistance and effects change it; say when it Knocks Out | done 21 Nov |
-| 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | |
+| 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | done 21 Nov |
 | 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | |
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | |
 | 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | |
@@ -38,3 +38,7 @@ styling only.
   Weakness / Resistance. The pop-up shows "KO ตัวหลักได้แน่นอน" (gold), "KO ตัวหลัก ~50% · ไม่ KO ก็เข้า 200",
   "เข้าตัวหลักจริง 40 (จุดอ่อน ×2)". ~4 ms per coin attack in Node. 12 copies first: 67% for a true 50%, so 96 and
   shown to 5%. Only the Active: Bench damage depends on your own choices (Phantom Dive), which the preview can't know.
+- **21 Nov, #3 done.** "จบเทิร์น" while `legalActions()` still has an attack: the dock turns into a yellow bar
+  "ยังโจมตีได้อยู่ (ชื่อท่า) จะจบเทิร์นโดยไม่โจมตีไหม?" with "กลับไปโจมตี" (opens the Active's pop-up) and "จบเทิร์นเลย".
+  No browser dialog (they block the page). Any action clears it. e2e: the helper `endTurn()` answers it; the table
+  test checks the bar, going back, and that the turn didn't end.
