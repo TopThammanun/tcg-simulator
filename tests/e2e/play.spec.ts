@@ -310,6 +310,12 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect
     .poll(() => page.locator('.hcard img').evaluateAll((els) => els.map((e) => e.getAttribute('alt'))))
     .toEqual(['Judge', 'Energy Switch', 'Unfair Stamp']);
+  // The bot's Pokémon, tapped: the card large with its state in play.
+  await page.locator('.side.theirs .slot.active .card').click();
+  const zoomed = page.getByRole('dialog', { name: 'Budew' });
+  await expect(zoomed.getByLabel('สถานะในสนาม')).toContainText('ของบอท · ตัวหลัก');
+  await expect(zoomed.getByLabel('สถานะในสนาม')).toContainText('HP 30/30');
+  await zoomed.getByRole('button', { name: 'ปิด' }).click();
   // A card that can't be played says why.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
   await expect(page.locator('.detail-layer .why')).toContainText('ถูก KO');

@@ -7,6 +7,7 @@
   import { keyOf, topKey } from '../../engine/state';
   import type { CardId, GameState, Slot } from '../../engine/types';
   import { def } from '../../engine/db';
+  import { CONDITION } from '../../ui/slot-info';
   import CardFace from './CardFace.svelte';
 
   let {
@@ -99,7 +100,9 @@
     {#if tool}<span class="tool" data-card={slot.tool} title={def(tool).name}>{def(tool).name}</span>{/if}
     {#if slot.damage > 0}<span class="dmg mono" aria-hidden="true"></span>{/if}
     {#if picked > 0}<span class="pick mono">{picked > 1 ? `×${picked}` : '✓'}</span>{/if}
-    {#if slot.conditions.length}<span class="cond">{slot.conditions.map((c) => (c === 'poisoned' ? 'พิษ' : 'สับสน')).join(' ')}</span>{/if}
+    {#if slot.conditions.length}<span class="cond" title={slot.conditions.map((c) => `${CONDITION[c].name}: ${CONDITION[c].does}`).join('\n')}
+        >{slot.conditions.map((c) => (c === 'poisoned' ? 'พิษ' : 'สับสน')).join(' ')}</span
+      >{/if}
     <span class={`hp ${health}`} aria-hidden="true"><span class="mono"></span></span>
   </button>
   {#if energy.length}

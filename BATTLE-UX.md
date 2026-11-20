@@ -22,9 +22,9 @@ styling only.
 | 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | done 21 Nov |
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | done 21 Nov |
 | 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | done 21 Nov |
-| 7 | A Pokémon in play, zoomed, shows its state | The card alone: no HP left, no Energy/Tool names, no conditions, nothing of the cards under it (a real table lets you look at the pile); the pips on the board are tiny | |
+| 7 | A Pokémon in play, zoomed, shows its state | The card alone: no HP left, no Energy/Tool names, no conditions, nothing of the cards under it (a real table lets you look at the pile); the pips on the board are tiny | done 21 Nov |
 | 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | |
-| 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | |
+| 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | done 21 Nov (with #7) |
 | 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | |
 | 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | |
 
@@ -59,3 +59,8 @@ styling only.
   timeout in a later step.
 - **21 Nov, research.** Tapping the bot's Pokémon already opens the card large (CardInfo), so their attacks can be
   read. Added #7–#11 above.
+- **21 Nov, #7 and #9 done.** `ui/slot-info.ts` `slotInfo()`: HP left, Energy (name and type) and Tool, conditions
+  with what they do (`CONDITION`), effects still running (can't attack / retreat, protected, with the turn), the cards
+  under it. The zoomed card (tap the bot's Pokémon, right-click or long-press any) shows it in a band above the card
+  text; your own Pokémon's pop-up shows Energy / Tool / conditions as chips under the name; the "พิษ" / "สับสน" badge
+  has a tooltip. Zoom now remembers which Pokémon it came from (`zoomTo(key, slot)`), so two Dreepy don't mix.

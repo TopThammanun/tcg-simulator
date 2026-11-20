@@ -41,6 +41,7 @@
     chosen = new Map(),
     onslot,
     onzoom,
+    onzoomslot,
     ondiscard,
     onpress,
     canUseStadium = false,
@@ -75,6 +76,8 @@
     chosen?: Map<SlotId, string>;
     onslot: (uid: SlotId) => void;
     onzoom: (key: string) => void;
+    /** A Pokémon in play zoomed (right click / long press): the card and its state. */
+    onzoomslot?: (uid: SlotId, key: string) => void;
     ondiscard: (p: PlayerId) => void;
     onpress?: (uid: SlotId, e: PointerEvent) => void;
     canUseStadium?: boolean;
@@ -111,7 +114,7 @@
     chosen={chosen.get(sl.uid)}
     onclick={() => onslot(sl.uid)}
     onpress={(e) => onpress?.(sl.uid, e)}
-    {onzoom}
+    onzoom={(k) => (onzoomslot ? onzoomslot(sl.uid, k) : onzoom(k))}
   />
 {/snippet}
 

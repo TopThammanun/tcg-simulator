@@ -8,12 +8,14 @@
   import type { Action } from '../../engine/types';
   import type { SlotMenu } from '../../ui/menu';
   import { previewText, type AttackPreview } from '../../ui/preview';
+  import type { SlotInfo } from '../../ui/slot-info';
   import { motion } from '../../ui/anim/motion';
   import CardFace from './CardFace.svelte';
 
   let {
     menu,
     previews = [],
+    info = null,
     anchor,
     hp,
     onact,
@@ -23,6 +25,8 @@
     menu: SlotMenu;
     /** What each attack would do to their Active (ui/preview.ts), in the order of menu.attacks; null for none. */
     previews?: (AttackPreview | null)[];
+    /** Its Energy, Tool, conditions and effects (ui/slot-info.ts). */
+    info?: SlotInfo | null;
     /** The tapped card on screen. */
     anchor: DOMRect | null;
     hp: { left: number; max: number };
@@ -74,6 +78,14 @@
     </div>
     <button type="button" class="x" onclick={onclose} aria-label="ปิด">✕</button>
   </header>
+  {#if info && (info.energy.length || info.tool || info.conditions.length || info.marks.length)}
+    <div class="state">
+      {#each info.energy as e}<span class="chip" style={`--c:var(--t-${e.type.toLowerCase()})`}>{e.name}</span>{/each}
+      {#if info.tool}<span class="chip tool">{info.tool}</span>{/if}
+      {#each info.conditions as c}<span class="chip cond" title={c.does}>{c.name}</span>{/each}
+      {#each info.marks as m}<span class="chip cond">{m}</span>{/each}
+    </div>
+  {/if}
 
   {#each menu.abilities as ab}
     <section class="ability">
@@ -186,6 +198,26 @@
     border: 0;
     background: none;
     cursor: zoom-in;
+  }
+  /* Attached cards and what is on it, under the name. */
+  .state {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .state .chip {
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--c, #ffffff22);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .state .chip.tool {
+    background: #ffffff2e;
+  }
+  .state .chip.cond {
+    background: #c3352b;
   }
   .title {
     display: flex;

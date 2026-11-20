@@ -22,6 +22,7 @@
   import { trackPress } from '../../ui/press';
   import { slotMenu } from '../../ui/menu';
   import { previewAttack } from '../../ui/preview';
+  import { slotInfo } from '../../ui/slot-info';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
@@ -129,6 +130,12 @@
   let menuAnchor = $state<DOMRect | null>(null);
   let picks = $state<number[]>([]);
   let zoom = $state<string | null>(null);
+  /** The zoomed card is a Pokémon in play: its state shows too (ui/slot-info.ts). */
+  let zoomSlot = $state<SlotId | null>(null);
+  function zoomTo(key: string, slot: SlotId | null = null) {
+    zoom = key;
+    zoomSlot = slot;
+  }
   let discardOf = $state<PlayerId | null>(null);
   let error = $state('');
 
@@ -592,7 +599,7 @@
       return;
     }
     const sl = shown && [0, 1].flatMap((p) => slotsOf(shown!.players[p as PlayerId])).find((x) => x.uid === uid);
-    if (sl) zoom = topKey(shown!, sl);
+    if (sl) zoomTo(topKey(shown!, sl), sl.uid);
   }
 
   function pick(v: number) {
@@ -616,10 +623,10 @@
     }
   }
 
-  function press(e: PointerEvent, key: string, drops: Map<string, Drop>, card?: CardId) {
+  function press(e: PointerEvent, key: string, drops: Map<string, Drop>, card?: CardId, slot: SlotId | null = null) {
     trackPress(e, {
       canDrag: drops.size > 0,
-      onLongPress: () => (zoom = key),
+      onLongPress: () => zoomTo(key, slot),
       onDragStart: (x, y) => {
         fx?.finish();
         selected = null;
@@ -666,7 +673,7 @@
     if (grabbable.has(uid)) {
       for (const [zone, a] of slotDrops(cur, legal, uid)) drops.set(zone, { label: describeAction(cur, a), run: () => step(a) });
     }
-    press(e, topKey(shown, sl), drops);
+    press(e, topKey(shown, sl), drops, undefined, uid);
   }
 </script>
 
@@ -762,7 +769,7 @@
       onpick={pick}
       onsubmit={() => step({ t: 'choose', picks })}
       onclear={() => (picks = [])}
-      onzoom={(k) => (zoom = k)}
+      onzoom={(k) => zoomTo(k)}
     />
   {/snippet}
   <div class="game" class:dragging>
@@ -809,7 +816,8 @@
         choosing={onTable}
         chosen={chosenSlots}
         {ready}
-        onzoom={(k) => (zoom = k)}
+        onzoom={(k) => zoomTo(k)}
+        onzoomslot={(uid, k) => zoomTo(k, uid)}
         ondiscard={(p) => (discardOf = p)}
         onpress={onSlotPress}
         canUseStadium={canStadium}
@@ -829,7 +837,7 @@
             {myTurn}
             onplay={(a) => step(a)}
             onclose={() => (selected = null)}
-            onzoom={(k) => (zoom = k)}
+            onzoom={(k) => zoomTo(k)}
           />
         </div>
       {/if}
@@ -844,7 +852,7 @@
             earlier={earlierWords}
             onsubmit={() => step({ t: 'choose', picks })}
             onclear={() => (picks = [])}
-            onzoom={(k) => (zoom = k)}
+            onzoom={(k) => zoomTo(k)}
           />
         {:else if myTurn && !req}
           {#if confirmEnd}
@@ -903,7 +911,7 @@
           sort={sortHand}
           onpick={onHand}
           onpress={onHandPress}
-          onzoom={(k) => (zoom = k)}
+          onzoom={(k) => zoomTo(k)}
         />
       </div>
     </div>
@@ -961,15 +969,22 @@
   <PokemonMenu
     {menu}
     {previews}
+    info={slotInfo(cur!, menu.uid)}
     anchor={menuAnchor}
     hp={{ left: sl ? Math.max(0, maxHp(cur!, sl) - sl.damage) : 0, max: sl ? maxHp(cur!, sl) : 0 }}
     onact={(a) => ((menuFor = null), step(a))}
-    onzoom={(k) => (zoom = k)}
+    onzoom={(k) => zoomTo(k)}
     onclose={() => (menuFor = null)}
   />
 {/if}
 
-{#if zoom}<CardInfo cardKey={zoom} onclose={() => (zoom = null)} />{/if}
+{#if zoom}
+  <CardInfo
+    cardKey={zoom}
+    info={zoomSlot !== null && shown ? slotInfo(shown, zoomSlot) : null}
+    onclose={() => ((zoom = null), (zoomSlot = null))}
+  />
+{/if}
 
 {#if drag}
   <div
@@ -998,7 +1013,7 @@
         {#each shown.players[discardOf].discard as c, i (c)}
           <button
             type="button"
-            onclick={(e) => ((e.stopPropagation(), (zoom = keyOf(shown, c))))}
+            onclick={(e) => (e.stopPropagation(), zoomTo(keyOf(shown, c)))}
             in:scale={{ start: 0.8, delay: motion(Math.min(i, 24) * 18), duration: motion(200) }}
           >
             <CardFace cardKey={keyOf(shown, c)} />
