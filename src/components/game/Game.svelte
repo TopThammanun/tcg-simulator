@@ -387,6 +387,9 @@
   function step(a: Action) {
     fx?.finish();
     drag = null;
+    // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
+    // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
+    a = $state.snapshot(a);
     try {
       const ns = apply(cur!, a);
       states = [...states, ns];

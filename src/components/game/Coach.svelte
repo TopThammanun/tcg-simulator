@@ -24,7 +24,8 @@
   } = $props();
 
   let open = $state(false);
-  let tips = $state<Suggestion[]>([]);
+  // Raw: a tip's action goes into the game state as it is, and a deep $state proxy can't be posted to the bot's worker.
+  let tips = $state.raw<Suggestion[]>([]);
 
   async function ask() {
     const plan = planFor(mine);

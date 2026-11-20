@@ -45,7 +45,9 @@ export function apply(s: GameState, action: Action, opts: { trusted?: boolean } 
   if (action.t === 'choose') {
     if (!s.pending) throw new Error('no choice is pending');
     const { base, action: inner, answers } = s.pending;
-    return run(base, inner, [...answers, action.picks]);
+    // A copy: the state keeps the answers (pending.answers) and must not share the caller's array (the play
+    // screen's picks are a Svelte $state proxy, which can't be posted to the bot's worker or saved).
+    return run(base, inner, [...answers, [...action.picks]]);
   }
   if (s.pending) throw new Error('a choice is pending; answer it with { t: "choose" }');
   if (!opts.trusted && action.t !== 'setup' && !isLegal(s, action)) {

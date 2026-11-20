@@ -237,6 +237,26 @@ test('the hint button explains each suggestion', async ({ page }) => {
   expect((await tips.first().locator('.why').innerText()).length).toBeGreaterThan(12);
 });
 
+test("a hint's move is kept as plain data, so the bot's worker and the saved game can take it", async ({ page }) => {
+  // It used to go in as a Svelte $state proxy: "บอทผิดพลาด: … could not be cloned" once the bot had to answer in the
+  // middle of it (a new Active after your attack), and a finished game could not be saved.
+  await startGame(page, 101);
+  await page.getByRole('button', { name: 'แนะนำ 3 ทางเลือก' }).click();
+  await page.locator('.coach .tips > li .go').first().click();
+  const cloned = await page.evaluate(() => {
+    const t = (window as unknown as { __tcg: { state: () => unknown; history: () => unknown[] } }).__tcg;
+    try {
+      structuredClone(t.history());
+      structuredClone(t.state());
+      return t.history().length;
+    } catch (e) {
+      return String(e);
+    }
+  });
+  expect(cloned).toBeGreaterThan(0);
+  await expect(page.locator('.error', { hasText: 'บอทผิดพลาด' })).toHaveCount(0);
+});
+
 test('the threat panel shows what the opponent can do next turn, and goes away when turned off', async ({ page }) => {
   await startGame(page, 101);
   const panel = page.locator('.threat');

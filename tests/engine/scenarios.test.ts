@@ -234,6 +234,22 @@ describe('meta deck mechanics', () => {
   });
 });
 
+describe('answers to a choice', () => {
+  // The play screen answers with a Svelte $state proxy; a state holding it could not be posted to the bot's worker.
+  it('are copied into the state, so it stays plain data that can be posted to a worker', () => {
+    let s = scenario({ p0: { active: 'abra', hand: ['ultra-ball', 'judge', 'cyrano', 'crispin'], deck: ['dreepy'] }, p1: { active: 'abra' } });
+    s = apply(s, { t: 'trainer', card: handCard(s, 0, 'ultra-ball') });
+    expect(s.pending?.request.purpose).toBe('discard-cost');
+    const picks = s.pending!.request.options.slice(0, 2).map((o) => o.value);
+    const proxied = new Proxy(picks, {});
+    s = apply(s, { t: 'choose', picks: proxied });
+    expect(s.pending).not.toBeNull(); // the search is next: the discard answers stay in pending.answers
+    expect(() => structuredClone(s)).not.toThrow();
+    picks.length = 0;
+    expect(s.pending!.answers[0]).toHaveLength(2);
+  });
+});
+
 describe('turn rules', () => {
   it('the first player cannot attack or play a Supporter on turn 1', () => {
     const s = scenario({ p0: { active: { card: 'abra', energy: ['psychic-energy'] }, hand: ['judge'] }, p1: { active: 'abra' }, turn: 1 });
