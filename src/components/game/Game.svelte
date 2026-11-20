@@ -21,6 +21,7 @@
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
   import { trackPress } from '../../ui/press';
   import { slotMenu } from '../../ui/menu';
+  import { previewAttack } from '../../ui/preview';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
@@ -216,6 +217,10 @@
     return m;
   });
   const menu = $derived(menuFor !== null && myTurn && !cur!.pending ? slotMenu(cur!, legal, menuFor) : null);
+  /** What each usable attack in the pop-up would do to their Active (ui/preview.ts), in the menu's order. */
+  const previews = $derived(
+    menu ? menu.attacks.map((a) => (a.action?.t === 'attack' ? previewAttack(cur!, a.action) : null)) : [],
+  );
   /** Your Pokémon with something to do now (an attack or an Ability): they glow on the table. */
   const ready = $derived.by(() => {
     const r = new Set<SlotId>();
@@ -922,6 +927,7 @@
   {@const sl = slotsOf(cur!.players[0]).find((x) => x.uid === menu.uid)}
   <PokemonMenu
     {menu}
+    {previews}
     anchor={menuAnchor}
     hp={{ left: sl ? Math.max(0, maxHp(cur!, sl) - sl.damage) : 0, max: sl ? maxHp(cur!, sl) : 0 }}
     onact={(a) => ((menuFor = null), step(a))}

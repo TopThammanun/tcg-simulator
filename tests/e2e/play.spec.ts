@@ -315,7 +315,10 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
 
   // Attack: its own button in the pop-up. Budew is Knocked Out and you pick the 4th Prize card (a Dreepy here).
   await page.locator('.side.mine .slot.active .card').click();
-  await page.locator('.pmenu .attack').filter({ hasText: 'Jet Headbutt' }).getByRole('button').click();
+  // The attack says what it would do: Budew has 30 HP left.
+  const headbutt = page.locator('.pmenu .attack').filter({ hasText: 'Jet Headbutt' });
+  await expect(headbutt.locator('.pv')).toHaveText('KO ตัวหลักได้แน่นอน');
+  await headbutt.getByRole('button').click();
   const prizes = page.locator('.side.mine .prize-slot.pick');
   await expect(prizes).toHaveCount(6);
   await prizes.nth(3).click();

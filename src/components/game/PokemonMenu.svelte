@@ -7,11 +7,13 @@
   import { def } from '../../engine/db';
   import type { Action } from '../../engine/types';
   import type { SlotMenu } from '../../ui/menu';
+  import { previewText, type AttackPreview } from '../../ui/preview';
   import { motion } from '../../ui/anim/motion';
   import CardFace from './CardFace.svelte';
 
   let {
     menu,
+    previews = [],
     anchor,
     hp,
     onact,
@@ -19,6 +21,8 @@
     onclose,
   }: {
     menu: SlotMenu;
+    /** What each attack would do to their Active (ui/preview.ts), in the order of menu.attacks; null for none. */
+    previews?: (AttackPreview | null)[];
     /** The tapped card on screen. */
     anchor: DOMRect | null;
     hp: { left: number; max: number };
@@ -88,7 +92,9 @@
 
   {#if menu.active}
     <div class="attacks">
-      {#each menu.attacks as atk}
+      {#each menu.attacks as atk, i}
+        {@const pv = previews[i] ?? null}
+        {@const pvText = pv ? previewText(pv) : null}
         <div class="attack" class:off={!atk.action}>
           <span class="line">
             <span class="cost">
@@ -100,6 +106,7 @@
           </span>
           {#if atk.effect}<span class="text">{atk.effect}</span>{/if}
           {#if atk.reason}<span class="why">{atk.reason}</span>{/if}
+          {#if pvText}<span class="pv" class:ko={pv!.ko > 0} class:sure={pv!.ko >= 1}>{pvText}</span>{/if}
           <button type="button" class="go" disabled={!atk.action} onclick={() => atk.action && onact(atk.action)}>
             โจมตี{atk.action ? ' · จบเทิร์น' : ''}
           </button>
@@ -338,6 +345,24 @@
   }
   .attack.off .dmg {
     color: inherit;
+  }
+  /* What the attack would do to their Active: green for damage, gold for a Knock Out. */
+  .pv {
+    align-self: flex-start;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #ffffff1a;
+    color: #cfe0ff;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .pv.ko {
+    background: #f2c94c33;
+    color: #ffe08a;
+  }
+  .pv.sure {
+    background: #f2c94c;
+    color: #1c1508;
   }
   .why {
     margin: 0;

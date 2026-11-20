@@ -17,7 +17,7 @@ styling only.
 | # | Item | Why | State |
 |---|------|-----|-------|
 | 1 | Why a hand card can't be played | "ใช้การ์ดนี้ตอนนี้ไม่ได้" alone leaves you guessing (Supporter already played, first turn, Bench full, card condition) | done 21 Nov |
-| 2 | Real damage on the attack button | Printed damage only; Weakness/Resistance and effects change it; say when it Knocks Out | |
+| 2 | Real damage on the attack button | Printed damage only; Weakness/Resistance and effects change it; say when it Knocks Out | done 21 Nov |
 | 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | |
 | 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | |
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | |
@@ -32,3 +32,9 @@ styling only.
   over random games a reason is given exactly when the card isn't playable. Found on the way: unplayable hand cards had
   `aria-disabled`, wrong now that any card is tapped to read it (Playwright refused to click them); now an
   `aria-label` "(ใช้ตอนนี้ไม่ได้)".
+- **21 Nov, #2 done.** `ui/preview.ts` `previewAttack()`: each usable attack played out on 96 re-dealt copies
+  (`determinize`: hidden cards and coins drawn again, so the real flips are never seen; a question on the way gets
+  its first options) → damage to their Active (a range when coins or hidden cards decide it), the Knock Out share,
+  Weakness / Resistance. The pop-up shows "KO ตัวหลักได้แน่นอน" (gold), "KO ตัวหลัก ~50% · ไม่ KO ก็เข้า 200",
+  "เข้าตัวหลักจริง 40 (จุดอ่อน ×2)". ~4 ms per coin attack in Node. 12 copies first: 67% for a true 50%, so 96 and
+  shown to 5%. Only the Active: Bench damage depends on your own choices (Phantom Dive), which the preview can't know.
