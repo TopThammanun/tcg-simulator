@@ -34,10 +34,14 @@ DTYPES = {"f2": np.float16, "f4": np.float32, "i1": np.int8, "i2": np.int16, "i4
 
 def read_shard(path: str) -> dict[str, np.ndarray]:
     with open(path, "rb") as f:
-        raw = f.read()
-    (n,) = struct.unpack("<Q", raw[:8])
-    header = json.loads(raw[8 : 8 + n])
-    base = 8 + n
+        return parse_shard(f.read())
+
+
+def parse_shard(raw: bytes | memoryview, start: int = 0) -> dict[str, np.ndarray]:
+    """A shard's arrays from its bytes (a file, or a frame from gen.ts in batched mode), starting at `start`."""
+    (n,) = struct.unpack_from("<Q", raw, start)
+    header = json.loads(bytes(raw[start + 8 : start + 8 + n]))
+    base = start + 8 + n
     out = {}
     for name, h in header.items():
         dt = np.dtype(DTYPES[h["dtype"]])
@@ -166,8 +170,20 @@ class Net(nn.Module):
 V2_DIMS = {"E": 32, "SH": 96, "BAGD": 16, "H": 512, "OH": 128}
 
 
+_FEATURES: dict | None = None
+
+
 def card_features() -> dict:
-    """Card keys (encoder order), feature table (vocab x F, row 0 = no card) and the globals v2 keeps, from TypeScript."""
+    """Card keys (encoder order), feature table (vocab x F, row 0 = no card) and the globals v2 keeps, from TypeScript.
+
+    Read once per process (the cards don't change while it runs)."""
+    global _FEATURES
+    if _FEATURES is None:
+        _FEATURES = _card_features()
+    return {**_FEATURES, "table": _FEATURES["table"].clone()}
+
+
+def _card_features() -> dict:
     import subprocess
 
     path = os.path.join(ROOT, ".cache", "learn", "features.json")
@@ -223,8 +239,15 @@ class Net2(nn.Module):
             ids = torch.where(drop, torch.ones_like(ids), ids)
         return self.id_emb(ids) + self.feat(self.feats)
 
-    def forward(self, b: dict[str, torch.Tensor]):
-        cv = self.card_vectors()
+    def frozen(self) -> dict[str, torch.Tensor]:
+        """Card vectors and bag weights, fixed while the weights don't change (the inference server passes them in,
+        so a captured CUDA graph does not rebuild them)."""
+        with torch.no_grad():
+            cv = self.card_vectors()
+            return {"cv": cv, "bag_w": torch.einsum("nke,ve->nvk", self.bag_p, cv)}
+
+    def forward(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
+        cv = frozen["cv"] if frozen else self.card_vectors()
         slots = b["slots"]
         present = (slots[:, :, 0] > 0).float()
         sc = b["slot_cards"]
@@ -239,7 +262,7 @@ class Net2(nn.Module):
 
         my_mean, my_max = pool(1)
         op_mean, op_max = pool(10)
-        bag_w = torch.einsum("nke,ve->nvk", self.bag_p, cv)
+        bag_w = frozen["bag_w"] if frozen else torch.einsum("nke,ve->nvk", self.bag_p, cv)
         bags = torch.einsum("bnv,nvk->bnk", b["bags"], bag_w).reshape(slots.shape[0], -1) + self.bag_b
         glob = b["glob"][:, self.glob_keep]
         z = torch.cat([tok[:, 0], my_mean, my_max, tok[:, 9], op_mean, op_max, bags, glob, cv[b["source"]]], -1)
@@ -376,16 +399,37 @@ def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
     return net.to(DEVICE)
 
 
-def run_gen(config: dict, path: str) -> dict:
-    """Run scripts/learn/gen.ts with a config; returns its JSON summary line."""
+class Gen:
+    """scripts/learn/gen.ts running with a config (start_gen); wait() returns its JSON summary line."""
+
+    def __init__(self, proc, path: str):
+        self.proc = proc
+        self.path = path
+
+    def wait(self) -> dict:
+        out, err = self.proc.communicate()
+        lines = [l for l in out.splitlines() if l.startswith("{")]
+        if self.proc.returncode != 0 or not lines:
+            raise RuntimeError(f"gen failed ({self.proc.returncode}):\n{out[-2000:]}\n{err[-4000:]}")
+        if err.strip():
+            print(err.strip()[-1500:])
+        return json.loads(lines[-1])
+
+
+def start_gen(config: dict, path: str, server=None) -> Gen:
+    """Start scripts/learn/gen.ts with a config (written to `path`) and return at once.
+
+    With `server` (serve.Server), network players ask it for their forward passes (batched, on the GPU)."""
     import subprocess
 
+    if server is not None:
+        config = {**config, "server": {"port": server.port, **config.get("server", {})}}
     with open(path, "w") as f:
         json.dump(config, f)
-    r = subprocess.run(f'npx tsx scripts/learn/gen.ts "{path}"', cwd=ROOT, shell=True, capture_output=True, text=True, encoding="utf-8")
-    lines = [l for l in r.stdout.splitlines() if l.startswith("{")]
-    if r.returncode != 0 or not lines:
-        raise RuntimeError(f"gen failed ({r.returncode}):\n{r.stdout[-2000:]}\n{r.stderr[-4000:]}")
-    if r.stderr.strip():
-        print(r.stderr.strip()[-1500:])
-    return json.loads(lines[-1])
+    proc = subprocess.Popen(f'npx tsx scripts/learn/gen.ts "{path}"', cwd=ROOT, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    return Gen(proc, path)
+
+
+def run_gen(config: dict, path: str, server=None) -> dict:
+    """Run scripts/learn/gen.ts with a config; returns its JSON summary line (see start_gen)."""
+    return start_gen(config, path, server).wait()

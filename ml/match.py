@@ -60,6 +60,8 @@ def main():
     ap.add_argument("--by-deck", action="store_true", help="also print A's score per deck pair")
     ap.add_argument("--a-decks", default="", help="A plays only these decks: slug or slug=weight,...")
     ap.add_argument("--b-decks", default="", help="B plays only these decks (same form)")
+    ap.add_argument("--server", action="store_true", help="network players without look-ahead (net:, bot) run batched on the GPU (ml/serve.py)")
+    ap.add_argument("--concurrent", type=int, default=64, help="with --server: games in flight per worker")
     a = ap.parse_args()
     # Own config and output per run: matches run side by side must not read each other's config.
     tag = f"match-{os.getpid()}"
@@ -71,7 +73,13 @@ def main():
         "players": {"A": spec(a.a), "B": spec(a.b)},
         "pairs": [{"a": "A", "b": "B", "share": 1, **decks(a)}],
     }
-    r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"))
+    server = None
+    if a.server:
+        from serve import Server
+
+        server = Server().start()
+        cfg["server"] = {"concurrent": a.concurrent}
+    r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), server)
     sc = r["scores"]["A vs B"]
     lo, hi = wilson(sc["score"], sc["n"])
     print(f"{a.a} vs {a.b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}); "

@@ -138,7 +138,18 @@ export class ShardWriter {
     this.optSlot.n = optFrom;
   }
 
+  /** Empty again (one writer reused for many batches). */
+  reset(): void {
+    this.truncate(0);
+    this.open = null;
+  }
+
   write(path: string): void {
+    writeFileSync(path, this.toBuffer());
+  }
+
+  /** The file's bytes; `extra` arrays (name, dtype, shape, data) go after the standard ones. */
+  toBuffer(extra: [string, string, number[], ArrayBufferView][] = []): Buffer {
     const n = this.rows;
     const m = this.optCard.n;
     const arrays: [string, string, number[], ArrayBufferView][] = [
@@ -159,6 +170,7 @@ export class ShardWriter {
       ['optX', 'f2', [m, OPT_F], this.optX.view()],
       ['optCard', 'i2', [m], this.optCard.view()],
       ['optSlot', 'i1', [m], this.optSlot.view()],
+      ...extra,
     ];
     const header: Record<string, { dtype: string; shape: number[]; offset: number }> = {};
     let offset = 0;
@@ -173,6 +185,6 @@ export class ShardWriter {
     head.copy(out, 8);
     const base = 8 + head.length;
     for (const [name, , , a] of arrays) Buffer.from(a.buffer, a.byteOffset, a.byteLength).copy(out, base + header[name]!.offset);
-    writeFileSync(path, out);
+    return out;
   }
 }

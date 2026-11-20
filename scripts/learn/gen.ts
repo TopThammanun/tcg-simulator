@@ -8,9 +8,11 @@
 // Prints one JSON line: games, rows, and each player's score per pairing.
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { makeBot } from '../../src/bots/core';
-import { createBot } from '../../src/bots';
+import { createBot, MODEL } from '../../src/bots';
 import { makeHardBot } from '../../src/bots/hard';
 import { loadModel, type Model, type ModelJson } from '../../src/bots/learn/model';
 import { makeNetBot, recordBot } from '../../src/bots/learn/netbot';
@@ -25,6 +27,7 @@ import { deckKeys } from '../../src/engine/db';
 import type { GameState } from '../../src/engine/types';
 import { loadDeckFiles } from '../lib/decks';
 import { runTsWorker } from '../lib/workers';
+import { playBatched, serverClient, type GameDeps, type ResignSpec, type Served } from './batched';
 import { ShardWriter } from './shard';
 
 export type PlayerSpec =
@@ -53,6 +56,12 @@ export interface GenConfig {
    * from the beginning, with that game's lists and decks. Self-play then learns what real players did to it.
    */
   starts?: { path: string; share: number };
+  /**
+   * Batched forward passes (BOT-LEAP.md, L1): network players ("net", and "bot" without look-ahead) ask the
+   * inference server on this port (ml/serve.py) instead of computing in the worker; each worker keeps
+   * `concurrent` games in flight. `resign`: hopeless served sides give up (batched.ts ResignSpec).
+   */
+  server?: { port: number; concurrent?: number; lanes?: number; resign?: ResignSpec };
 }
 
 /**
@@ -96,12 +105,16 @@ interface Job {
   /** The saved games starts refer to. */
   games?: SavedGame[];
   path: string;
+  server?: GenConfig['server'];
 }
 export interface MatchResult {
   names: [string, string];
   decks: [string, string];
   winner: 0 | 1 | 'draw' | null;
   maxThinkMs: [number, number];
+  /** Batched games: the seat that resigned, or that would have resigned in a game played on to check. */
+  resigned?: 0 | 1;
+  wouldResign?: 0 | 1;
 }
 interface JobResult {
   results: MatchResult[];
@@ -123,7 +136,7 @@ function model(path: string): Model {
   return m;
 }
 
-function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: number, out: ShardWriter | null): Bot {
+function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: number, out: Pick<ShardWriter, 'add'> | null): Bot {
   const plan = planFor(slug);
   const oppPlan = planFor(oppSlug);
   const decks = [plan.name, oppPlan.name] as const;
@@ -160,9 +173,9 @@ function startFrom(games: SavedGame[], start: NonNullable<Match['start']>, seed:
   return s;
 }
 
-export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: ShardWriter | null, gameId: number, games: SavedGame[] = []): MatchResult {
-  const bots = [0, 1].map((i) => makePlayer(players[m.names[i]!]!, m.decks[i]!, m.decks[1 - i]!, m.seed * 2 + i + 1, out));
-  let s: GameState = m.start
+/** A match's first state: a saved game's position, or a new game with the match's lists. */
+function newGame(m: Match, games: SavedGame[]): GameState {
+  return m.start
     ? startFrom(games, m.start, m.seed)
     : createGame({
         seed: m.seed,
@@ -172,6 +185,25 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
         ],
         quiet: true,
       });
+}
+
+const BOT_WEIGHTS = fileURLToPath(new URL('../../src/bots/learn/weights.json', import.meta.url));
+
+/** The network a player spec plays from, when the inference server can play it (no look-ahead, not a recorded bot). */
+function served(spec: PlayerSpec): Served | null {
+  if (spec.kind === 'net') return { model: resolve(spec.weights), temperature: spec.temperature ?? 0, record: !!spec.record };
+  if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: BOT_WEIGHTS, temperature: 0, record: false };
+  return null;
+}
+
+/** What batched.ts needs to play a match of these players. */
+export function gameDeps(players: Record<string, PlayerSpec>, games: SavedGame[] = []): GameDeps<Match, PlayerSpec> {
+  return { players, newGame: (m) => newGame(m, games), served, makePlayer, maxActions: MAX_ACTIONS };
+}
+
+export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: ShardWriter | null, gameId: number, games: SavedGame[] = []): MatchResult {
+  const bots = [0, 1].map((i) => makePlayer(players[m.names[i]!]!, m.decks[i]!, m.decks[1 - i]!, m.seed * 2 + i + 1, out));
+  let s = newGame(m, games);
   const think: [number, number] = [0, 0];
   out?.beginGame(gameId);
   try {
@@ -259,14 +291,27 @@ if (!isMainThread) {
   const job = workerData as Job;
   const out = new ShardWriter();
   const results: MatchResult[] = [];
-  job.matches.forEach((m) => {
-    try {
-      results.push(playMatch(m, job.players, out, m.id, job.games));
-    } catch (e) {
-      results.push({ names: m.names, decks: m.decks, winner: null, maxThinkMs: [0, 0] });
-      console.error(`game ${m.seed} ${m.decks.join(' vs ')} broke: ${(e as Error).message}`);
-    }
-  });
+  const broke = (m: Match, e: Error) => console.error(`game ${m.seed} ${m.decks.join(' vs ')} broke: ${e.message}`);
+  if (job.server) {
+    const client = serverClient(job.server.port);
+    const played = await playBatched(job.matches, gameDeps(job.players, job.games), client.infer, out, {
+      concurrent: job.server.concurrent ?? 64,
+      lanes: job.server.lanes,
+      resign: job.server.resign,
+      onError: broke,
+    });
+    client.close();
+    for (const r of played) results.push({ names: r.m.names, decks: r.m.decks, winner: r.winner, maxThinkMs: r.maxThinkMs, resigned: r.resigned, wouldResign: r.wouldResign });
+  } else {
+    job.matches.forEach((m) => {
+      try {
+        results.push(playMatch(m, job.players, out, m.id, job.games));
+      } catch (e) {
+        results.push({ names: m.names, decks: m.decks, winner: null, maxThinkMs: [0, 0] });
+        broke(m, e as Error);
+      }
+    });
+  }
   if (out.rows > 0) out.write(job.path);
   parentPort!.postMessage({ results, rows: out.rows } satisfies JobResult);
 } else if (process.argv[1]?.endsWith('gen.ts')) {
@@ -284,6 +329,8 @@ export async function generate(c: GenConfig): Promise<{
   /** The same per deck: "<player> <its deck> vs <other deck>". */
   byDeck: Record<string, { score: number; n: number }>;
   maxThinkMs: Record<string, number>;
+  /** Batched games with resigning: games resigned, games played on to check, and how many of those the would-be resigner won. */
+  resign?: { resigned: number; checked: number; wrong: number };
 }> {
   if (!existsSync(c.out)) mkdirSync(c.out, { recursive: true });
   const matches = matchesFor(c);
@@ -295,12 +342,19 @@ export async function generate(c: GenConfig): Promise<{
     players: c.players,
     games,
     path: `${c.out}/shard-${t}.bin`,
+    server: c.server,
   }));
   const parts = await Promise.all(jobs.map((j) => runTsWorker<JobResult>(new URL(import.meta.url), j)));
   const scores: Record<string, { score: number; n: number }> = {};
   const byDeck: Record<string, { score: number; n: number }> = {};
   const maxThinkMs: Record<string, number> = {};
+  const resign = { resigned: 0, checked: 0, wrong: 0 };
   for (const r of parts.flatMap((p) => p.results)) {
+    if (r.resigned !== undefined) resign.resigned++;
+    if (r.wouldResign !== undefined) {
+      resign.checked++;
+      if (r.winner === r.wouldResign) resign.wrong++;
+    }
     for (const i of [0, 1] as const) {
       const points = r.winner === i ? 1 : r.winner === 'draw' || r.winner === null ? 0.5 : 0;
       for (const [table, key] of [
@@ -314,5 +368,5 @@ export async function generate(c: GenConfig): Promise<{
       maxThinkMs[r.names[i]] = Math.max(maxThinkMs[r.names[i]] ?? 0, r.maxThinkMs[i]);
     }
   }
-  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, byDeck, maxThinkMs };
+  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, byDeck, maxThinkMs, ...(c.server?.resign ? { resign } : {}) };
 }

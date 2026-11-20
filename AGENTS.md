@@ -21,7 +21,10 @@ npx tsx scripts/tune.ts --iterations 3000 --validate 8000 --hard 480   # SPSA se
 npx tsx scripts/learn/gen.ts <config.json>   # bot games on every CPU thread -> training shards (format in scripts/learn/shard.ts)
 ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn/bc.json   # imitation of the recorded bot
 ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn/ppo   # self-play PPO; resumes; log.jsonl
-ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats
+#   the networks' moves run batched on the GPU (ml/serve.py <- scripts/learn/batched.ts, ~8x the games; --no-server = old way);
+#   --overlap plays the next iteration while this one trains, --resign 0.03 lets hopeless sides give up (BOT-LEAP.md L1)
+ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats (--server: net/bot players batched on the GPU)
+ml/.venv/Scripts/python ml/serve_check.py <net.json>   # the GPU server gives model.ts's answers on the same rows
 npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/parity.py <net.json> <dir>   # TS = PyTorch
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
 npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
@@ -63,6 +66,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   policy's best few options plus the attack planner's line, played out on determinized deals and scored by the
   value head), or the hard bot when no network is bundled; `{ fast: true }` is the network alone (the simulator
   and its replays, the review's comparison turn).
+  `scripts/learn/gen.ts` plays training games; with a `server` in its config, `batched.ts` keeps many games in flight
+  per worker and sends every waiting decision to `ml/serve.py` (one select loop, CUDA graphs per batch size) in one frame.
   `learn/`: `encode.ts` (what the network sees: a token per Pokémon in play, card-count bags, globals, one row
   per legal action or pick; hidden zones only as combined counts), `model.ts` (forward pass; same layers as
   `ml/common.py`; version 2 files build card vectors from `card-features.ts`, the printed features, plus a vector

@@ -22,7 +22,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from common import DEVICE, ROOT, Data, export, import_json, run_gen
+from common import DEVICE, ROOT, Data, export, import_json, run_gen, start_gen
 
 import glob as globmod
 
@@ -122,6 +122,12 @@ def main():
     ap.add_argument("--vs-weights", default="", help="with --focus: extra weight on some opponent decks, e.g. player=0.4 (the rest spread evenly)")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=480)
+    ap.add_argument("--no-server", dest="server", action="store_false", help="compute the networks' moves in the gen.ts workers (no GPU server)")
+    ap.add_argument("--concurrent", type=int, default=128, help="games in flight per worker (batched, BOT-LEAP.md L1)")
+    ap.add_argument("--resign", type=float, default=0.0, help="a side whose value is below this at the start of --resign-turns own turns in a row resigns (0 = never)")
+    ap.add_argument("--resign-turns", type=int, default=2)
+    ap.add_argument("--keep-playing", type=float, default=0.1, help="share of games where nobody resigns (checks how often resigning was wrong)")
+    ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)
@@ -160,13 +166,18 @@ def main():
         focus = {"decksA": {a.focus: 1}, "decksB": {d: rest + extra.get(d, 0) for d in decks}}
         print(f"specialist: plays {a.focus} against {focus['decksB']}", flush=True)
     log = open(os.path.join(a.dir, "log.jsonl"), "a")
+    server = None
+    if a.server:
+        from serve import Server
 
-    for _ in range(a.iters):
-        it = state["iter"]
-        t0 = time.time()
+        server = Server().start()
+    batched = {"concurrent": a.concurrent, "lanes": 1}
+    resign = {"below": a.resign, "turns": a.resign_turns, "keepPlaying": a.keep_playing} if a.resign > 0 else None
+
+    def gen_config(it: int, out: str, weights: str) -> dict:
         league = sorted(globmod.glob(os.path.join(a.dir, "league-*.json")))
         players = {
-            "net": {"kind": "net", "weights": cur_path, "temperature": 1, "record": True},
+            "net": {"kind": "net", "weights": weights, "temperature": 1, "record": True},
             "old": {"kind": "net", "weights": random.choice(league), "temperature": 1},
             "normal": {"kind": "normal"},
             "hard": {"kind": "hard"},
@@ -175,15 +186,34 @@ def main():
         if a.frozen:
             players["frozen"] = {"kind": "net", "weights": a.frozen, "temperature": 0}
         pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v, **focus} for k, v in mix.items() if v > 0]
-        out = os.path.join(a.dir, "games")
-        shutil.rmtree(out, ignore_errors=True)
         variants = {"variants": {"path": os.path.join(ROOT, ".cache", "meta", "variants.json"), "share": a.variants}} if a.variants > 0 else {}
         if a.starts:
             variants["starts"] = {"path": os.path.abspath(a.starts), "share": a.starts_share}
         cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs, **variants}
-        res = run_gen(cfg, os.path.join(a.dir, "gen.json"))
+        if server:
+            cfg["server"] = {**batched, **({"resign": resign} if resign else {})}
+        return cfg
+
+    def start(it: int):
+        """Start the games of iteration `it`, played by a copy of the current weights (the training goes on writing
+        current.json; with --overlap these games are played while the iteration before trains)."""
+        out = os.path.join(a.dir, f"games-{it % 2}")
+        shutil.rmtree(out, ignore_errors=True)
+        weights = os.path.join(a.dir, f"behavior-{it % 2}.json")
+        shutil.copy(cur_path, weights)
+        return out, start_gen(gen_config(it, out, weights), os.path.join(a.dir, f"gen-{it % 2}.json"), server)
+
+    pending = None
+    for n_iter in range(a.iters):
+        it = state["iter"]
+        t0 = time.time()
+        out, gen = pending or start(it)
+        res = gen.wait()
         t1 = time.time()
         data = Data(sorted(globmod.glob(os.path.join(out, "*.bin"))))
+        # The next iteration's games, played meanwhile by the weights before this update (one iteration behind;
+        # PPO's ratio to the recorded move probabilities corrects for it).
+        pending = start(it + 1) if a.overlap and n_iter < a.iters - 1 else None
         adv, ret = gae(data, a.lam)
         kl_coef = a.kl * max(0.0, 1 - it / max(1, a.kl_iters))
         stats = ppo_update(net, anchor, data, adv, ret, opt, a, kl_coef)
@@ -198,8 +228,9 @@ def main():
             "games": res["games"],
             "scores": {k: round(v["score"] / v["n"], 3) for k, v in res["scores"].items() if k.startswith("net vs")},
             **stats,
-            "gen_s": round(t1 - t0),
+            "gen_s": round(t1 - t0),  # with --overlap: the wait for the games still running
             "train_s": round(time.time() - t1),
+            **({"resign": res["resign"]} if "resign" in res else {}),
         }
         if it % a.eval_every == 0:
             ecfg = {
@@ -214,8 +245,9 @@ def main():
                     **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
                 },
                 "pairs": [{"a": "net", "b": a.eval_vs, "share": 1, **({"decksA": {a.focus: 1}} if a.focus else {})}],
+                **({"server": batched} if server else {}),
             }
-            er = run_gen(ecfg, os.path.join(a.dir, "eval.json"))
+            er = run_gen(ecfg, os.path.join(a.dir, "eval.json"), server)
             sc = er["scores"][f"net vs {a.eval_vs}"]
             row[f"eval_vs_{a.eval_vs}"] = round(sc["score"] / sc["n"], 4)
             row["eval_n"] = sc["n"]
