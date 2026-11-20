@@ -101,6 +101,8 @@
   /** Where each card of a deck's fan sits: the headline Pokémon in the middle, the next two either side. */
   const FAN = [0, -1, 1];
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Your hand sorted by kind and name (on unless turned off; saved with the other settings). */
+  let sortHand = $state(saved.sortHand !== false);
   let animLevel = $state<AnimLevel>((params.get('anim') as AnimLevel) ?? (saved.anim as AnimLevel) ?? (reducedMotion ? 'off' : 'full'));
   // Replays at full bot speed (and the end-to-end games) skip animations.
   const effectiveAnim = $derived<AnimLevel>(watch && speed === 0 ? 'off' : animLevel);
@@ -314,7 +316,7 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel, sortHand }));
     } catch {
       /* ignore */
     }
@@ -898,6 +900,7 @@
           {selected}
           {marked}
           lifted={drag?.card ?? null}
+          sort={sortHand}
           onpick={onHand}
           onpress={onHandPress}
           onzoom={(k) => (zoom = k)}
@@ -926,6 +929,10 @@
             <option value="fast">เร็ว</option>
             <option value="off">ปิด</option>
           </select>
+        </label>
+        <label class="anim-pick">
+          <input type="checkbox" bind:checked={sortHand} onchange={saveSettings} />
+          เรียงการ์ดในมือ
         </label>
         <button type="button" onclick={() => (howto = true)}>วิธีเล่น</button>
       </div>

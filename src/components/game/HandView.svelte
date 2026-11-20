@@ -5,6 +5,7 @@
   import { def } from '../../engine/db';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState } from '../../engine/types';
+  import { sortedHand } from '../../ui/play';
   import CardFace from './CardFace.svelte';
 
   let {
@@ -13,6 +14,7 @@
     selected,
     marked = new Set(),
     lifted = null,
+    sort = true,
     onpick,
     onzoom,
     onpress,
@@ -24,12 +26,14 @@
     marked?: Set<CardId>;
     /** The card being dragged (shown as a gap in the hand). */
     lifted?: CardId | null;
+    /** Show the hand sorted by kind and name (ui/play.ts sortedHand) instead of in the order drawn. */
+    sort?: boolean;
     onpick: (c: CardId) => void;
     onzoom: (key: string) => void;
     onpress?: (c: CardId, e: PointerEvent) => void;
   } = $props();
 
-  const hand = $derived(s.players[0].hand);
+  const hand = $derived(sort ? sortedHand(s, s.players[0].hand) : s.players[0].hand);
   /** Fan: a small turn and drop towards the ends of the hand. */
   const fan = (i: number, n: number) => {
     const mid = (n - 1) / 2;

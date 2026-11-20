@@ -1,6 +1,6 @@
 // Pure helpers for the play screen: what a click on a card or Pokémon can do, Thai labels.
 import { legalActions } from '../engine/actions';
-import { def } from '../engine/db';
+import { def, isBasicEnergy } from '../engine/db';
 import { keyOf, topDef } from '../engine/state';
 import type { Action, CardId, GameState, SlotId } from '../engine/types';
 
@@ -103,4 +103,25 @@ export function turnUses(s: GameState): TurnUse[] {
       ? { label: 'ถอย', state: 'used', title: 'ถอยไปแล้วเทิร์นนี้' }
       : { label: 'ถอย', state: 'free', title: 'ยังถอยได้ 1 ครั้ง' },
   ];
+}
+
+const TRAINER_RANK = { Supporter: 10, Item: 11, Tool: 12, Stadium: 13 } as const;
+const STAGE_RANK = { Basic: 0, Stage1: 1, Stage2: 2 } as const;
+
+/**
+ * Your hand in a fixed order, as players hold it: Pokémon (Basic, Stage 1, Stage 2), Supporters, Items, Tools,
+ * Stadiums, Basic then Special Energy; by name inside each, copies together, otherwise in the order drawn.
+ */
+export function sortedHand(s: GameState, cards: readonly CardId[]): CardId[] {
+  const rank = (c: CardId) => {
+    const k = keyOf(s, c);
+    const d = def(k);
+    if (d.category === 'pokemon') return STAGE_RANK[d.stage];
+    if (d.category === 'energy') return isBasicEnergy(k) ? 20 : 21;
+    return TRAINER_RANK[d.trainerType];
+  };
+  return cards
+    .map((c, i) => ({ c, i, r: rank(c), n: def(keyOf(s, c)).name }))
+    .sort((a, b) => a.r - b.r || a.n.localeCompare(b.n) || a.i - b.i)
+    .map((x) => x.c);
 }

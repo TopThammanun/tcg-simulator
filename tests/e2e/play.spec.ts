@@ -303,6 +303,10 @@ const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg:
 
 test('a hand card is read before it is played; Energy Switch is answered on the table; you pick your Prize card', async ({ page }) => {
   await loadPosition(page);
+  // The hand is shown sorted: the Supporter first, then the Items by name.
+  await expect
+    .poll(() => page.locator('.hcard img').evaluateAll((els) => els.map((e) => e.getAttribute('alt'))))
+    .toEqual(['Judge', 'Energy Switch', 'Unfair Stamp']);
   // A card that can't be played says why.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
   await expect(page.locator('.detail-layer .why')).toContainText('ถูก KO');

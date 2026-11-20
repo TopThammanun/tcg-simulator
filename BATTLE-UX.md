@@ -20,7 +20,7 @@ styling only.
 | 2 | Real damage on the attack button | Printed damage only; Weakness/Resistance and effects change it; say when it Knocks Out | done 21 Nov |
 | 3 | Warn before ending the turn while an attack is available | The big end-turn button makes a lost attack easy | done 21 Nov |
 | 4 | What you used this turn | Supporter / Energy attachment / retreat used or not; the state knows, the screen doesn't say | done 21 Nov |
-| 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | |
+| 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | done 21 Nov |
 | 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | |
 
 ## Log
@@ -45,3 +45,7 @@ styling only.
 - **21 Nov, #4 done.** `turnUses()` in `ui/play.ts`: Supporter / ติดพลังงาน / ถอย as chips beside "จบเทิร์น" — free
   (blue outline), used (✓, faded), barred (struck through: the first player's Supporter on turn 1); a tooltip says
   which. Fits one row on a 390px phone. Unit test (free → used → free next turn, turn-1 bar) and e2e (attach an Energy).
+- **21 Nov, #5 done.** `sortedHand()` in `ui/play.ts`: Pokémon by stage, Supporter, Item, Tool, Stadium, Basic then
+  Special Energy; by name inside each; copies together in the order drawn. Only the view is sorted (the engine's hand
+  order is untouched, so the bot, replays and saved games don't change). "เรียงการ์ดในมือ" checkbox in the side
+  column, on by default, saved with the other settings.
