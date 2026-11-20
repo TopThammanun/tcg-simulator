@@ -161,12 +161,12 @@ export class Fx {
     Object.assign(n.style, { left: `${x}px`, top: `${y}px` });
   }
 
-  /** A card picture (front and back) that can flip. */
-  private card(key: string | null, rect: DOMRect, faceUp: boolean): { node: HTMLElement; inner: HTMLElement } {
+  /** A card picture (front and back) that can flip; `sharp`: the large image (shown big, to be read). */
+  private card(key: string | null, rect: DOMRect, faceUp: boolean, sharp = false): { node: HTMLElement; inner: HTMLElement } {
     const node = this.node('fx-card', rect);
     const inner = el('div', 'fx-inner');
     const front = el('div', 'fx-front');
-    const src = key ? imageFor(key).low : undefined;
+    const src = key ? (sharp ? (imageFor(key).high ?? imageFor(key).low) : imageFor(key).low) : undefined;
     if (src) {
       const img = el('img');
       img.src = src;
@@ -290,7 +290,7 @@ export class Fx {
     const to = this.rectAt(e.to, e.card, c.after, c);
     if (!from || !to) return 0;
     const dest = this.destination(e, c);
-    const { node, inner } = this.card(e.key, from, e.faceUp[0]);
+    const { node, inner } = this.card(e.key, from, e.faceUp[0], !!e.stage);
     node.style.transformOrigin = '0 0';
     const at = (r: DOMRect, lift = 0, s = 1) =>
       `translate(${r.left - from.left}px, ${r.top - from.top - lift}px) scale(${(r.width / from.width) * s})`;
@@ -298,10 +298,11 @@ export class Fx {
     let dur: number;
     let frames: Keyframe[];
     if (e.stage) {
-      // A played Trainer: up to the middle of the table, held there so you can read it, then to the discard pile.
-      const w = Math.max(from.width * 1.5, c.board.width * 0.13);
+      // A played Trainer: up to the middle of the table, large enough to read and held there (the bot's longer: you
+      // didn't choose it), then to the discard pile.
+      const w = Math.max(from.width * 1.5, Math.min(c.board.width * 0.3, c.board.height * 0.52 * CARD));
       const mid = new DOMRect(c.board.left + (c.board.width - w) / 2, c.board.top + c.board.height / 2 - w / CARD / 2, w, w / CARD);
-      dur = 1250 * k;
+      dur = (e.from.player === 0 ? 1300 : 2300) * k;
       frames = [
         { transform: at(from), offset: 0 },
         { transform: at(mid), offset: 0.28 },

@@ -51,6 +51,8 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
   them.knownTop = [];
   d.rng = { shuffle: [derive(seed, 11), derive(seed, 12)], coin: derive(seed, 13) };
   d.quiet = true;
+  // Bots look ahead taking Prize cards in order (a pick by position changes nothing they can know).
+  if (d.rules.pickPrizes) d.rules = { ...d.rules, pickPrizes: false };
   return d;
 }
 

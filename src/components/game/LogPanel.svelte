@@ -38,9 +38,10 @@
     flex-direction: column;
     max-height: 420px;
     overflow-y: auto;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--line);
     background: var(--card-bg);
     font-size: 0.8rem;
+    border-radius: var(--radius);
   }
   .line {
     padding: 2px 8px;

@@ -76,7 +76,7 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     padding: 9% 8%;
     overflow: hidden;
     border-radius: inherit;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background:
       repeating-linear-gradient(-45deg, transparent 0 6px, color-mix(in srgb, var(--rule) 35%, transparent) 6px 7px),
       var(--card-bg);
@@ -93,11 +93,12 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     left: -8px;
     min-width: 2.1em;
     padding: 2px 6px;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-weight: 600;
     font-size: 0.85rem;
-    box-shadow: 2px 2px 0 var(--stamp);
+    box-shadow: 0 4px 0 var(--press);
+    border-radius: 999px;
   }
   .note {
     position: absolute;

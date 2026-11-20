@@ -273,7 +273,21 @@ function takePrizes(ctx: Ctx, p: PlayerId, n: number): void {
   const ps = ctx.ps(p);
   const k = Math.min(n, ps.prizes.length);
   if (k <= 0) return;
-  ps.hand.push(...ps.prizes.splice(0, k));
+  if (p === 0 && ctx.s.rules.pickPrizes && k < ps.prizes.length) {
+    // By position only (the options name no card): face down, which one is taken tells no one anything.
+    const at = ctx.choose({
+      player: p,
+      purpose: 'take',
+      hint: 'prizes',
+      prompt: `เลือก Prize ${k} ใบ`,
+      options: ps.prizes.map((_, i) => ({ value: i, label: `Prize ${i + 1}` })),
+      min: k,
+      max: k,
+    });
+    const taken = at.map((i) => ps.prizes[i]!);
+    for (const i of [...at].sort((a, b) => b - a)) ps.prizes.splice(i, 1);
+    ps.hand.push(...taken);
+  } else ps.hand.push(...ps.prizes.splice(0, k));
   ctx.log(`${ctx.who(p)} เก็บ Prize ${k} ใบ (เหลือ ${ps.prizes.length})`, p);
 }
 

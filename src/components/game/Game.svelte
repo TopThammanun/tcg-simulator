@@ -9,13 +9,13 @@
   import { actor, apply, createGame, legalActions } from '../../engine/actions';
   import { maxHp } from '../../engine/rules';
   import { keyOf, slotsOf, topKey } from '../../engine/state';
-  import type { Action, CardId, GameState, PlayerId, SlotId } from '../../engine/types';
+  import type { Action, CardId, ChoiceRequest, GameState, PlayerId, SlotId } from '../../engine/types';
   import { redeal, viewFor } from '../../engine/view';
   import { makeBot } from '../../bots/core';
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
-  import { actionLabel, describeAction, handActions, targetOf } from '../../ui/play';
+  import { describeAction, handActions, targetOf } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -30,7 +30,9 @@
   import CardBack from './CardBack.svelte';
   import CardFace from './CardFace.svelte';
   import CardInfo from './CardInfo.svelte';
+  import ChoiceBar from './ChoiceBar.svelte';
   import ChoicePanel from './ChoicePanel.svelte';
+  import HandDetail from './HandDetail.svelte';
   import HandView from './HandView.svelte';
   import LogPanel from './LogPanel.svelte';
   import PokemonMenu from './PokemonMenu.svelte';
@@ -171,10 +173,47 @@
   const req = $derived(myTurn && cur!.pending ? cur!.pending.request : null);
   const legal = $derived(myTurn && !cur!.pending ? legalActions(cur!) : []);
   const hand = $derived(myTurn && !cur!.pending ? handActions(cur!) : new Map());
-  /** The card picked up from the hand, when it is played without a target (the dock shows its button). */
-  const selectedNow = $derived.by(() => {
-    const ca = selected !== null ? hand.get(selected) : undefined;
-    return ca?.kind === 'now' ? ca : null;
+  /**
+   * Your answers so far to the card being played (Energy Switch: which Pokémon, which Energy, then where): shown with
+   * the next question, and the Pokémon picked are marked on the table. Same `pending.base` = the same play.
+   */
+  let chain = $state.raw<{ base: GameState; steps: { req: ChoiceRequest; picks: number[] }[] } | null>(null);
+  const earlier = $derived(chain && cur?.pending && cur.pending.base === chain.base ? chain.steps : []);
+  const earlierWords = $derived(
+    earlier.flatMap((st) =>
+      st.req.options.filter((o) => st.picks.includes(o.value)).map((o) => (st.req.hint === 'from' ? `จาก ${o.label}` : o.label)),
+    ),
+  );
+  const chosenSlots = $derived(
+    new Map<SlotId, string>(
+      earlier.flatMap((st) =>
+        st.req.options
+          .filter((o) => o.slot !== undefined && st.picks.includes(o.value))
+          .map((o) => [o.slot!, st.req.hint === 'from' ? 'จาก' : 'เลือกแล้ว'] as [SlotId, string]),
+      ),
+    ),
+  );
+  /**
+   * A pick of an Energy (or Tool) attached to a Pokémon (Energy Switch, Crushing Hammer): made on the table, by tapping
+   * it on its Pokémon. Every attached card that stands for an option (one option per name: any copy on that Pokémon).
+   */
+  const attachedPick = $derived.by(() => {
+    if (!req || req.view || !req.options.length || !req.options.every((o) => o.card !== undefined) || !cur) return null;
+    const where = new Map<CardId, SlotId>();
+    for (const p of [0, 1] as const)
+      for (const sl of slotsOf(cur.players[p])) {
+        for (const e of sl.energy) where.set(e, sl.uid);
+        if (sl.tool !== null) where.set(sl.tool, sl.uid);
+      }
+    if (!req.options.every((o) => where.has(o.card!))) return null;
+    const m = new Map<CardId, number>();
+    for (const [c, uid] of where) {
+      const o =
+        req.options.find((x) => x.card === c) ??
+        req.options.find((x) => where.get(x.card!) === uid && keyOf(cur!, x.card!) === keyOf(cur!, c));
+      if (o) m.set(c, o.value);
+    }
+    return m;
   });
   const menu = $derived(menuFor !== null && myTurn && !cur!.pending ? slotMenu(cur!, legal, menuFor) : null);
   /** Your Pokémon with something to do now (an attack or an Ability): they glow on the table. */
@@ -195,6 +234,10 @@
   const targets = $derived.by(() => {
     const t = new Set<SlotId>();
     if (req) for (const o of req.options) if (o.slot !== undefined) t.add(o.slot);
+    if (attachedPick && cur)
+      for (const p of [0, 1] as const)
+        for (const sl of slotsOf(cur.players[p]))
+          if ([...sl.energy, sl.tool].some((c) => c !== null && attachedPick.has(c))) t.add(sl.uid);
     if (selected !== null) {
       const ca = hand.get(selected);
       if (ca?.kind === 'target') for (const a of ca.actions) t.add(targetOf(a)!);
@@ -206,6 +249,36 @@
     req ? (req.options[0]?.slot !== undefined ? 'slot' : req.options[0]?.card !== undefined ? 'card' : 'label') : null,
   );
   const setupReq = $derived(req && (req.purpose === 'setup-active' || req.purpose === 'setup-bench') ? req : null);
+  /** Which face-down Prize cards to take (engine/rules.ts takePrizes): tapped in your Prize grid. */
+  const prizeReq = $derived(req?.hint === 'prizes' ? req : null);
+  /** The choice is made by tapping on the table (a Pokémon, an Energy on one, a Prize card), not in a box. */
+  const onTable = $derived(!!req && !setupReq && (choiceKind === 'slot' || !!attachedPick || !!prizeReq));
+  /**
+   * Where each Prize card lies in its grid: a taken one leaves a gap, as at a real table (a Prize picked from the
+   * middle leaves the middle empty). Remembered by card, in this script only (the page never sees which card a
+   * Prize is). Per player: the Prize pile's index at each grid spot, or null.
+   */
+  const prizeSpot = new Map<CardId, number>();
+  const prizeGrid = $derived.by(() => {
+    if (!shownRaw) return null;
+    return ([0, 1] as const).map((p) => {
+      const prizes = shownRaw.players[p].prizes;
+      const grid: (number | null)[] = Array(6).fill(null);
+      const rest: number[] = [];
+      prizes.forEach((c, i) => {
+        const at = prizeSpot.get(c);
+        if (at !== undefined && at < grid.length && grid[at] === null) grid[at] = i;
+        else rest.push(i);
+      });
+      for (const i of rest) {
+        const at = grid.indexOf(null);
+        if (at < 0) break;
+        grid[at] = i;
+        prizeSpot.set(prizes[i]!, at);
+      }
+      return grid;
+    }) as [(number | null)[], (number | null)[]];
+  });
   const optionOf = (c: CardId) => setupReq?.options.find((o) => o.card === c);
   const handPlayable = $derived(
     setupReq ? new Set(setupReq.options.map((o) => o.card!)) : new Set<CardId>(hand.keys()),
@@ -269,7 +342,7 @@
           { name: 'บอท', cards: pick.cards },
         ],
         names: ['คุณ', 'บอท'],
-        rules: { twinShotelsPiercesBenchShields: pierce },
+        rules: { twinShotelsPiercesBenchShields: pierce, pickPrizes: true },
       }),
     ];
     if (!watch && !testing && !seenHowTo()) howto = true;
@@ -354,6 +427,11 @@
     // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
     // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
     a = $state.snapshot(a);
+    if (a.t === 'choose' && cur?.pending) {
+      const st = { req: cur.pending.request, picks: a.picks };
+      const base = cur.pending.base;
+      chain = chain && chain.base === base ? { base, steps: [...chain.steps, st] } : { base, steps: [st] };
+    }
     try {
       const ns = apply(cur!, a);
       states = [...states, ns];
@@ -450,8 +528,18 @@
     };
   });
 
-  // Test hook: Playwright reads the engine state to compare with the screen.
-  if (testing) (window as unknown as { __tcg: unknown }).__tcg = { state: () => cur, history: () => history };
+  // Test hook: Playwright reads the engine state to compare with the screen, or sets up a position to play from.
+  if (testing)
+    (window as unknown as { __tcg: unknown }).__tcg = {
+      state: () => cur,
+      history: () => history,
+      load: (s: GameState) => {
+        states = [s];
+        history = [];
+        selected = null;
+        picks = [];
+      },
+    };
   if (watch) start();
   else if (params.has('resume')) void resume(Number(params.get('resume')), Number(params.get('at') ?? 0));
 
@@ -470,7 +558,7 @@
       else selected = null;
       return;
     }
-    if (!ca) return;
+    // Any card can be picked up to read it (HandDetail), playable or not.
     selected = c;
   }
 
@@ -498,8 +586,14 @@
 
   function pick(v: number) {
     if (!req) return;
-    if (req.max === 1 && req.min === 1) {
+    // One Pokémon / Energy tapped on the table, your Active at setup, or one of a few words: that's the answer. A card
+    // picked from a box is marked first and confirmed (so it can be looked at; a real game asks too).
+    if (req.max === 1 && req.min === 1 && (onTable || !!setupReq || choiceKind !== 'card')) {
       step({ t: 'choose', picks: [v] });
+      return;
+    }
+    if (req.max === 1 && !req.repeat && !picks.includes(v)) {
+      picks = [v];
       return;
     }
     if (req.repeat) {
@@ -696,6 +790,13 @@
         ghostBench={benchPicks.map((o) => keyOf(cur, o.card!))}
         onghost={(i) => (picks = picks.filter((v) => v !== benchPicks[i]!.value))}
         onslot={onSlot}
+        pickable={attachedPick}
+        pickedValues={new Set(picks)}
+        onpickcard={pick}
+        {prizeGrid}
+        prizePick={prizeReq ? { picked: new Set(picks), onpick: pick } : null}
+        choosing={onTable}
+        chosen={chosenSlots}
         {ready}
         onzoom={(k) => (zoom = k)}
         ondiscard={(p) => (discardOf = p)}
@@ -704,31 +805,43 @@
         onstadium={() => step({ t: 'stadium' })}
       />
 
-      <!-- Picking cards or an option covers the table; picking Pokémon on the table happens in the dock. -->
-      {#if req && !setupReq && choiceKind !== 'slot'}
+      <!-- Picking cards or an option opens a box over the table; a Pokémon or an attached Energy is tapped on the
+           table itself (the dock says what is asked). The card picked up from your hand shows its text. -->
+      {#if req && !setupReq && !onTable}
         <div class="choice-layer">{@render choice()}</div>
+      {:else if selected !== null && !req && cur.players[0].hand.includes(selected)}
+        <div class="detail-layer">
+          <HandDetail
+            s={cur}
+            card={selected}
+            actions={hand.get(selected)}
+            {myTurn}
+            onplay={(a) => step(a)}
+            onclose={() => (selected = null)}
+            onzoom={(k) => (zoom = k)}
+          />
+        </div>
       {/if}
       {#if error}<p class="error">{error}</p>{/if}
       </div>
 
       <div class="dock">
-        {#if req && !setupReq && choiceKind === 'slot'}
-          {@render choice()}
+        {#if req && !setupReq && onTable}
+          <ChoiceBar
+            {req}
+            {picks}
+            earlier={earlierWords}
+            onsubmit={() => step({ t: 'choose', picks })}
+            onclear={() => (picks = [])}
+            onzoom={(k) => (zoom = k)}
+          />
         {:else if myTurn && !req}
           <div class="bar">
-            <button type="button" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
-            {#if selectedNow}
-              <button type="button" class="primary play" onclick={() => step(selectedNow!.action)}>{actionLabel(cur, selectedNow.action)}</button>
-              <button type="button" class="ghost" onclick={() => (selected = null)}>ยกเลิก</button>
-            {:else if selected !== null}
-              <button type="button" class="ghost" onclick={() => (selected = null)}>ยกเลิก</button>
-            {/if}
+            <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์น</button>
             <span class="hint">
-              {selectedNow
-                ? 'แตะการ์ดอีกครั้ง หรือลากลงสนามเพื่อใช้'
-                : selected !== null
-                  ? 'แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง'
-                  : 'แตะการ์ดในมือเพื่อหยิบ · แตะ Pokémon ของคุณเพื่อโจมตี · ถอย · ใช้ Ability'}
+              {selected !== null
+                ? 'แตะการ์ดอีกครั้งเพื่อใช้ · แตะ Pokémon ที่สว่าง · หรือลากการ์ดลงสนาม'
+                : 'แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability'}
             </span>
           </div>
         {:else if setupReq}
@@ -862,9 +975,10 @@
   .setup {
     max-width: 920px;
     margin: 8px auto 0;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
-    box-shadow: 8px 8px 0 var(--paper-deep);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   .sheet-head {
     display: flex;
@@ -872,7 +986,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 18px 20px 14px;
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 2px solid var(--line);
   }
   .sheet-head h1 {
     margin: 0;
@@ -975,13 +1089,13 @@
     width: 3.2rem;
     height: 3.2rem;
     border-radius: 50%;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.15rem;
     transform: rotate(-8deg);
-    box-shadow: 3px 3px 0 var(--stamp);
+    box-shadow: var(--shadow-lg);
   }
   .prefs {
     display: flex;
@@ -998,12 +1112,12 @@
     margin-left: auto;
     padding: 10px 26px;
     font-size: 1.1rem;
-    box-shadow: 4px 4px 0 var(--stamp);
+    box-shadow: 0 4px 0 var(--press);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .start:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0 var(--stamp);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 var(--press);
   }
   .chip {
     padding: 0 8px;
@@ -1052,28 +1166,31 @@
   }
   select {
     padding: 6px 8px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--line);
     background: var(--paper);
     color: var(--ink);
     font: inherit;
+    border-radius: 10px;
   }
   button {
     padding: 6px 14px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--primary);
     font: inherit;
     cursor: pointer;
+    border-radius: 999px;
   }
   button:disabled {
     opacity: 0.4;
     cursor: default;
   }
   .primary {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
+    border-radius: 999px;
   }
   .ghost {
     background: transparent;
@@ -1145,6 +1262,22 @@
   .choice-layer :global(.choice.zone) {
     width: min(1060px, 100%);
   }
+  /* The card picked up from the hand: its text over the opponent's side (top right), so your Pokémon, where it is
+     played, stay free to tap. */
+  .detail-layer {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 5;
+    display: flex;
+    justify-content: flex-end;
+    width: min(440px, calc(100% - 20px));
+    max-height: calc(100% - 20px);
+    pointer-events: none;
+  }
+  .detail-layer > :global(*) {
+    pointer-events: auto;
+  }
   .result {
     color: var(--stamp);
     font-family: var(--font-display);
@@ -1166,6 +1299,20 @@
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+  }
+  /* Ending the turn: the one big button, as on a game screen. */
+  .bar .end {
+    padding: 8px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(#ff6b4a, #d8391c);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 600;
+    box-shadow: 0 4px 0 #8f2410;
+  }
+  .bar .end:hover {
+    transform: translateY(-1px);
   }
   .hint {
     margin: 0;
@@ -1262,9 +1409,10 @@
   }
   .panel {
     padding: 10px 12px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--line);
     background: var(--card-bg);
     font-size: 0.85rem;
+    border-radius: var(--radius);
   }
   .panel h3 {
     margin: 0 0 6px;
@@ -1291,6 +1439,7 @@
   }
   .anim-pick select {
     padding: 4px 6px;
+    border-radius: 10px;
   }
   .backdrop {
     position: fixed;
@@ -1306,8 +1455,9 @@
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     padding: 16px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
+    border-radius: var(--radius);
   }
   .discard h3 {
     margin: 0 0 10px;

@@ -155,7 +155,8 @@
     </div>
   {/if}
 
-  {#if !(req.max === 1 && req.min === 1)}
+  <!-- A card is marked first and confirmed (it can be looked at); a word is the answer at once. -->
+  {#if kind === 'card' || !(req.max === 1 && req.min === 1)}
     <div class="actions">
       {#if pile}<span class="tip">กดค้าง / คลิกขวาที่การ์ดเพื่อดูใหญ่</span>{/if}
       <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>ล้าง</button>
@@ -169,9 +170,10 @@
 <style>
   .choice {
     padding: 12px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
-    box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 25%, transparent);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   .head {
     display: flex;
@@ -275,11 +277,12 @@
   }
   .lbl {
     padding: 6px 12px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--primary);
     font: inherit;
     cursor: pointer;
+    border-radius: 999px;
   }
   .lbl.big {
     padding: 8px 16px;
@@ -287,8 +290,9 @@
     font-weight: 600;
   }
   .lbl.on {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
+    border-radius: 999px;
   }
   .actions {
     display: flex;
@@ -313,18 +317,21 @@
   .go,
   .ghost {
     padding: 6px 16px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 999px;
   }
   .go {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
+    border-radius: 999px;
   }
   .ghost {
     background: transparent;
-    color: var(--ink);
+    color: var(--primary);
+    border-radius: 999px;
   }
   button:disabled {
     opacity: 0.4;

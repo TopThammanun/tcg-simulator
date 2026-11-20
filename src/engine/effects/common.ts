@@ -45,9 +45,12 @@ export function discardStadium(ctx: Ctx): void {
   if (wasAreaZero) trimBenches(ctx, [st.owner, opp(st.owner)]);
 }
 
-/** Shuffle p's hand into their deck. */
+/** Shuffle p's hand into their deck. The log line also tells the play screen to send every card to the deck, the ones
+ * drawn straight back too (src/ui/anim/events.ts HAND_IN). */
 export function shuffleHandIn(ctx: Ctx, p: PlayerId): void {
   const ps = ctx.ps(p);
+  const n = ps.hand.length;
   ps.deck.push(...ps.hand.splice(0));
   ctx.shuffle(p);
+  if (n > 0) ctx.log(`${ctx.who(p)} สับการ์ดในมือ ${n} ใบเข้าเด็ค`, p);
 }

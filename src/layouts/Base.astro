@@ -25,14 +25,18 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
     />
     <title>{title} · สนามซ้อม Matchup</title>
   </head>
   <body>
     <header class="masthead">
       <a class="brand" href="/">
-        <span class="brand-mark" aria-hidden="true">◆</span>
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="4" y="6" width="15" height="21" rx="3" transform="rotate(-14 11.5 16.5)" fill="#e3412f" stroke="#fff" stroke-width="1.6" />
+          <rect x="13" y="5" width="15" height="21" rx="3" transform="rotate(10 20.5 15.5)" fill="#ffcb2f" stroke="#fff" stroke-width="1.6" />
+          <path d="M20.6 10.5l-3 5.3h2.6l-1.4 5 3.9-6.3h-2.7z" fill="#16213e" />
+        </svg>
         สนามซ้อม <em>Matchup</em>
       </a>
       <nav aria-label="เมนูหลัก">
@@ -56,17 +60,29 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
 </html>
 
 <style is:global>
+  /* Bright and friendly: a sky-blue page, white rounded panels, blue pill buttons with a pressed edge, a yellow
+     accent and a red for emphasis; the header a deep blue band. */
   :root {
-    --paper: #f3eee2;
-    --paper-deep: #e9e2d1;
-    --ink: #1f1c16;
-    --ink-soft: #5d574b;
-    --rule: #cfc6b2;
-    --stamp: #c3352b;
-    --teal: #1d6b66;
-    --card-bg: #fbf8f1;
-    --shadow: 0 1px 0 #fff8 inset, 0 10px 24px -14px #3a2f1a55;
-    --font-display: 'Chakra Petch', 'Anuphan', sans-serif;
+    --paper: #f2f6fd;
+    --paper-deep: #e1eaf8;
+    --ink: #16213e;
+    --ink-soft: #56627e;
+    --rule: #d3deef;
+    --line: #c5d4eb;
+    --stamp: #e3412f;
+    --teal: #1d7a6e;
+    --primary: #2b62d6;
+    --primary-ink: #ffffff;
+    --press: #1b3f98;
+    --accent: #ffcb2f;
+    --accent-ink: #1b2440;
+    --band: #1c3b8c;
+    --band-deep: #132a68;
+    --card-bg: #ffffff;
+    --radius: 16px;
+    --shadow: 0 1px 2px #1b3a6b14, 0 10px 24px -14px #1b3a6b55;
+    --shadow-lg: 0 20px 44px -18px #0f2a5c77;
+    --font-display: 'Mitr', 'Anuphan', sans-serif;
     --font-body: 'Anuphan', 'Leelawadee UI', 'Noto Sans Thai', sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
@@ -86,15 +102,21 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --paper: #17150f;
-      --paper-deep: #211e16;
-      --ink: #ece5d3;
-      --ink-soft: #a69e8b;
-      --rule: #3a3528;
-      --stamp: #e2574b;
-      --teal: #4fb3aa;
-      --card-bg: #221f17;
+      --paper: #0d1530;
+      --paper-deep: #17213f;
+      --ink: #e9eefb;
+      --ink-soft: #9ba9c8;
+      --rule: #26345a;
+      --line: #2e3f6b;
+      --stamp: #ff6655;
+      --teal: #4fc0b0;
+      --primary: #3d7bff;
+      --press: #1d47a8;
+      --band: #142c6e;
+      --band-deep: #0c1c4a;
+      --card-bg: #142043;
       --shadow: 0 10px 24px -14px #000c;
+      --shadow-lg: 0 20px 44px -18px #000e;
       color-scheme: dark;
     }
   }
@@ -111,8 +133,12 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
     display: flex;
     flex-direction: column;
     background-color: var(--paper);
-    /* faint paper grain */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* a fine dot grid over a light wash from the header down */
+    background-image:
+      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 0),
+      linear-gradient(180deg, var(--paper-deep), var(--paper) 480px);
+    background-size: 22px 22px, 100% 100%;
+    background-repeat: repeat, no-repeat;
     color: var(--ink);
     font-family: var(--font-body);
     font-size: 16px;
@@ -130,8 +156,8 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
   h2,
   h3 {
     font-family: var(--font-display);
-    line-height: 1.15;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    line-height: 1.2;
   }
 
   a {
@@ -143,56 +169,65 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
     outline-offset: 2px;
   }
 
+  /* The header: a deep blue band across the page with a yellow edge; the content inside it stays 1200px wide. */
   .masthead {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    width: min(1200px, 100%);
-    margin: 0 auto;
-    padding: 18px 16px 14px;
-    border-bottom: 2px solid var(--ink);
+    width: 100%;
+    padding: 12px max(16px, calc((100% - 1200px) / 2 + 16px));
+    background: linear-gradient(180deg, var(--band), var(--band-deep));
+    border-bottom: 4px solid var(--accent);
+    color: #fff;
+    box-shadow: 0 6px 18px -10px #0b1a4a99;
   }
 
   .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
+    font-weight: 600;
+    font-size: 1.2rem;
     text-decoration: none;
-    letter-spacing: 0.01em;
   }
 
   .brand em {
     font-style: normal;
-    color: var(--stamp);
+    color: var(--accent);
   }
 
   .brand-mark {
-    color: var(--stamp);
-    margin-right: 4px;
+    width: 30px;
+    height: 30px;
+    flex: none;
   }
 
   .masthead nav {
     display: flex;
-    gap: 4px;
+    gap: 6px;
   }
 
   .masthead nav a {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 500;
     text-decoration: none;
-    padding: 4px 12px;
-    border: 1.5px solid transparent;
+    padding: 5px 16px;
+    border-radius: 999px;
+    color: #dfe7ff;
+    transition: background 0.15s ease, color 0.15s ease;
   }
 
   .masthead nav a:hover {
-    border-color: var(--rule);
+    background: #ffffff1f;
+    color: #fff;
   }
 
   .masthead nav a[aria-current='page'] {
-    border-color: var(--ink);
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: 0 3px 0 #c99a12;
   }
 
   .masthead nav a {
@@ -205,7 +240,7 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
       flex-direction: column;
       align-items: stretch;
       gap: 8px;
-      padding: 12px 16px 0;
+      padding: 10px 16px 10px;
     }
     .masthead nav {
       margin: 0 -16px;
@@ -228,7 +263,7 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
     width: min(1200px, 100%);
     margin: 0 auto;
     padding: 16px;
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--line);
     color: var(--ink-soft);
     font-size: 0.8rem;
   }
@@ -238,12 +273,16 @@ const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
   }
 
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--stamp);
-    margin: 0 0 6px;
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--accent-ink);
+    background: var(--accent);
+    padding: 2px 12px;
+    border-radius: 999px;
+    margin: 0 0 10px;
   }
 
   @media (prefers-reduced-motion: no-preference) {

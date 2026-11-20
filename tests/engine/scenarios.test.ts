@@ -1,7 +1,7 @@
 // Scenario tests from PLAN.md ("Scenario test ชุดแรก") plus per-deck mechanics.
 import { describe, expect, it } from 'vitest';
 import { apply, legalActions } from '../../src/engine/actions';
-import { viewFor } from '../../src/engine/view';
+import { determinize, viewFor } from '../../src/engine/view';
 import { active, bench, choose, handCard, optionFor, scenario } from './helpers';
 
 const attack = (s: ReturnType<typeof scenario>, name: string) => apply(s, { t: 'attack', name });
@@ -263,6 +263,28 @@ describe('what a choice shows', () => {
     expect(theirs.options).toEqual([]);
     expect(theirs.view).toBeUndefined();
     expect(viewFor(s, 0).pending!.request.view).toEqual(req.view);
+  });
+
+  it('with pickPrizes you take the face-down Prize cards you point at; bots and look-ahead take them in order', () => {
+    const board = (pickPrizes: boolean) => {
+      const s = scenario({ p0: { active: { card: 'dragapult-ex', energy: ['psychic-energy'] } }, p1: { active: 'budew', bench: ['dreepy'] } });
+      return { ...s, rules: { ...s.rules, pickPrizes } };
+    };
+    const s = board(true);
+    const prizes = s.players[0].prizes.slice();
+    let n = attack(s, 'Jet Headbutt');
+    const req = n.pending!.request;
+    expect(req).toMatchObject({ player: 0, hint: 'prizes', min: 1, max: 1 });
+    expect(req.options.map((o) => o.value)).toEqual([0, 1, 2, 3, 4, 5]);
+    for (const o of req.options) expect(o.card).toBeUndefined();
+    n = choose(n, 4);
+    expect(n.players[0].hand).toContain(prizes[4]);
+    expect(n.players[0].prizes).toEqual(prizes.filter((_, i) => i !== 4));
+    // Without the rule (bots, the simulator): the first Prize, no question.
+    const auto = attack(board(false), 'Jet Headbutt');
+    expect(auto.pending?.request.hint).not.toBe('prizes');
+    expect(auto.players[0].hand).toContain(prizes[0]);
+    expect(determinize(s, 1, 7).rules.pickPrizes).toBe(false);
   });
 });
 

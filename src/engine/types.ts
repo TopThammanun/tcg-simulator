@@ -68,6 +68,11 @@ export interface PlayerState {
 export interface Rules {
   /** Twin Shotels ignores "effects on those Pokémon"; whether that includes Rabsca/Shaymin is unsettled. */
   twinShotelsPiercesBenchShields: boolean;
+  /**
+   * Player 0 (the play screen's player) picks which face-down Prize cards to take, by position, as at a real table.
+   * Off for bots: they take them in order, and their look-ahead turns it off (engine/view.ts determinize()).
+   */
+  pickPrizes?: boolean;
 }
 
 export interface LogEntry {

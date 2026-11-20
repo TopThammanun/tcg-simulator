@@ -15,7 +15,7 @@
   // Drop zones for drag and drop: every Pokémon (`slot:<uid>`), your Active Spot and Bench, the board (`play`).
   import { benchLimit, stadiumKey } from '../../engine/rules';
   import { keyOf } from '../../engine/state';
-  import type { GameState, PlayerId, Slot, SlotId } from '../../engine/types';
+  import type { CardId, GameState, PlayerId, Slot, SlotId } from '../../engine/types';
   import { def } from '../../engine/db';
   import CardBack from './CardBack.svelte';
   import CardFace from './CardFace.svelte';
@@ -32,8 +32,13 @@
     ghostBench = [],
     onghost,
     ready = new Set(),
-    danger = new Map(),
-    dangerStale = false,
+    pickable = null,
+    pickedValues = new Set(),
+    onpickcard,
+    prizeGrid = null,
+    prizePick = null,
+    choosing = false,
+    chosen = new Map(),
     onslot,
     onzoom,
     ondiscard,
@@ -55,9 +60,19 @@
     onghost?: (i: number) => void;
     /** Your Pokémon with an attack or Ability to use now (tap them for the pop-up). */
     ready?: Set<SlotId>;
-    /** Chance each of your Pokémon is Knocked Out next turn ("ภัยเทิร์นหน้า"); stale = for your previous move. */
-    danger?: Map<SlotId, number>;
-    dangerStale?: boolean;
+    /** Energy / Tools on the Pokémon that answer the choice now (card -> option), tapped on the table. */
+    pickable?: Map<CardId, number> | null;
+    /** The options marked so far (a pick of several). */
+    pickedValues?: Set<number>;
+    onpickcard?: (value: number) => void;
+    /** Each player's Prize grid: the Prize pile's index at each spot, or null for a gap (default: filled in order). */
+    prizeGrid?: [(number | null)[], (number | null)[]] | null;
+    /** Your Prize cards are being picked: tap one (its pile index); the ones marked so far. */
+    prizePick?: { picked: Set<number>; onpick: (index: number) => void } | null;
+    /** A choice is made on the table now: the Pokémon that aren't options step back. */
+    choosing?: boolean;
+    /** Pokémon picked earlier for the card being played, with a word ("จาก"). */
+    chosen?: Map<SlotId, string>;
     onslot: (uid: SlotId) => void;
     onzoom: (key: string) => void;
     ondiscard: (p: PlayerId) => void;
@@ -89,8 +104,11 @@
     picked={picks.get(sl.uid) ?? 0}
     abilities={abilities.get(sl.uid) ?? []}
     ready={p === 0 && ready.has(sl.uid)}
-    danger={p === 0 ? (danger.get(sl.uid) ?? 0) : undefined}
-    {dangerStale}
+    {pickable}
+    {pickedValues}
+    {onpickcard}
+    dim={choosing && !targets.has(sl.uid)}
+    chosen={chosen.get(sl.uid)}
     onclick={() => onslot(sl.uid)}
     onpress={(e) => onpress?.(sl.uid, e)}
     {onzoom}
@@ -105,9 +123,20 @@
   {@const open = Math.max(0, benchLimit(s, p) - ps.bench.length - ghosts.length)}
   <section class="side" class:mine class:theirs={!mine} aria-label={mine ? 'สนามของคุณ' : 'สนามของบอท'}>
     <div class="prizes" title="Prize ที่เหลือ">
-      <div class="prize-grid" data-zone={`prizes-${p}`}>
+      <div class="prize-grid" class:picking={mine && !!prizePick} data-zone={`prizes-${p}`}>
         {#each { length: PRIZES } as _, i}
-          <span class="prize-slot">{#if i < ps.prizes.length}<CardBack />{/if}</span>
+          {@const at = prizeGrid ? prizeGrid[p][i] : i < ps.prizes.length ? i : null}
+          {#if mine && prizePick && at !== null && at !== undefined}
+            <button
+              type="button"
+              class="prize-slot pick"
+              class:on={prizePick.picked.has(at)}
+              aria-label={`เก็บ Prize ใบที่ ${i + 1}`}
+              onclick={() => prizePick.onpick(at)}><CardBack /></button
+            >
+          {:else}
+            <span class="prize-slot">{#if at !== null && at !== undefined}<CardBack />{/if}</span>
+          {/if}
         {/each}
       </div>
       <span class="count"><span class="n mono">{ps.prizes.length}</span><span class="lbl">Prize</span></span>
@@ -258,10 +287,10 @@
     row-gap: var(--row-gap);
     padding: 0 var(--pad) 20px;
     border-radius: 14px;
-    background-color: #1d4b45;
+    background-color: #1c3a80;
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-      radial-gradient(120% 70% at 50% 50%, #2b6b60 0%, #1d4b45 55%, #12332f 100%);
+      radial-gradient(120% 70% at 50% 50%, #2d5bb5 0%, #1c3a80 55%, #0f2150 100%);
     color: var(--mat-ink);
     box-shadow:
       inset 0 0 0 1px #ffffff14,
@@ -351,7 +380,7 @@
     transform: translate(-50%, -50%);
     border: 1px solid #ffffff40;
     border-radius: 50%;
-    background: #22564f;
+    background: #1f3f88;
     color: #e2574b;
     font-size: 10px;
   }
@@ -408,6 +437,40 @@
     border-radius: 4px;
     outline: 1px dashed #ffffff2a;
     outline-offset: -1px;
+  }
+  /* Taking Prize cards: each face-down card is a button; the marked ones lift. */
+  .prize-grid.picking {
+    position: relative;
+    z-index: 4;
+  }
+  .prize-slot.pick {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    animation: prize-pick 1.2s ease-in-out infinite;
+    transition: transform 0.12s ease;
+  }
+  .prize-slot.pick:hover,
+  .prize-slot.pick:focus-visible {
+    transform: scale(1.08);
+  }
+  .prize-slot.pick.on {
+    transform: translateY(-5px) scale(1.08);
+    outline: 3px solid var(--stamp);
+    animation: none;
+  }
+  @keyframes prize-pick {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    50% {
+      box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 70%, transparent);
+    }
   }
   .count {
     display: flex;

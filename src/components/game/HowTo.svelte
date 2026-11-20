@@ -9,10 +9,14 @@
   const STEPS = [
     { title: 'วางตัวเริ่มเกม', text: 'ลาก Basic Pokémon จากมือไปช่องตัวหลัก (หรือแตะการ์ด) แล้วเลือกลง Bench กดยืนยัน' },
     {
-      title: 'เล่นการ์ดจากมือ',
-      text: 'ลากการ์ดไปวาง: พลังงาน Tool และร่างวิวัฒนาการวางบน Pokémon, Basic ลง Bench, Item Supporter Stadium วางตรงไหนก็ได้บนสนาม หรือแตะการ์ดเพื่อหยิบ แล้วแตะเป้าหมาย / แตะซ้ำ / กดปุ่มใช้',
+      title: 'อ่านแล้วเล่นการ์ดจากมือ',
+      text: 'แตะการ์ดในมือเพื่ออ่านเอฟเฟกต์ (ยังไม่ใช้) แล้วแตะซ้ำ กดปุ่มใช้ หรือแตะ Pokémon ที่สว่าง · ลากไปวางก็ได้: พลังงาน Tool ร่างวิวัฒนาการวางบน Pokémon, Basic ลง Bench, Item Supporter Stadium วางตรงไหนก็ได้',
     },
-    { title: 'โจมตี ถอย ใช้ Ability', text: 'แตะ Pokémon ของคุณ เมนูจะบอกท่าที่ใช้ได้ และเหตุผลถ้ายังใช้ไม่ได้' },
+    { title: 'โจมตี ถอย ใช้ Ability', text: 'แตะ Pokémon ของคุณเพื่ออ่านท่า แล้วกดปุ่ม "โจมตี" ของท่านั้น · ถอย: แตะตัวที่จะขึ้นมาแทน แล้วกดยืนยัน' },
+    {
+      title: 'เลือกบนสนาม',
+      text: 'การ์ดที่ให้เลือก Pokémon (ตัวขึ้นแทนตัวที่ถูก KO, Boss\'s Orders) หรือพลังงานบน Pokémon (Energy Switch) ให้แตะบนสนามได้เลย · Prize ก็เลือกใบเองได้',
+    },
     { title: 'ดูการ์ดและย้อนดูสนาม', text: 'คลิกขวาหรือกดค้างที่การ์ดเพื่อดูใบใหญ่ · กดบรรทัดใน log เพื่อดูสนามตอนนั้น' },
     {
       title: 'ค้นการ์ดจากเด็ค',
@@ -63,8 +67,9 @@
     overflow-y: auto;
     padding: 24px 24px 20px;
     background: var(--card-bg);
-    border: 2px solid var(--ink);
-    box-shadow: 8px 8px 0 var(--stamp);
+    border: 2px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   h2 {
     margin: 0 0 12px;
@@ -100,13 +105,14 @@
   .primary {
     width: 100%;
     padding: 10px 14px;
-    border: 2px solid var(--ink);
-    background: var(--ink);
-    color: var(--paper);
+    border: 2px solid var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
+    border-radius: 999px;
   }
   @media (prefers-reduced-motion: no-preference) {
     li {

@@ -136,7 +136,7 @@ let tileIndex = 0;
     color: var(--stamp);
   }
   .deck-head {
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 2px solid var(--line);
     padding-bottom: 16px;
     margin-bottom: 24px;
   }
@@ -162,16 +162,18 @@ let tileIndex = 0;
   .button {
     display: inline-block;
     padding: 6px 14px;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
     text-decoration: none;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--primary);
+    border-radius: 999px;
   }
   .button.alt {
     background: transparent;
-    color: var(--ink);
+    color: var(--primary);
+    border-radius: 999px;
   }
   .layout {
     display: grid;
@@ -184,8 +186,9 @@ let tileIndex = 0;
     top: 16px;
     padding: 16px 16px 12px;
     background: var(--card-bg);
-    border: 1.5px solid var(--ink);
-    box-shadow: 6px 6px 0 var(--paper-deep);
+    border: 1.5px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   .sheet h2 {
     display: flex;
@@ -193,7 +196,7 @@ let tileIndex = 0;
     font-size: 0.95rem;
     margin: 12px 0 4px;
     padding-bottom: 2px;
-    border-bottom: 1px solid var(--ink);
+    border-bottom: 1px solid var(--line);
   }
   .sheet section:first-child h2 {
     margin-top: 0;
@@ -269,10 +272,11 @@ let tileIndex = 0;
     width: min(860px, calc(100% - 32px));
     max-height: calc(100% - 32px);
     padding: 24px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
     color: var(--ink);
-    box-shadow: 10px 10px 0 color-mix(in srgb, var(--ink) 30%, transparent);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   dialog::backdrop {
     background: color-mix(in srgb, #1a150c 55%, transparent);

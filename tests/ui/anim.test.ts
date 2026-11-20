@@ -63,6 +63,20 @@ describe('cards moving between zones', () => {
     expect(evs.indexOf(played)).toBeLessThan(evs.indexOf(draws[0]!));
   });
 
+  it('a hand shuffled into the deck goes in whole, even the cards drawn straight back', () => {
+    // An empty deck: Judge puts the other 3 cards in and draws them all again, so before and after they are in the hand.
+    const s = scenario({ p0: { active: 'dreepy', hand: ['grass-energy', 'meowth-ex', 'judge', 'heros-cape'], deck: [] }, p1: { active: 'dreepy' } });
+    const card = handCard(s, 0, 'judge');
+    const n = chooseFirst(apply(s, { t: 'trainer', card }));
+    const others = s.players[0].hand.filter((c) => c !== card);
+    expect(n.players[0].hand.slice().sort()).toEqual(others.slice().sort());
+    const moves = of(animEvents(s, n, { t: 'trainer', card }), 'move');
+    for (const c of others) {
+      expect(moves.some((m) => m.card === c && m.from.zone === 'hand' && m.to.zone === 'deck')).toBe(true);
+      expect(moves.some((m) => m.card === c && m.from.zone === 'deck' && m.to.zone === 'hand')).toBe(true);
+    }
+  });
+
   it("never names a card you can't see", () => {
     const s = board();
     const card = handCard(s, 0, 'judge');

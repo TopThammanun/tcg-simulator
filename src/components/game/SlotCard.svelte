@@ -5,7 +5,7 @@
   // The container sets the width (Active Spot or a Bench cell).
   import { maxHp, provides, toolKey } from '../../engine/rules';
   import { keyOf, topKey } from '../../engine/state';
-  import type { GameState, Slot } from '../../engine/types';
+  import type { CardId, GameState, Slot } from '../../engine/types';
   import { def } from '../../engine/db';
   import CardFace from './CardFace.svelte';
 
@@ -19,8 +19,11 @@
     ready = false,
     over = false,
     grab = false,
-    danger,
-    dangerStale = false,
+    pickable = null,
+    pickedValues = new Set(),
+    onpickcard,
+    dim = false,
+    chosen,
     onclick,
     onzoom,
     onpress,
@@ -37,10 +40,15 @@
     over?: boolean;
     /** This Pokémon can be dragged (to retreat). */
     grab?: boolean;
-    /** Chance (0–1) it is Knocked Out on the opponent's next turn ("ภัยเทิร์นหน้า"); shown from 5%. */
-    danger?: number;
-    /** The chance is for your previous move (a new one is on its way). */
-    dangerStale?: boolean;
+    /** Attached cards that answer the choice now (card -> option): tapped on the Pokémon. */
+    pickable?: Map<CardId, number> | null;
+    /** The options marked so far (a pick of several): their pips stay lifted. */
+    pickedValues?: Set<number>;
+    onpickcard?: (value: number) => void;
+    /** A choice is made on the table and this Pokémon isn't an option. */
+    dim?: boolean;
+    /** Picked earlier for the card being played ("จาก"). */
+    chosen?: string;
     onclick?: () => void;
     onzoom?: (key: string) => void;
     onpress?: (e: PointerEvent) => void;
@@ -66,6 +74,8 @@
   class:grab
   class:ready
   class:picked={picked > 0}
+  class:dim
+  class:confused={slot.conditions.includes('confused')}
   data-drop={`slot:${slot.uid}`}
   data-slot={slot.uid}
   style:--left={left}
@@ -93,22 +103,27 @@
     <span class={`hp ${health}`} aria-hidden="true"><span class="mono"></span></span>
   </button>
   {#if energy.length}
-    <span class="energy" class:many={energy.length > 4}>
+    <span class="energy" class:many={energy.length > 4 && !pickable} class:picking={!!pickable}>
       {#each energy as e (e.id)}
-        <span class="pip" data-card={e.id} style={`--c:var(--t-${e.type.toLowerCase()})`} title={def(e.key).name}>{LETTER[e.type]}</span>
+        {#if pickable?.has(e.id)}
+          <button
+            type="button"
+            class="pip pickable"
+            class:on={pickedValues.has(pickable.get(e.id)!)}
+            data-card={e.id}
+            style={`--c:var(--t-${e.type.toLowerCase()})`}
+            title={def(e.key).name}
+            aria-label={`เลือก ${def(e.key).name}`}
+            onclick={() => onpickcard?.(pickable.get(e.id)!)}>{LETTER[e.type]}</button
+          >
+        {:else}
+          <span class="pip" class:off={!!pickable} data-card={e.id} style={`--c:var(--t-${e.type.toLowerCase()})`} title={def(e.key).name}>{LETTER[e.type]}</span>
+        {/if}
       {/each}
     </span>
   {/if}
+  {#if chosen}<span class="chosen">{chosen}</span>{/if}
   {#if abilities.length}<span class="ability-badge" title={abilities.join(', ')}>✦ Ability</span>{/if}
-  {#if danger !== undefined && danger >= 0.05}
-    <span
-      class="danger"
-      class:high={danger >= 0.5}
-      class:mid={danger >= 0.15 && danger < 0.5}
-      class:stale={dangerStale}
-      title="โอกาสโดน KO เทิร์นหน้า ถ้าจบเทิร์นตอนนี้">KO {Math.round(danger * 100)}%</span
-    >
-  {/if}
 </div>
 
 <style>
@@ -331,44 +346,72 @@
     pointer-events: none;
     box-shadow: 0 3px 8px #000b;
   }
-  /* "ภัยเทิร์นหน้า": chance of a Knock Out next turn, on the right edge above the HP bar. */
-  .danger {
-    position: absolute;
-    right: -8px;
-    bottom: 19%;
-    z-index: 3;
-    padding: 1px 6px;
-    border: 1.5px solid #fff;
-    border-radius: 999px;
-    background: #3a3f3c;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    font-weight: 700;
-    line-height: 1.3;
-    white-space: nowrap;
+  /* A choice on the table: the Energy you may pick grow and pulse; the rest step back. */
+  .energy.picking {
+    gap: 4px;
+    z-index: 4;
+  }
+  .pip.pickable {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 0.72rem;
+    cursor: pointer;
+    border: 2px solid #fff;
+    animation: pip-pick 1.1s ease-in-out infinite;
+  }
+  .pip.pickable:hover,
+  .pip.pickable:focus-visible {
+    transform: scale(1.18);
+    outline: none;
+  }
+  @keyframes pip-pick {
+    0%,
+    100% {
+      box-shadow: 0 0 0 2px var(--accent), 0 2px 6px #000a;
+    }
+    50% {
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 60%, transparent), 0 2px 6px #000a;
+    }
+  }
+  .pip.pickable.on {
+    transform: translateY(-6px) scale(1.12);
+    border-color: var(--accent);
+    animation: none;
+    box-shadow: 0 0 0 3px var(--accent), 0 4px 8px #000a;
+  }
+  .pip.off {
+    opacity: 0.35;
+  }
+  .dim .card {
+    filter: grayscale(0.6) brightness(0.62);
+  }
+  .dim {
     pointer-events: none;
-    box-shadow: 0 2px 5px #000a;
-    transition: opacity 0.15s ease;
   }
-  .danger.mid {
-    background: #c8941f;
-    color: #1c1508;
+  .chosen {
+    position: absolute;
+    left: 50%;
+    top: -10px;
+    z-index: 4;
+    transform: translateX(-50%);
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.7rem;
+    font-weight: 800;
+    box-shadow: 0 2px 6px #000a;
+    pointer-events: none;
   }
-  .danger.high {
-    background: #c3352b;
-  }
-  .danger.stale {
-    opacity: 0.45;
+  /* Confused: the card is turned upside down, as at a real table. */
+  .confused .card :global(.face) {
+    transform: rotate(180deg);
   }
   .mono {
     font-family: var(--font-mono);
   }
   @media (max-width: 700px) {
-    .danger {
-      padding: 0 4px;
-      font-size: 0.52rem;
-    }
     .hp {
       font-size: 0.56rem;
     }

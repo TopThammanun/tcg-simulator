@@ -105,7 +105,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`
   (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
-  rendered by `PokemonMenu.svelte` — attacking and retreating happen there, not in the dock).
+  rendered by `PokemonMenu.svelte` — attacking and retreating happen there, not in the dock; reading never acts:
+  each attack has its own button, a retreat is picked then confirmed).
 - `src/ui/anim/` — animations (plan and research: `ANIMATION-PLAN.md`). `events.ts` reads what happened
   from the state before/after an action (pure, tested); `fx.ts` plays it with the Web Animations API on
   the overlay in `FxLayer.svelte`, finding things by `data-card` / `data-slot` / `data-zone`. The state
@@ -117,13 +118,23 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
   Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
   game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo; a tap picks a hand card up
-  (a second tap or the dock's button plays it, a drag plays it at once). A choice shows the card whose effect asks,
+  and shows its text (`HandDetail.svelte`, over the opponent's side; a second tap or its button plays it, a drag plays
+  it at once). A choice of Pokémon, of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
+  grow) or of your Prize cards is made on the table: the dock shows `ChoiceBar.svelte` (what is asked, this card's
+  earlier answers) and the Pokémon that aren't options dim. Prize cards: `rules.pickPrizes` (the play screen only)
+  asks player 0 which face-down Prize to take, by position; bots and look-ahead take them in order (`determinize()`
+  turns it off); a taken Prize leaves its gap (`prizeGrid` in Game.svelte). A card picked from a box is marked, then
+  confirmed. `?test=1` exposes `window.__tcg` (`state()`, `history()`, `load(state)`: play on from a built position,
+  see the e2e tests). A choice shows the card whose effect asks,
   and an effect that looks at a pile (`ChoiceRequest.view`: a deck search shows the whole deck, "look at the top N"
   those cards) shows all of it, the cards you may take lit (`ChoicePanel.svelte`). A saved game picked up again has
   the hidden cards dealt again (`engine/view.ts` `redeal()`).
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
+  Theme: tokens on `:root` in `layouts/Base.astro` (sky-blue page, deep blue header band, `--primary` blue pill buttons
+  with a `--press` edge, `--accent` yellow, `--stamp` red, `--line` / `--radius` for panels; Mitr for headings);
+  the playmat is blue (`.table` in Board.svelte). Original styling only: no official logos or game trade dress.
 
 ## Versions
 

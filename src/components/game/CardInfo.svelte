@@ -5,13 +5,10 @@
   import { def } from '../../engine/db';
   import { motion } from '../../ui/anim/motion';
   import CardFace from './CardFace.svelte';
+  import CardText from './CardText.svelte';
 
   let { cardKey, onclose }: { cardKey: string; onclose: () => void } = $props();
   const d = $derived(def(cardKey));
-  const LETTER: Record<string, string> = {
-    Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
-    Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
-  };
 </script>
 
 <div
@@ -26,33 +23,7 @@
   <div class="info" role="dialog" aria-label={d.name} in:scale={{ start: 0.85, duration: motion(220), easing: backOut }}>
     <button type="button" class="close" onclick={onclose} aria-label="ปิด">×</button>
     <div class="img"><CardFace {cardKey} size="high" /></div>
-    <div class="text">
-      <h3>{d.name}</h3>
-      {#if d.category === 'pokemon'}
-        <p class="sub">
-          {d.stage === 'Stage1' ? 'Stage 1' : d.stage === 'Stage2' ? 'Stage 2' : 'Basic'}{d.evolvesFrom ? ` · จาก ${d.evolvesFrom}` : ''}
-          · {d.hp} HP · {d.types.join('/')}{d.tera ? ' · Tera' : ''}{d.prizes > 1 ? ` · ${d.prizes} prize` : ''}
-        </p>
-        {#each d.abilities as a}
-          <p><span class="tag">Ability</span> <strong>{a.name}</strong><br />{a.effect}</p>
-        {/each}
-        {#each d.attacks as a}
-          <p>
-            <span class="mono">[{a.cost.map((c) => LETTER[c]).join('') || '0'}]</span>
-            <strong>{a.name}</strong>
-            <span class="mono dmg">{a.damage}</span>
-            {#if a.effect}<br />{a.effect}{/if}
-          </p>
-        {/each}
-        <p class="sub mono">
-          weak {d.weaknesses.map((w) => `${LETTER[w.type]}${w.value}`).join(' ') || '—'} · resist
-          {d.resistances.map((w) => `${LETTER[w.type]}${w.value}`).join(' ') || '—'} · retreat {d.retreat}
-        </p>
-      {:else}
-        <p class="sub">{d.category === 'trainer' ? d.trainerType : `${d.energyType} Energy`}{d.aceSpec ? ' · ACE SPEC' : ''}</p>
-        {#if d.effect}<p class="effect">{d.effect}</p>{/if}
-      {/if}
-    </div>
+    <CardText {cardKey} />
   </div>
 </div>
 
@@ -75,9 +46,10 @@
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     padding: 20px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
     color: var(--ink);
+    border-radius: var(--radius);
   }
   .close {
     position: absolute;
@@ -88,30 +60,6 @@
     color: var(--ink);
     font-size: 1.6rem;
     cursor: pointer;
-  }
-  h3 {
-    margin: 0 0 4px;
-    padding-right: 28px;
-  }
-  .sub {
-    color: var(--ink-soft);
-    font-size: 0.85rem;
-  }
-  .tag {
-    padding: 0 4px;
-    background: var(--stamp);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-  }
-  .dmg {
-    float: right;
-  }
-  .effect {
-    white-space: pre-line;
-  }
-  .mono {
-    font-family: var(--font-mono);
   }
   @media (max-width: 640px) {
     .info {

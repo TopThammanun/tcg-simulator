@@ -189,9 +189,12 @@ test('tapping your Active opens a pop-up with its attacks and retreating', async
   const menu = page.getByRole('dialog').filter({ has: page.locator('.attacks') });
   await expect(menu).toBeVisible();
   await expect(menu.locator('.attack').first()).toBeVisible();
-  // Nothing attached yet: the attack is greyed out with the reason; no Bench, so no retreat.
-  await expect(menu.locator('.attack').first()).toBeDisabled();
+  // Nothing attached yet: the attack's button is greyed out with the reason; no Bench, so no retreat.
+  await expect(menu.locator('.attack .go').first()).toBeDisabled();
   await expect(menu.locator('.attack .why').first()).not.toBeEmpty();
+  // Reading an attack never uses it: only its button does.
+  await menu.locator('.attack .aname').first().click();
+  await expect(menu).toBeVisible();
   await expect(menu.locator('.retreat')).toContainText('ไม่มี Pokémon บน Bench');
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
@@ -245,6 +248,79 @@ test('a deck search shows your whole deck, the cards you may take lit; a tap pic
     }
   });
   expect(cloned).toBe('ok');
+});
+
+/** Play from a position built here: Dragapult ex (Fire + Psychic) Active, Dreepy (Psychic) and Drakloak on the Bench,
+ * Energy Switch in hand; the bot's Budew (30 HP) Active; you pick your Prize cards. */
+async function loadPosition(page: Page) {
+  await page.goto('/play/?test=1&seed=5&me=dragapult-ex&opp=basic-box');
+  await page.getByRole('button', { name: /เริ่มเกม/ }).click();
+  await expect(page.locator('.board')).toBeVisible();
+  await page.evaluate(() => {
+    const cards: { id: number; key: string; owner: 0 | 1 }[] = [];
+    const make = (key: string, owner: 0 | 1) => (cards.push({ id: cards.length, key, owner }), cards.length - 1);
+    let uid = 1;
+    const slot = (key: string, owner: 0 | 1, energy: string[] = []) => ({
+      uid: uid++, stack: [make(key, owner)], energy: energy.map((k) => make(k, owner)), tool: null, damage: 0,
+      enteredTurn: 0, evolvedTurn: -1, conditions: [], marks: [], usedAbility: {},
+    });
+    const side = (p: 0 | 1, active: ReturnType<typeof slot>, bench: ReturnType<typeof slot>[], hand: string[]) => ({
+      active, bench, hand: hand.map((k) => make(k, p)), deck: Array.from({ length: 20 }, () => make('psychic-energy', p)), discard: [],
+      prizes: ['fire-energy', 'budew', 'judge', 'dreepy', 'psychic-energy', 'meowth-ex'].map((k) => make(k, p)),
+      supporterPlayed: false, energyAttached: false, retreated: false, stadiumPlayed: false, namedUsed: [], buffs: [],
+      itemLockTurn: -1, koLastTurn: false, koByAttackLastTurn: false, koThisTurn: false, koByAttackThisTurn: false,
+      mulligans: 0, knownTop: [],
+    });
+    const players = [
+      side(0, slot('dragapult-ex', 0, ['fire-energy', 'psychic-energy']), [slot('dreepy', 0, ['psychic-energy']), slot('drakloak', 0)], ['energy-switch', 'judge']),
+      side(1, slot('budew', 1), [slot('dreepy', 1)], []),
+    ];
+    const s = {
+      seed: 1, turn: 5, current: 0, first: 0, phase: 'main', players, stadium: null, cards, rng: { shuffle: [11, 22], coin: 33 },
+      nextUid: uid, pending: null, winner: null, winReason: '', log: [], quiet: false, steps: 0,
+      rules: { twinShotelsPiercesBenchShields: false, pickPrizes: true }, names: ['คุณ', 'บอท'],
+    };
+    (window as unknown as { __tcg: { load: (s: unknown) => void } }).__tcg.load(s);
+  });
+  await page.locator('.anim-pick select').selectOption('off');
+}
+
+const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state());
+
+test('a hand card is read before it is played; Energy Switch is answered on the table; you pick your Prize card', async ({ page }) => {
+  await loadPosition(page);
+  // A tap shows the card's text and a button; nothing is played yet.
+  await page.locator('.hcard').filter({ has: page.locator('img[alt="Energy Switch"]') }).click();
+  const detail = page.locator('.detail-layer');
+  await expect(detail).toContainText('Move a Basic Energy');
+  expect((await state(page)).pending).toBeNull();
+  await detail.getByRole('button', { name: 'ใช้ Energy Switch' }).click();
+
+  // From which Pokémon: tapped on the table (no box over it); the others step back.
+  await expect(page.locator('.choice-layer')).toHaveCount(0);
+  await expect(page.locator('.side.theirs .slot.dim').first()).toBeVisible();
+  await page.locator('.side.mine .slot.active .card').click();
+  // Which Energy: its pip on that Pokémon; what was picked so far stays in the bar.
+  await expect(page.locator('.dock')).toContainText('จาก Dragapult ex');
+  await page.getByRole('button', { name: 'เลือก Psychic Energy' }).click();
+  // Where to: Drakloak.
+  await expect(page.locator('.dock')).toContainText('Psychic Energy');
+  const drakloak = (await state(page)).players[0].bench[1].uid;
+  await page.locator(`[data-slot="${drakloak}"] .card`).click();
+  await expect.poll(async () => (await state(page)).players[0].bench[1].energy.length).toBe(1);
+
+  // Attack: its own button in the pop-up. Budew is Knocked Out and you pick the 4th Prize card (a Dreepy here).
+  await page.locator('.side.mine .slot.active .card').click();
+  await page.locator('.pmenu .attack').filter({ hasText: 'Jet Headbutt' }).getByRole('button').click();
+  const prizes = page.locator('.side.mine .prize-slot.pick');
+  await expect(prizes).toHaveCount(6);
+  await prizes.nth(3).click();
+  await expect.poll(async () => (await state(page)).players[0].prizes.length).toBe(5);
+  const s = await state(page);
+  expect(s.players[0].hand.map((c: number) => s.cards[c].key)).toContain('dreepy');
+  // The taken Prize leaves its gap where it was.
+  await expect(page.locator('.side.mine .prize-grid > :nth-child(4) > *')).toHaveCount(0);
+  await expect(page.locator('.side.mine .prize-grid > :nth-child(5) > *')).toHaveCount(1);
 });
 
 test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {

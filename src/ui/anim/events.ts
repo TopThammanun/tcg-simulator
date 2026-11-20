@@ -69,6 +69,8 @@ function slotMap(s: GameState): Map<SlotId, { player: PlayerId; slot: Slot }> {
 }
 
 const COIN = /^โยนเหรียญ: (หัว|ก้อย)$/;
+/** A hand shuffled into the deck (engine/effects/common.ts shuffleHandIn), by the log entry's player. */
+const HAND_IN = / สับการ์ดในมือ \d+ ใบเข้าเด็ค$/;
 
 /**
  * Events from `prev` to `next` for `viewer`. `action` is the action applied to `prev` (a `choose`
@@ -157,6 +159,20 @@ export function animEvents(prev: GameState | null, next: GameState, action?: Act
     else rest.push({ ...move, phase: 'move' });
     if (b.zone === 'pokemon' && before.has(b.uid) && a.zone !== 'pokemon') {
       out.push({ t: 'evolve', player: b.player, uid: b.uid, phase: card === played ? 'play' : 'move' });
+    }
+  }
+  // A hand shuffled into the deck (Judge, Lillie's Determination…): every card goes in, also the ones drawn straight
+  // back; read from the states alone those never left the hand and would stay put on the table.
+  const handIn = new Set(next.log.slice(prev.log.length).filter((l) => l.player !== null && HAND_IN.test(l.text)).map((l) => l.player!));
+  for (const p of handIn) {
+    for (const card of prev.players[p].hand) {
+      const a = from.get(card)!;
+      const b = at.get(card);
+      if (card === played || !b || !samePlace(a, b)) continue;
+      const deck: Place = { zone: 'deck', player: p };
+      const key = seen(a) ? next.cards[card]!.key : null;
+      away.push({ t: 'move', card, key, from: a, to: deck, faceUp: [seen(a), false], phase: 'move' });
+      rest.push({ t: 'move', card, key, from: deck, to: b, faceUp: [false, seen(b)], phase: 'move' });
     }
   }
   // Cards leave first, then the deck shuffles, then cards come out.

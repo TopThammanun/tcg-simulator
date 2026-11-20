@@ -111,10 +111,11 @@
     gap: 10px;
     min-width: min(360px, 100%);
     padding: 26px 30px 22px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
     box-shadow: 0 30px 60px -20px #000c;
     text-align: center;
+    border-radius: var(--radius);
   }
   .title {
     margin: 0;
@@ -142,16 +143,18 @@
   }
   button {
     padding: 8px 18px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--primary);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 999px;
   }
   .primary {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
+    border-radius: 999px;
   }
   a {
     font-size: 0.85rem;

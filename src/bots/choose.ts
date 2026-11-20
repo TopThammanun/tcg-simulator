@@ -97,6 +97,8 @@ export function choosePicks(s: GameState, req: ChoiceRequest, plan: DeckPlan): n
       return energyChoice(s, me, req, plan);
     case 'search':
     case 'take': {
+      // Face-down Prize cards picked by position (engine/rules.ts takePrizes): any of them, the first ones.
+      if (req.hint === 'prizes') return req.options.slice(0, req.min).map((o) => o.value);
       const scored = cardsScored((c) => (theirs(c) ? 0 : cardValue(s, me, keyOf(s, c), plan)));
       const n = req.min === 0 ? scored.filter((x) => x.score > 0).length : req.max;
       return top(scored, count(n));

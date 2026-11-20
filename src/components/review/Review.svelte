@@ -349,12 +349,13 @@
     display: inline-block;
     margin-top: 8px;
     padding: 10px 18px;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
     text-decoration: none;
-    box-shadow: 4px 4px 0 var(--stamp);
+    box-shadow: 0 4px 0 var(--press);
+    border-radius: 999px;
   }
   /* Your record: two big numbers, then a bar per opponent deck. */
   .record {
@@ -364,7 +365,7 @@
     align-items: center;
     padding: 16px 0 20px;
     margin-bottom: 8px;
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 2px solid var(--line);
   }
   .totals {
     display: flex;
@@ -473,7 +474,7 @@
     color: var(--ink-soft);
   }
   .import:focus-within {
-    outline: 2px solid var(--ink);
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
   .import input {
@@ -481,6 +482,7 @@
     width: 1px;
     height: 1px;
     opacity: 0;
+    border-radius: 10px;
   }
   .link {
     border: 0;
@@ -493,7 +495,7 @@
   }
   .head {
     padding-bottom: 14px;
-    border-bottom: 2px solid var(--ink);
+    border-bottom: 2px solid var(--line);
   }
   .back {
     display: inline-block;
@@ -551,10 +553,11 @@
   }
   .key > ol > li {
     padding: 14px 16px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
-    box-shadow: 5px 5px 0 var(--paper-deep);
+    box-shadow: var(--shadow-lg);
     font-size: 0.9rem;
+    border-radius: var(--radius);
   }
   .layout {
     display: grid;
@@ -683,19 +686,21 @@
   .button,
   .seg button {
     padding: 4px 12px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--primary);
     font: inherit;
     font-size: 0.82rem;
     text-decoration: none;
     cursor: pointer;
+    border-radius: 999px;
   }
   .games .button {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
+    border-radius: 999px;
   }
   .seg {
     display: flex;
@@ -703,8 +708,9 @@
     margin-bottom: 8px;
   }
   .seg button.on {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
+    border-radius: 999px;
   }
   /* Board.svelte sizes its cards from this box (container query units). */
   .table {

@@ -127,7 +127,7 @@
 <style>
   .mine {
     margin-top: 40px;
-    border-top: 2px solid var(--ink);
+    border-top: 2px solid var(--line);
   }
   header {
     display: flex;
@@ -146,12 +146,13 @@
   button,
   .button {
     padding: 6px 14px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--primary);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--primary);
     font: inherit;
     text-decoration: none;
     cursor: pointer;
+    border-radius: 999px;
   }
   button:disabled {
     opacity: 0.4;
@@ -159,10 +160,11 @@
   }
   .primary,
   .button {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-display);
     font-weight: 600;
+    border-radius: 999px;
   }
   .link {
     padding: 0;
@@ -177,9 +179,10 @@
     gap: 10px;
     padding: 16px;
     margin-bottom: 16px;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--line);
     background: var(--card-bg);
-    box-shadow: 6px 6px 0 var(--paper-deep);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius);
   }
   label {
     display: flex;
@@ -190,14 +193,16 @@
   input,
   textarea {
     padding: 8px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--line);
     background: var(--paper);
     color: var(--ink);
     font: inherit;
+    border-radius: 10px;
   }
   textarea {
     font-family: var(--font-mono);
     font-size: 0.8rem;
+    border-radius: 10px;
   }
   .starts {
     display: flex;

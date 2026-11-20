@@ -89,10 +89,11 @@
   .chart {
     margin: 0;
     padding: 10px 12px;
-    border: 1.5px solid var(--ink);
+    border: 1.5px solid var(--line);
     background: var(--card-bg);
     --critical: #d03b3b;
     --warning: #fab219;
+    border-radius: var(--radius);
   }
   figcaption {
     font-weight: 600;
