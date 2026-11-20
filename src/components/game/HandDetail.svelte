@@ -1,7 +1,8 @@
 <script lang="ts">
   // The card picked up from your hand, as at a real table: its text to read, and what you can do with it (play it, or
-  // tap the Pokémon it goes on). Cards you can't play now can be read too.
+  // tap the Pokémon it goes on). Cards you can't play now can be read too, with the reason (engine whyNotPlayable).
   import { fly } from 'svelte/transition';
+  import { whyNotPlayable } from '../../engine/actions';
   import { keyOf } from '../../engine/state';
   import type { Action, CardId, GameState } from '../../engine/types';
   import { actionLabel, type CardActions } from '../../ui/play';
@@ -27,6 +28,7 @@
     onzoom: (key: string) => void;
   } = $props();
   const k = $derived(keyOf(s, card));
+  const why = $derived(myTurn && !actions ? whyNotPlayable(s, card) : null);
 </script>
 
 <aside class="detail" aria-label="การ์ดที่หยิบจากมือ" in:fly={{ y: 18, duration: motion(200) }}>
@@ -39,7 +41,9 @@
       {:else if actions?.kind === 'target'}
         <span class="hint">แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง</span>
       {:else}
-        <span class="hint">{myTurn ? 'ใช้การ์ดนี้ตอนนี้ไม่ได้' : 'ยังไม่ใช่ตาคุณ'}</span>
+        <span class="hint why" role="note">
+          {#if myTurn}<strong>ใช้ตอนนี้ไม่ได้</strong>{#if why}<span>{why}</span>{/if}{:else}ยังไม่ใช่ตาคุณ{/if}
+        </span>
       {/if}
       <button type="button" class="close" onclick={onclose}>ปิด</button>
     </div>
@@ -88,6 +92,22 @@
     flex: 1;
     font-size: 0.82rem;
     color: var(--ink-soft);
+  }
+  /* Can't be played now: what stops it, on a soft red. */
+  .hint.why {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 6px 10px;
+    border-left: 3px solid var(--stamp);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--stamp) 10%, transparent);
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .hint.why strong {
+    color: var(--stamp);
+    font-size: 0.78rem;
   }
   .play,
   .close {

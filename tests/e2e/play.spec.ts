@@ -272,7 +272,7 @@ async function loadPosition(page: Page) {
       mulligans: 0, knownTop: [],
     });
     const players = [
-      side(0, slot('dragapult-ex', 0, ['fire-energy', 'psychic-energy']), [slot('dreepy', 0, ['psychic-energy']), slot('drakloak', 0)], ['energy-switch', 'judge']),
+      side(0, slot('dragapult-ex', 0, ['fire-energy', 'psychic-energy']), [slot('dreepy', 0, ['psychic-energy']), slot('drakloak', 0)], ['energy-switch', 'judge', 'unfair-stamp']),
       side(1, slot('budew', 1), [slot('dreepy', 1)], []),
     ];
     const s = {
@@ -289,6 +289,10 @@ const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg:
 
 test('a hand card is read before it is played; Energy Switch is answered on the table; you pick your Prize card', async ({ page }) => {
   await loadPosition(page);
+  // A card that can't be played says why.
+  await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
+  await expect(page.locator('.detail-layer .why')).toContainText('ถูก KO');
+  await page.locator('.detail-layer').getByRole('button', { name: 'ปิด' }).click();
   // A tap shows the card's text and a button; nothing is played yet.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Energy Switch"]') }).click();
   const detail = page.locator('.detail-layer');

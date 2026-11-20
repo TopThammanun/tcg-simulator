@@ -2,6 +2,7 @@
   // Your hand, held like in the game: every card shows, overlapping in a slight fan when there are many
   // (no scrolling). Cards that can't be played right now are dimmed (PLAN.md: ตาม legalActions).
   // Tap a card to select it, or drag it onto the board.
+  import { def } from '../../engine/db';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState } from '../../engine/types';
   import CardFace from './CardFace.svelte';
@@ -51,7 +52,7 @@
       class:marked={marked.has(c)}
       class:lifted={lifted === c}
       class:grab={playable.has(c)}
-      aria-disabled={!playable.has(c)}
+      aria-label={playable.has(c) ? def(k).name : `${def(k).name} (ใช้ตอนนี้ไม่ได้)`}
       onclick={() => onpick(c)}
       onpointerdown={(e) => onpress?.(c, e)}
       oncontextmenu={(e) => {

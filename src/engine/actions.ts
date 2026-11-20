@@ -151,6 +151,74 @@ function excitedDive(s: GameState, p: PlayerId, key: string): boolean {
   });
 }
 
+/**
+ * Why the current player's hand card can't be played now, in a few Thai words for the play screen; null when it can
+ * (exactly when legalActions() has an action for a card of its name). Follows legalActions() check by check.
+ */
+export function whyNotPlayable(s: GameState, card: CardId): string | null {
+  if (s.winner !== null || s.phase !== 'main') return 'เกมยังไม่เริ่มหรือจบแล้ว';
+  if (s.pending) return 'ตอบตัวเลือกที่ค้างอยู่ก่อน';
+  const p = s.current;
+  const ps = s.players[p];
+  if (!ps.hand.includes(card)) return 'การ์ดไม่ได้อยู่ในมือ';
+  const k = keyOf(s, card);
+  const d = def(k);
+  const mine = slotsOf(ps);
+  const aceBlocked = slotsWithAbility(s, opp(p), 'ACE Nullifier').some((sl) => sl.tool !== null);
+  if (d.category === 'pokemon') {
+    if (d.stage === 'Basic' || excitedDive(s, p, k)) {
+      return ps.bench.length < benchLimit(s, p) ? null : `Bench เต็มแล้ว (${benchLimit(s, p)} ตัว)`;
+    }
+    if (s.turn <= 2) return 'เทิร์นแรกของแต่ละคนยังวิวัฒนาการไม่ได้';
+    if (mine.some((sl) => canEvolve(s, sl, k))) return null;
+    const from = pokemon(k).evolvesFrom;
+    if (!from) return 'ลงจากมือตรงๆ ไม่ได้';
+    return mine.some((sl) => topDef(s, sl).name === from)
+      ? `${from} เพิ่งลงสนามหรือเพิ่งวิวัฒนาการเทิร์นนี้ (วิวัฒนาการได้เทิร์นหน้า)`
+      : `ต้องมี ${from} ในสนามก่อน`;
+  }
+  if (aceBlocked && d.aceSpec) return 'ACE Nullifier ของคู่แข่งห้ามใช้การ์ด ACE SPEC';
+  if (d.category === 'energy') return ps.energyAttached ? 'ติดพลังงานจากมือไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)' : null;
+  if (d.trainerType === 'Tool') return mine.some((sl) => sl.tool === null) ? null : 'Pokémon ทุกตัวติด Tool อยู่แล้ว';
+  if (d.trainerType === 'Item' && ps.itemLockTurn === s.turn) return 'เทิร์นนี้ถูกห้ามใช้ Item';
+  if (d.trainerType === 'Supporter') {
+    if (ps.supporterPlayed) return 'เล่น Supporter ไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)';
+    if (s.turn === 1) return 'คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก';
+  }
+  if (d.trainerType === 'Stadium') {
+    if (ps.stadiumPlayed) return 'เล่น Stadium ไปแล้วเทิร์นนี้';
+    if (s.stadium && keyOf(s, s.stadium.card) === k) return 'Stadium ใบนี้อยู่ในสนามแล้ว';
+  }
+  const impl = TRAINERS[k];
+  if (impl?.canPlay && !impl.canPlay(s, p, card)) return TRAINER_NEEDS[k]?.(s, p) ?? 'เงื่อนไขบนการ์ดยังไม่ครบ';
+  return null;
+}
+
+/** What each Trainer with a condition needs, said when it isn't met (tests/ui/why.test.ts: every one has a line). */
+export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string> = {
+  'ultra-ball': () => 'ต้องมีการ์ดอื่นในมือให้ทิ้ง 2 ใบ',
+  'buddy-buddy-poffin': () => 'Bench เต็มแล้ว',
+  'night-stretcher': () => 'ไม่มี Pokémon หรือพลังงานพื้นฐานในกองทิ้ง',
+  'energy-switch': () => 'ต้องมี Pokémon 2 ตัวขึ้นไป และมีพลังงานพื้นฐานติดอยู่ให้ย้าย',
+  switch: () => 'ไม่มี Pokémon บน Bench ให้สลับ',
+  'enhanced-hammer': () => 'Pokémon ของคู่แข่งไม่มีพลังงานพิเศษ',
+  'rare-candy': (s) => (s.turn <= 2 ? 'เทิร์นแรกของแต่ละคนใช้ไม่ได้' : 'ไม่มี Basic ในสนามที่มี Stage 2 ของมันอยู่ในมือ'),
+  'tool-scrapper': () => 'ไม่มี Tool ติดอยู่ในสนาม',
+  'sacred-ash': () => 'ไม่มี Pokémon ในกองทิ้ง',
+  'secret-box': () => 'ต้องมีการ์ดอื่นในมือให้ทิ้ง 3 ใบ',
+  'unfair-stamp': () => 'ใช้ได้เฉพาะเทิร์นหลังจาก Pokémon ของคุณถูก KO',
+  'special-red-card': () => 'ใช้ได้เมื่อคู่แข่งเหลือ Prize 3 ใบหรือน้อยกว่า',
+  'wondrous-patch': () => 'ต้องมี Psychic Energy ในกองทิ้ง และ Pokémon ประเภท Psychic บน Bench',
+  'ns-pp-up': () => "ต้องมีพลังงานพื้นฐานในกองทิ้ง และ N's Pokémon บน Bench",
+  'glass-trumpet': () => 'ต้องมี Tera Pokémon ในสนาม พลังงานพื้นฐานในกองทิ้ง และ Pokémon ประเภท Colorless บน Bench',
+  'bosss-orders': () => 'คู่แข่งไม่มี Pokémon บน Bench',
+  'janines-secret-art': () => 'ไม่มี Pokémon ประเภท Darkness',
+  'rosas-encouragement': () => 'ต้องเหลือ Prize มากกว่าคู่แข่ง มี Stage 2 ในสนาม และพลังงานพื้นฐานในกองทิ้ง',
+  'gladions-final-battle': () => 'ต้องเป็นการ์ดใบเดียวที่เหลือในมือ',
+  'lanas-aid': () => 'ไม่มี Pokémon (ที่ไม่มี Rule Box) หรือพลังงานพื้นฐานในกองทิ้ง',
+  surfer: () => 'ไม่มี Pokémon บน Bench ให้สลับ',
+};
+
 /** Same as one of legalActions(), treating copies of the same card as equal. */
 export function isLegal(s: GameState, a: Action): boolean {
   const norm = (x: Action) => JSON.stringify('card' in x ? { ...x, card: keyOf(s, x.card) } : x);
