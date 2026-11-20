@@ -23,7 +23,7 @@ styling only.
 | 5 | Hand sorted (Pokémon / Trainer / Energy) | New cards go to the end; hard to find a card in a big hand | done 21 Nov |
 | 6 | e2e setup helper waits for turn 1 | It waits for "ตาคุณ", which shows during setup too, so a setup bug showed as 2-minute timeouts | done 21 Nov |
 | 7 | A Pokémon in play, zoomed, shows its state | The card alone: no HP left, no Energy/Tool names, no conditions, nothing of the cards under it (a real table lets you look at the pile); the pips on the board are tiny | done 21 Nov |
-| 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | |
+| 8 | What the bot did last turn, in a few lines | On a phone the log is in a drawer and the animations are quick; a short recap in the dock when your turn starts | done 21 Nov |
 | 9 | What a condition does | "สับสน" / "พิษ" badges don't say what they do (coin on attack / 10 between turns) | done 21 Nov (with #7) |
 | 10 | Keyboard on a computer | No shortcuts: end turn, close, confirm | |
 | 11 | Sounds | Silent; short made-up sounds (Web Audio, no files) for play, attack, KO, coin; off switch | |
@@ -64,3 +64,12 @@ styling only.
   under it. The zoomed card (tap the bot's Pokémon, right-click or long-press any) shows it in a band above the card
   text; your own Pokémon's pop-up shows Energy / Tool / conditions as chips under the name; the "พิษ" / "สับสน" badge
   has a tooltip. Zoom now remembers which Pokémon it came from (`zoomTo(key, slot)`), so two Dreepy don't mix.
+- **21 Nov, #8 done.** `ui/recap.ts`: the bot's last turn from its log lines (no header, no opening draw; a line
+  repeated in a row once with ×N; a long turn shows its start and its end, where the attack and Knock Outs are). A
+  card at the top left of the table when your turn starts, folded into a pill "บอทเล่นอะไรไป (N)" after 8 s (it sits
+  over the bot's side), gone with your first move or ✕. It also surfaces effects like "คุณ ใช้ Item ไม่ได้ในเทิร์นหน้า".
+- **21 Nov, found on the way: `npm run check` was not clean.** It runs `astro check && svelte-check`; my check of
+  the result only read astro check's "- 0 errors", and svelte-check reported 11 errors (from #3 and #8: derived values
+  declared above the `cur` / `legal` they use — correct at run time, wrong for TypeScript) and 2 unused CSS rules
+  (the old `aria-disabled` hand style, `label.check`). Fixed; the check now exits 0. Checks go by the exit code from
+  now on. A `{@const}` misplaced in the recap was only caught by loading the page (Vite 500), not by the check.

@@ -151,9 +151,6 @@
       --lift: -16px;
     }
   }
-  .hcard[aria-disabled='true'] {
-    cursor: default;
-  }
   .hcard.sel {
     z-index: 3;
     --lift: -18px;

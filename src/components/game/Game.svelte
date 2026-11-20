@@ -23,6 +23,7 @@
   import { slotMenu } from '../../ui/menu';
   import { previewAttack } from '../../ui/preview';
   import { slotInfo } from '../../ui/slot-info';
+  import { lastOpponentTurn, shortRecap } from '../../ui/recap';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
@@ -126,7 +127,8 @@
   let menuFor = $state<SlotId | null>(null);
   /** "จบเทิร์น" pressed while an attack can still be used: the dock asks first (an attack lost by a slip is a turn). */
   let confirmEnd = $state(false);
-  const attacksLeft = $derived([...new Set(legal.filter((a) => a.t === 'attack').map((a) => (a as { name: string }).name))]);
+  /** The turn whose recap of the bot's last turn was closed (✕ or your first move). */
+  let recapClosed = $state(-1);
   let menuAnchor = $state<DOMRect | null>(null);
   let picks = $state<number[]>([]);
   let zoom = $state<string | null>(null);
@@ -186,6 +188,21 @@
   const req = $derived(myTurn && cur!.pending ? cur!.pending.request : null);
   const legal = $derived(myTurn && !cur!.pending ? legalActions(cur!) : []);
   const hand = $derived(myTurn && !cur!.pending ? handActions(cur!) : new Map());
+  const RECAP_LINES = 6;
+  const recap = $derived(
+    myTurn && !req && viewing === null && cur && recapClosed !== cur.turn ? lastOpponentTurn(cur) : [],
+  );
+  const recapShort = $derived(shortRecap(recap, RECAP_LINES));
+  /** Open when it appears, folded into a small pill after a few seconds (it sits over the bot's side). */
+  let recapFull = $state(true);
+  const recapTurn = $derived(recap.length ? cur!.turn : -1);
+  $effect(() => {
+    if (recapTurn < 0) return;
+    recapFull = true;
+    const t = setTimeout(() => (recapFull = false), 8000);
+    return () => clearTimeout(t);
+  });
+  const attacksLeft = $derived([...new Set(legal.filter((a) => a.t === 'attack').map((a) => (a as { name: string }).name))]);
   /**
    * Your answers so far to the card being played (Energy Switch: which Pokémon, which Energy, then where): shown with
    * the next question, and the Pokémon picked are marked on the table. Same `pending.base` = the same play.
@@ -442,6 +459,7 @@
     fx?.finish();
     drag = null;
     confirmEnd = false;
+    if (cur && actor(cur) === 0) recapClosed = cur.turn;
     // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
     // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
     a = $state.snapshot(a);
@@ -841,6 +859,22 @@
           />
         </div>
       {/if}
+      <!-- What the bot did on its turn, when yours starts: gone with your first move. -->
+      {#if recap.length && selected === null && !req && !recapFull}
+        <button type="button" class="recap-pill" onclick={() => (recapFull = true)}>บอทเล่นอะไรไป ({recap.length})</button>
+      {:else if recap.length && selected === null && !req}
+        <aside class="recap-layer" aria-label="เทิร์นที่แล้วของบอท">
+          <header>
+            <strong>บอทเล่นไปเมื่อเทิร์นที่แล้ว</strong>
+            <button type="button" aria-label="ปิด" onclick={() => (recapClosed = cur.turn)}>✕</button>
+          </header>
+          <ul>
+            {#each recapShort.head as line}<li>{line}</li>{/each}
+            {#if recapShort.skipped}<li class="more">… อีก {recapShort.skipped} บรรทัด (ดูใน log)</li>{/if}
+            {#each recapShort.tail as line}<li>{line}</li>{/each}
+          </ul>
+        </aside>
+      {/if}
       {#if error}<p class="error">{error}</p>{/if}
       </div>
 
@@ -1211,13 +1245,6 @@
     gap: 4px;
     font-weight: 500;
   }
-  label.check {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    font-weight: 400;
-    font-size: 0.9rem;
-  }
   select {
     padding: 6px 8px;
     border: 1.5px solid var(--line);
@@ -1315,6 +1342,69 @@
   /* Looking through a pile (the whole deck for a search) takes the table. */
   .choice-layer :global(.choice.zone) {
     width: min(1060px, 100%);
+  }
+  /* The bot's last turn in a few lines, top left over its side; it leaves with your first move. */
+  .recap-layer {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 5;
+    width: min(340px, calc(100% - 20px));
+    padding: 10px 12px;
+    border-radius: 14px;
+    border-left: 4px solid var(--stamp);
+    background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+    color: var(--ink);
+    box-shadow: 0 10px 26px #0006;
+    font-size: 0.8rem;
+    animation: recap-in 0.3s ease-out 0.4s backwards;
+  }
+  .recap-layer header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .recap-layer header button {
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .recap-layer ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .recap-layer li {
+    line-height: 1.45;
+  }
+  .recap-layer .more {
+    list-style: none;
+    margin-left: -18px;
+    color: var(--ink-soft);
+  }
+  .recap-pill {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 5;
+    padding: 3px 12px;
+    border: 0;
+    border-left: 3px solid var(--stamp);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+    color: var(--ink);
+    font-size: 0.76rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px #0005;
+    cursor: pointer;
+  }
+  @keyframes recap-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
   }
   /* The card picked up from the hand: its text over the opponent's side (top right), so your Pokémon, where it is
      played, stay free to tap. */

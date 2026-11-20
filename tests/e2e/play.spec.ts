@@ -361,6 +361,13 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   // The taken Prize leaves its gap where it was.
   await expect(page.locator('.side.mine .prize-grid > :nth-child(4) > *')).toHaveCount(0);
   await expect(page.locator('.side.mine .prize-grid > :nth-child(5) > *')).toHaveCount(1);
+
+  // The bot plays turn 6; when yours starts, what it did is listed over its side.
+  await expect.poll(async () => { const t = await state(page); return t.turn === 7 && t.current === 0 && !t.pending; }, { timeout: 30_000 }).toBe(true);
+  const recap = page.getByLabel('เทิร์นที่แล้วของบอท');
+  await expect(recap).toContainText('บอท');
+  await recap.getByRole('button', { name: 'ปิด' }).click();
+  await expect(recap).toHaveCount(0);
 });
 
 test('a finished game is saved, reviewed turn by turn in under 30 s, and can be played on from a turn', async ({ page }) => {
