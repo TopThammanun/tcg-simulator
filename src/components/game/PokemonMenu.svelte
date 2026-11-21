@@ -171,8 +171,8 @@
     overflow-y: auto;
     padding: 10px 12px 12px;
     border: 1px solid #ffffff24;
-    border-radius: 6px;
-    background: #1a2230f7;
+    border-radius: var(--radius-lg);
+    background: #1f1f1ff5;
     color: #eceef1;
     box-shadow:
       0 0 0 1px #0006,
@@ -299,12 +299,11 @@
   .attack {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 9px 10px;
-    border: 1px solid #ffffff2e;
-    border-left: 3px solid var(--accent);
-    border-radius: 4px;
-    background: #ffffff0f;
+    gap: 4px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: var(--radius);
+    background: #ffffff0a;
     color: #fff;
     text-align: left;
   }

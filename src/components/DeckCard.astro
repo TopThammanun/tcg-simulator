@@ -1,0 +1,130 @@
+---
+// One meta deck as a card: its headline Pokémon's art (cropped from the card image), rank, name, meta share.
+interface Props {
+  href: string;
+  name: string;
+  rank?: number;
+  /** Meta share in percent, and the largest share on the page (for the bar). */
+  share?: number;
+  maxShare?: number;
+  /** The card image the art is cropped from. */
+  art?: string;
+  note?: string;
+  counts?: string;
+}
+const { href, name, rank, share, maxShare = 100, art, note, counts } = Astro.props;
+---
+
+<a class="deck-card" href={href}>
+  <span class="art" aria-hidden="true">{art && <img src={art} alt="" loading="lazy" decoding="async" width="600" height="825" />}</span>
+  <span class="body">
+    <span class="top">
+      {rank !== undefined && <span class="caption-4 rank">อันดับ {rank}</span>}
+      {share !== undefined && <span class="mono caption-4 pct">{share.toFixed(1)}%</span>}
+    </span>
+    <span class="name title-2">{name}</span>
+    {note && <span class="caption-5 note">{note}</span>}
+    {counts && <span class="caption-5 counts">{counts}</span>}
+    {
+      share !== undefined && (
+        <span class="bar">
+          <span style={`width:${(share / maxShare) * 100}%`} />
+        </span>
+      )
+    }
+  </span>
+</a>
+
+<style>
+  .deck-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
+    background: var(--card-bg);
+    text-decoration: none;
+    transition:
+      border-color 0.3s var(--ease),
+      transform 0.5s var(--ease);
+  }
+  .deck-card:hover {
+    border-color: #4a4a4a;
+    transform: translateY(-4px);
+  }
+  .deck-card:active {
+    transform: translateY(-2px) scale(0.99);
+  }
+  /* The art window of the card: the frame and the text are cut away. */
+  .art {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--raised);
+  }
+  .art img {
+    position: absolute;
+    left: -11%;
+    top: -35%;
+    width: 122%;
+    height: auto;
+    transition: transform 0.5s var(--ease);
+  }
+  .deck-card:hover .art img {
+    transform: scale(1.04);
+  }
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+  }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ink-soft);
+  }
+  .pct {
+    color: var(--ink-strong);
+  }
+  .name {
+    color: var(--ink-strong);
+  }
+  .counts {
+    font-variant-numeric: tabular-nums;
+  }
+  .note,
+  .counts {
+    color: var(--ink-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar {
+    display: block;
+    height: 4px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--control);
+  }
+  .bar span {
+    display: block;
+    height: 100%;
+    background: var(--ink-strong);
+  }
+  @media (max-width: 640px) {
+    .deck-card {
+      border-radius: var(--radius-lg);
+    }
+    .body {
+      padding: 12px;
+    }
+    .name {
+      font-size: 16px;
+      line-height: 24px;
+    }
+  }
+</style>

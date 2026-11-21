@@ -74,7 +74,7 @@
     border: 1px solid var(--line);
     background: var(--card-bg);
     color: var(--ink);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   .close {
     position: absolute;

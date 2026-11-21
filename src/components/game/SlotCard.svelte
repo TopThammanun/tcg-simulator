@@ -216,13 +216,24 @@
     place-items: center;
     border-radius: 3px;
     border: 1px solid #0009;
-    background: linear-gradient(to right, var(--fill) var(--pct), #1b1f1ccc var(--pct));
+    background: #111111cc;
     color: #fff;
+    isolation: isolate;
+    overflow: hidden;
     font-size: 0.66rem;
     font-weight: 600;
     line-height: 1;
     text-shadow: 0 1px 1px #000c;
     box-shadow: 0 1px 3px #0008;
+  }
+  /* The HP left, as a bar behind the numbers. */
+  .hp::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: -1;
+    width: var(--pct);
+    background: var(--fill);
   }
   .hp.ok {
     --fill: #3f9b5a;
@@ -257,7 +268,7 @@
     padding: 1px 6px;
     border: 1px solid #0007;
     border-radius: 4px 4px 2px 2px;
-    background: linear-gradient(#e9e3d4, #c9c1ad);
+    background: #e4ddcc;
     color: #2a261e;
     font-size: 0.6rem;
     font-weight: 600;

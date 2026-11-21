@@ -1,9 +1,10 @@
 ---
+import DeckCard from '../../components/DeckCard.astro';
 import MyDecks from '../../components/MyDecks.svelte';
 import { formatDecklist } from '../../data/decklist';
 import { deckKeys } from '../../engine/db';
 import Base from '../../layouts/Base.astro';
-import { loadDecks, metaDecks, sectionCount } from '../../lib/decks';
+import { headlines, loadDecks, metaDecks, sectionCount } from '../../lib/decks';
 
 const decks = metaDecks(await loadDecks());
 // For your own decks: the meta lists to start from, and their plans for lists near them.
@@ -17,169 +18,59 @@ const lists = decks.map((d) => ({
   text: formatDecklist(d.lines.map((l) => l.entry)),
 }));
 const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
-// The deck's headline Pokémon: the one it is named after, then rule-box attackers, then most copies.
-// Drawn last so it sits on top of the row.
-type Line = (typeof decks)[number]['lines'][number];
-const score = (deckName: string, l: Line) =>
-  (deckName.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) +
-  (l.card.category === 'pokemon' ? l.card.prizes * 10 : 0) +
-  l.entry.count;
-const thumbs = (d: (typeof decks)[number]) =>
-  d.lines
-    .filter((l) => l.entry.section === 'pokemon' && l.print.image.source !== 'none')
-    .sort((a, b) => score(d.meta.name, b) - score(d.meta.name, a))
-    .slice(0, 3)
-    .reverse();
 ---
 
 <Base title="เด็คทั้งหมด">
-  <p class="eyebrow">เด็คใน meta</p>
-  <h1>เด็คทั้งหมด</h1>
-  <p class="lede">
-    เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด เลือกเล่นเด็คไหนก็ได้
-    หรือเพิ่ม list ของคุณเองที่ด้านล่าง กดเด็คเพื่อดูการ์ดทุกใบ
-  </p>
+  <header class="page-head">
+    <p class="eyebrow">เด็คใน meta</p>
+    <h1 class="heading-3">เด็คทั้งหมด</h1>
+    <p class="body-7 lede">
+      เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด
+      เลือกเด็คเพื่อดูการ์ดทุกใบ หรือเพิ่ม list ของคุณเองด้านล่าง
+    </p>
+  </header>
 
-  <ol class="decks">
+  <div class="grid reveal">
     {
-      decks.map((d, i) => (
-        <li class="deck rise" style={`--i:${i}`}>
-          <a href={`/decks/${d.slug}/`}>
-            <span class="rank">{d.meta.rank}</span>
-            <span class="fan" aria-hidden="true">
-              {thumbs(d).map((l, j) => (
-                <img src={l.print.image.low} alt="" loading="lazy" width="245" height="342" style={`--j:${j}`} />
-              ))}
-            </span>
-            <span class="info">
-              <span class="name">{d.meta.name}</span>
-              <span class="source">{d.meta.listSource}</span>
-              <span class="counts mono">
-                P {sectionCount(d, 'pokemon')} · T {sectionCount(d, 'trainer')} · E {sectionCount(d, 'energy')}
-              </span>
-            </span>
-            {d.meta.metaShare !== undefined && (
-              <span class="share">
-                <span class="bar" style={`--w:${(d.meta.metaShare / maxShare) * 100}%`} />
-                <span class="mono pct">{d.meta.metaShare.toFixed(2)}%</span>
-              </span>
-            )}
-          </a>
-        </li>
+      decks.map((d) => (
+        <DeckCard
+          href={`/decks/${d.slug}/`}
+          name={d.meta.name}
+          rank={d.meta.rank}
+          share={d.meta.metaShare}
+          {maxShare}
+          art={headlines(d)[0]?.print.image.high}
+          note={d.meta.listSource}
+          counts={`Pokémon ${sectionCount(d, 'pokemon')} · Trainer ${sectionCount(d, 'trainer')} · Energy ${sectionCount(d, 'energy')}`}
+        />
       ))
     }
-  </ol>
+  </div>
 
   <MyDecks client:only="svelte" decks={lists} />
 </Base>
 
 <style>
+  .page-head {
+    max-width: 680px;
+    margin-bottom: 40px;
+  }
   h1 {
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    margin: 0 0 8px;
+    margin: 0 0 12px;
   }
   .lede {
-    max-width: 62ch;
-    color: var(--ink-soft);
-    margin: 0 0 32px;
-  }
-  .decks {
-    list-style: none;
     margin: 0;
-    padding: 0;
-    border-top: 2px solid var(--ink);
+    color: var(--ink-soft);
   }
-  .deck a {
+  .grid {
     display: grid;
-    grid-template-columns: 3.2rem 7.5rem 1fr 11rem;
-    align-items: center;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
-    padding: 14px 8px;
-    border-bottom: 1px solid var(--rule);
-    text-decoration: none;
-    transition: background 0.15s ease;
   }
-  .deck a:hover {
-    background: var(--card-bg);
-  }
-  .deck a:hover .name {
-    color: var(--primary);
-  }
-  .rank {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 1.6rem;
-    line-height: 1;
-    text-align: center;
-    color: var(--ink-soft);
-  }
-  .fan {
-    position: relative;
-    height: 5.6rem;
-  }
-  .fan img {
-    position: absolute;
-    top: 0;
-    left: calc(var(--j) * 1.6rem);
-    width: 4rem;
-    height: auto;
-    border-radius: 3px;
-    box-shadow:
-      0 0 0 1px #15181d1a,
-      -4px 0 10px -6px #15181d80;
-  }
-  .info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .name {
-    font-weight: 600;
-    font-size: 1.12rem;
-    transition: color 0.15s ease;
-  }
-  .source {
-    color: var(--ink-soft);
-    font-size: 0.85rem;
-  }
-  .counts {
-    font-size: 0.75rem;
-    color: var(--ink-soft);
-  }
-  .share {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .bar {
-    flex: 1;
-    height: 6px;
-    background: linear-gradient(to right, var(--primary) var(--w), var(--paper-deep) var(--w));
-  }
-  .pct {
-    font-size: 0.85rem;
-    font-weight: 500;
-    min-width: 4.2em;
-    text-align: right;
-  }
-  @media (max-width: 720px) {
-    .deck a {
-      grid-template-columns: 2.6rem 1fr;
-      grid-template-areas: 'rank info' 'rank share';
-      gap: 4px 12px;
-    }
-    .rank {
-      grid-area: rank;
-      font-size: 1.6rem;
-    }
-    .fan {
-      display: none;
-    }
-    .info {
-      grid-area: info;
-    }
-    .share {
-      grid-area: share;
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
   }
 </style>

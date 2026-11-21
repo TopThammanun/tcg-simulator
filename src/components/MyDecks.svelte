@@ -126,37 +126,46 @@
 
 <style>
   .mine {
-    margin-top: 56px;
-    border-top: 2px solid var(--ink);
+    margin-top: 80px;
   }
   header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 12px;
-    padding: 16px 0 10px;
+    gap: 16px;
+    padding: 0 0 24px;
   }
   h2 {
     margin: 0;
-    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-size: 30px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .eyebrow {
-    margin: 0 0 2px;
+    margin: 0 0 4px;
   }
   button,
   .button {
-    padding: 6px 14px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
-    background: var(--card-bg);
-    color: var(--ink);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
     border-radius: var(--radius);
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition:
+      background-color 0.3s var(--ease),
+      transform 0.3s var(--ease);
   }
   button:hover:not(:disabled) {
-    border-color: var(--ink);
+    background: #313131;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.98);
   }
   button:disabled {
     opacity: 0.4;
@@ -174,23 +183,24 @@
     border-color: var(--press);
     background: var(--press);
   }
-  .link {
+  .link,
+  .link:hover:not(:disabled) {
     padding: 0;
     border: 0;
     background: none;
     text-decoration: underline;
+    text-underline-offset: 4px;
     color: inherit;
   }
   .editor {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-    border: 1px solid var(--line);
+    gap: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid var(--rule);
     background: var(--card-bg);
-    box-shadow: var(--shadow);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   label {
     display: flex;
@@ -200,23 +210,25 @@
   }
   input,
   textarea {
-    padding: 8px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
     background: var(--paper);
-    color: var(--ink);
+    color: var(--ink-strong);
     font: inherit;
     border-radius: var(--radius);
   }
   textarea {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 12px;
+    line-height: 16px;
   }
   .starts {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 12px;
     margin: 0;
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
     color: var(--ink-soft);
   }
   .starts .link {
@@ -224,9 +236,10 @@
   }
   .errors {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 16px;
     color: var(--stamp);
-    font-size: 0.9rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .ok {
     margin: 0;
@@ -235,7 +248,8 @@
   }
   .hint {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
     color: var(--ink-soft);
   }
   .actions {
@@ -246,15 +260,20 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--rule);
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
+    background: var(--card-bg);
   }
   .list li {
     display: grid;
     grid-template-columns: 6.5rem minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
-    padding: 12px 4px;
-    border-bottom: 1px solid var(--rule);
+    padding: 16px;
+  }
+  .list li + li {
+    border-top: 1px solid var(--rule);
   }
   .fan {
     position: relative;
@@ -272,44 +291,57 @@
     min-width: 0;
   }
   .info strong {
-    font-weight: 600;
-    font-size: 1.08rem;
+    color: var(--ink-strong);
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 500;
   }
   .muted {
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .bad {
     color: var(--stamp);
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .acts {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
   .empty {
     margin: 0;
-    padding: 18px;
+    padding: 32px 24px;
     border: 1px dashed var(--line);
+    border-radius: var(--radius-xl);
     color: var(--ink-soft);
+    text-align: center;
   }
   .cards {
-    margin-top: 16px;
-    font-size: 0.85rem;
+    margin-top: 24px;
+    font-size: 14px;
+    line-height: 20px;
   }
   .cards summary {
+    color: var(--ink-soft);
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 500;
+    transition: color 0.3s var(--ease);
+  }
+  .cards summary:hover {
+    color: var(--ink-strong);
   }
   .cards h3 {
-    margin: 10px 0 2px;
-    font-size: 0.95rem;
+    margin: 16px 0 4px;
+    font-size: 14px;
+    line-height: 20px;
   }
   .names {
     margin: 0;
     color: var(--ink-soft);
-    line-height: 1.7;
+    line-height: 24px;
   }
   @media (max-width: 640px) {
     .list li {

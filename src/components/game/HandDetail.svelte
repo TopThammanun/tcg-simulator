@@ -58,7 +58,7 @@
     width: min(420px, 100%);
     max-height: 100%;
     padding: 12px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     background: var(--card-bg);
     color: var(--ink);
     box-shadow: 0 10px 30px #0006;
@@ -97,17 +97,18 @@
   .hint.why {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 6px 10px;
-    border-left: 3px solid var(--stamp);
-    border-radius: 2px;
-    background: color-mix(in srgb, var(--stamp) 8%, transparent);
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--stamp) 40%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--stamp) 10%, transparent);
     color: var(--ink);
-    line-height: 1.35;
+    line-height: 20px;
   }
   .hint.why strong {
     color: var(--stamp);
-    font-size: 0.78rem;
+    font-size: 12px;
+    line-height: 16px;
   }
   .play,
   .close {

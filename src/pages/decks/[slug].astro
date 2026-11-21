@@ -19,15 +19,15 @@ let tileIndex = 0;
 <Base title={deck.meta.name}>
   <a class="back" href="/decks/">← เด็คทั้งหมด</a>
   <header class="deck-head">
-    <p class="eyebrow">อันดับ {deck.meta.rank} · meta share {deck.meta.metaShare?.toFixed(1)}%</p>
-    <h1>{deck.meta.name}</h1>
-    <p class="source">
+    <p class="eyebrow">อันดับ {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> ของ meta</p>
+    <h1 class="heading-3">{deck.meta.name}</h1>
+    <p class="source body-6">
       {deck.meta.listSource}
       {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">list บน Limitless ↗</a>}
     </p>
     <p class="play">
-      <a class="button" href={`/play/?me=${deck.slug}`}>เล่นด้วยเด็คนี้</a>
-      <a class="button alt" href={`/play/?opp=${deck.slug}`}>ซ้อมกับเด็คนี้</a>
+      <a class="btn primary" href={`/play/?me=${deck.slug}`}>เล่นด้วยเด็คนี้</a>
+      <a class="btn" href={`/play/?opp=${deck.slug}`}>ซ้อมกับเด็คนี้</a>
     </p>
   </header>
 
@@ -127,85 +127,64 @@ let tileIndex = 0;
 <style>
   .back {
     display: inline-block;
-    margin-bottom: 12px;
-    font-size: 0.9rem;
+    margin-bottom: 24px;
     color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
     text-decoration: none;
+    transition: color 0.3s var(--ease);
   }
   .back:hover {
-    color: var(--ink);
+    color: var(--ink-strong);
   }
   .deck-head {
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 24px;
-    margin-bottom: 28px;
+    max-width: 760px;
+    margin-bottom: 48px;
   }
   h1 {
-    font-size: clamp(1.8rem, 4.5vw, 3rem);
-    margin: 0 0 6px;
+    margin: 0 0 8px;
   }
   .source {
     margin: 0;
     color: var(--ink-soft);
-    font-size: 0.9rem;
   }
   .source a {
-    margin-left: 10px;
-    color: var(--primary);
-    text-underline-offset: 3px;
+    margin-left: 8px;
+    color: var(--ink-strong);
+    text-underline-offset: 4px;
   }
   .play {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin: 18px 0 0;
-  }
-  .button {
-    display: inline-block;
-    padding: 8px 18px;
-    background: var(--primary);
-    color: var(--primary-ink);
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid var(--primary);
-    border-radius: var(--radius);
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-  .button:hover {
-    background: var(--press);
-    border-color: var(--press);
-  }
-  .button.alt {
-    background: transparent;
-    border-color: var(--line);
-    color: var(--ink);
-  }
-  .button.alt:hover {
-    border-color: var(--ink);
+    gap: 8px;
+    margin: 24px 0 0;
   }
   .layout {
     display: grid;
     grid-template-columns: 300px 1fr;
-    gap: 32px;
+    gap: 40px;
     align-items: start;
   }
   .sheet {
     position: sticky;
-    top: 16px;
-    padding: 16px 16px 12px;
+    top: 80px;
+    padding: 16px;
     background: var(--card-bg);
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow);
-    border-radius: var(--radius);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
   }
   .sheet h2 {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 0.98rem;
-    margin: 14px 0 4px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--ink);
+    margin: 24px 0 8px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+  .sheet h2 .mono {
+    color: var(--ink-strong);
   }
   .sheet section:first-child h2 {
     margin-top: 0;
@@ -217,27 +196,27 @@ let tileIndex = 0;
   }
   .sheet button {
     display: grid;
-    grid-template-columns: 1.6rem 1fr auto;
-    gap: 6px;
+    grid-template-columns: 24px 1fr auto;
+    gap: 8px;
     width: 100%;
-    padding: 2px 4px;
+    padding: 4px 8px;
     border: 0;
+    border-radius: 6px;
     background: none;
-    color: inherit;
+    color: var(--ink);
     font: inherit;
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
     text-align: left;
     cursor: pointer;
-    background-image: linear-gradient(var(--rule), var(--rule));
-    background-size: 100% 1px;
-    background-position: bottom;
-    background-repeat: no-repeat;
+    transition: background-color 0.3s var(--ease);
   }
   .sheet button:hover {
-    background-color: var(--paper-deep);
+    background: var(--control);
   }
   .qty {
-    font-weight: 600;
+    color: var(--ink-strong);
+    font-weight: 500;
   }
   .cname {
     overflow: hidden;
@@ -245,77 +224,81 @@ let tileIndex = 0;
     white-space: nowrap;
   }
   .setno {
-    color: var(--ink-soft);
-    font-size: 0.75rem;
+    color: var(--ink-faint);
+    font-size: 12px;
   }
   .total {
-    margin: 10px 0 0;
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
     text-align: right;
-    font-size: 0.8rem;
-    font-weight: 600;
   }
   .section-title {
-    font-size: 1.1rem;
-    margin: 0 0 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--rule);
+    margin: 0 0 16px;
+    font-size: 20px;
+    line-height: 28px;
   }
   .cards section + section {
-    margin-top: 28px;
+    margin-top: 40px;
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    gap: 18px 14px;
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+    gap: 24px 16px;
   }
 
   dialog {
     width: min(860px, calc(100% - 32px));
     max-height: calc(100% - 32px);
-    padding: 24px;
+    padding: 32px;
     border: 1px solid var(--line);
     background: var(--card-bg);
     color: var(--ink);
     box-shadow: var(--shadow-lg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   dialog::backdrop {
-    background: color-mix(in srgb, #15181d 60%, transparent);
+    background: #000000b3;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
   .close {
     position: absolute;
-    top: 8px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
     border: 0;
+    border-radius: var(--radius);
     background: none;
-    color: var(--ink);
-    font-size: 1.6rem;
+    color: var(--ink-soft);
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
+    transition:
+      background-color 0.3s var(--ease),
+      color 0.3s var(--ease);
+  }
+  .close:hover {
+    background: var(--control);
+    color: var(--ink-strong);
   }
   .dialog-body :global(.detail) {
     display: grid;
     grid-template-columns: minmax(0, 300px) 1fr;
-    gap: 24px;
+    gap: 32px;
     align-items: start;
   }
   .dialog-body :global(.detail img) {
     width: 100%;
     height: auto;
     border-radius: 4.5% / 3.2%;
-    box-shadow: var(--shadow);
   }
   .dialog-body :global(.detail-text) {
-    font-size: 1.1rem;
+    font-size: 18px;
     /* keep the name/HP line clear of the close button */
     padding-right: 32px;
   }
@@ -329,7 +312,10 @@ let tileIndex = 0;
     }
     .grid {
       grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 14px 10px;
+      gap: 16px 12px;
+    }
+    dialog {
+      padding: 24px 16px;
     }
     .dialog-body :global(.detail) {
       grid-template-columns: 1fr;

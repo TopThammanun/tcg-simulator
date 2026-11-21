@@ -50,3 +50,17 @@ export function archetypes(decks: DeckView[]) {
 export function sectionCount(deck: DeckView, section: DeckSection): number {
   return deck.lines.filter((l) => l.entry.section === section).reduce((n, l) => n + l.entry.count, 0);
 }
+
+/**
+ * A deck's Pokémon lines with an image, its headline first: the one the deck is named after, then rule-box Pokémon
+ * (by Prize cards given up), then the most copies.
+ */
+export function headlines(deck: DeckView): DeckLine[] {
+  const score = (l: DeckLine) =>
+    (deck.meta.name.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) +
+    (l.card.category === 'pokemon' ? l.card.prizes * 10 : 0) +
+    l.entry.count;
+  return deck.lines
+    .filter((l) => l.entry.section === 'pokemon' && l.print.image.source !== 'none')
+    .sort((a, b) => score(b) - score(a));
+}

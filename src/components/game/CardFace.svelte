@@ -63,9 +63,7 @@
     border-radius: inherit;
     font-size: clamp(8px, 0.62em, 12px);
     line-height: 1.2;
-    background:
-      repeating-linear-gradient(-45deg, transparent 0 6px, color-mix(in srgb, var(--rule) 35%, transparent) 6px 7px),
-      var(--card-bg);
+    background: var(--card-bg);
     color: var(--ink);
   }
   strong {

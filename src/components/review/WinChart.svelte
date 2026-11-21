@@ -87,18 +87,20 @@
 
 <style>
   .chart {
-    margin: 0;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
+    margin: 32px 0 0;
+    padding: 16px;
+    border: 1px solid var(--rule);
     background: var(--card-bg);
     --critical: var(--stamp);
     --warning: var(--accent);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   figcaption {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    color: var(--ink-strong);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
   }
   .plot {
     position: relative;

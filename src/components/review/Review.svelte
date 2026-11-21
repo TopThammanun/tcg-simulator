@@ -337,25 +337,31 @@
     font-variant-numeric: tabular-nums;
   }
   h2 {
-    font-size: 1.3rem;
-    margin: 28px 0 10px;
+    margin: 48px 0 16px;
+    font-size: 24px;
+    line-height: 32px;
   }
   .empty {
-    padding: 32px;
+    padding: 48px 24px;
     border: 1px dashed var(--line);
-    text-align: center;
+    border-radius: var(--radius-xl);
     color: var(--ink-soft);
+    text-align: center;
+  }
+  .empty p {
+    max-width: 480px;
+    margin: 0 auto 24px;
   }
   .cta {
     display: inline-block;
-    margin-top: 8px;
-    padding: 10px 22px;
+    padding: 8px 12px;
     border: 1px solid var(--primary);
+    border-radius: var(--radius);
     background: var(--primary);
     color: var(--primary-ink);
     font-weight: 600;
     text-decoration: none;
-    border-radius: var(--radius);
+    transition: background-color 0.3s var(--ease);
   }
   .cta:hover {
     border-color: var(--press);
@@ -365,29 +371,32 @@
   .record {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 24px;
+    gap: 32px;
     align-items: center;
-    padding: 20px 0 24px;
-    margin-bottom: 8px;
-    border-top: 2px solid var(--ink);
-    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+    padding: 24px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
+    background: var(--card-bg);
   }
   .totals {
     display: flex;
-    gap: 28px;
+    gap: 32px;
   }
   .totals div {
     display: flex;
     flex-direction: column;
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .num {
-    font-family: var(--font-heading);
+    color: var(--ink-strong);
+    font-size: 36px;
+    line-height: 40px;
     font-weight: 600;
-    font-size: 2.4rem;
-    line-height: 1.15;
-    color: var(--ink);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
   }
   .vs {
     list-style: none;
@@ -396,15 +405,27 @@
   }
   .vs li {
     display: grid;
-    grid-template-columns: minmax(0, 13rem) 1fr 3.4rem;
-    gap: 10px;
+    grid-template-columns: minmax(0, 13rem) 1fr 3.5rem;
+    gap: 12px;
     align-items: center;
-    padding: 3px 0;
-    font-size: 0.88rem;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 20px;
   }
+  /* Wins in white, losses in red. */
   .vs .bar {
-    height: 6px;
-    background: linear-gradient(to right, var(--primary) var(--w), color-mix(in srgb, var(--stamp) 45%, var(--paper-deep)) var(--w));
+    position: relative;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--stamp) 55%, var(--control));
+  }
+  .vs .bar::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--w);
+    background: var(--ink-strong);
   }
   .wl {
     text-align: right;
@@ -413,25 +434,32 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
+    background: var(--card-bg);
   }
   .games li {
     display: grid;
-    grid-template-columns: 4.2rem minmax(0, 1fr) auto;
-    gap: 14px;
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    gap: 16px;
     align-items: center;
-    padding: 12px 4px;
-    border-bottom: 1px solid var(--rule);
+    padding: 16px;
+  }
+  .games li + li {
+    border-top: 1px solid var(--rule);
   }
   .res {
     display: inline-block;
-    padding: 1px 0;
-    width: 4.2rem;
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 600;
+    width: 4.5rem;
+    padding: 2px 0;
     border: 1px solid var(--line);
-    border-radius: 2px;
+    border-radius: 6px;
     color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    text-align: center;
   }
   .res.won {
     border-color: var(--primary);
@@ -439,7 +467,7 @@
     color: var(--primary-ink);
   }
   .res.lost {
-    border-color: var(--stamp);
+    border-color: color-mix(in srgb, var(--stamp) 50%, transparent);
     color: var(--stamp);
   }
   .match {
@@ -448,38 +476,41 @@
     min-width: 0;
   }
   .match strong {
-    font-weight: 600;
+    color: var(--ink-strong);
+    font-weight: 500;
   }
   .match .muted {
-    font-size: 0.82rem;
+    font-size: 12px;
+    line-height: 16px;
   }
   .vs-word {
-    font-family: var(--font-mono);
+    color: var(--ink-faint);
     font-size: 0.75em;
-    font-weight: 500;
-    color: var(--ink-soft);
+    font-weight: 400;
   }
   .act {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
   }
   .files {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1.2rem;
+    gap: 8px 24px;
     align-items: center;
-    margin-top: 1rem;
-    font-size: 0.88rem;
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 20px;
   }
   .import {
     position: relative;
-    cursor: pointer;
-    text-decoration: underline;
     color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
   }
   .import:focus-within {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--ink-strong);
     outline-offset: 2px;
   }
   .import input {
@@ -489,45 +520,53 @@
     opacity: 0;
   }
   .link {
-    border: 0;
     padding: 0;
+    border: 0;
     background: none;
     color: var(--ink-soft);
     font: inherit;
     text-decoration: underline;
+    text-underline-offset: 4px;
     cursor: pointer;
+    transition: color 0.3s var(--ease);
+  }
+  .link:hover {
+    color: var(--ink-strong);
   }
   .head {
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--line);
+    max-width: 860px;
   }
   .back {
     display: inline-block;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
+    margin-bottom: 24px;
     color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
     text-decoration: none;
+    transition: color 0.3s var(--ease);
   }
   .back:hover {
-    color: var(--ink);
+    color: var(--ink-strong);
   }
   .head .eyebrow {
-    margin: 0 0 4px;
+    margin: 0 0 8px;
   }
   .head h1 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 14px;
-    margin: 0 0 6px;
-    font-size: clamp(1.5rem, 3.6vw, 2.3rem);
+    gap: 8px 16px;
+    margin: 0 0 8px;
+    font-size: 36px;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
   }
   .head h1 .res {
     width: auto;
-    padding: 0 12px;
-    font-family: var(--font-body);
-    font-size: 0.55em;
-    line-height: 1.6;
+    padding: 4px 12px;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0;
   }
   .summary {
     margin: 0;
@@ -536,19 +575,20 @@
   .summary progress {
     vertical-align: middle;
     width: 140px;
-    accent-color: var(--primary);
+    accent-color: var(--ink-strong);
   }
   .bad {
     color: var(--stamp);
   }
   .warn {
-    color: #b07a00;
+    color: var(--accent);
   }
   .clean {
-    margin: 18px 0 0;
-    padding: 12px 14px;
-    border-left: 3px solid var(--teal);
-    background: color-mix(in srgb, var(--teal) 7%, transparent);
+    margin: 24px 0 0;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--teal) 40%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--teal) 8%, transparent);
   }
   .key > ol {
     list-style: none;
@@ -558,17 +598,17 @@
     gap: 12px;
   }
   .key > ol > li {
-    padding: 14px 16px;
-    border: 1px solid var(--line);
+    padding: 16px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
     background: var(--card-bg);
-    box-shadow: var(--shadow);
-    font-size: 0.9rem;
-    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 20px;
   }
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+    gap: 16px;
   }
   @media (min-width: 1100px) {
     .layout:has(.viewer) {
@@ -577,8 +617,8 @@
     }
     .viewer {
       position: sticky;
-      top: 12px;
-      margin-top: 24px;
+      top: 80px;
+      margin-top: 48px;
     }
   }
   .turns {
@@ -587,40 +627,45 @@
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
   .turns > li {
-    padding: 10px 12px;
+    padding: 16px;
     border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
     background: var(--card-bg);
-    font-size: 0.88rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .turns > li.sel,
   .key > ol > li.sel {
-    border-color: var(--primary);
+    border-color: var(--ink-soft);
   }
   .key p,
   .turns p {
-    margin: 6px 0 0;
-    line-height: 1.5;
+    margin: 8px 0 0;
   }
   .row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 10px;
+    gap: 8px 12px;
     align-items: center;
   }
   .row strong {
+    color: var(--ink-strong);
+    font-size: 16px;
+    line-height: 24px;
     font-weight: 600;
   }
   .win {
     margin-left: auto;
   }
   .badge {
-    padding: 1px 8px;
-    border-radius: 2px;
-    font-size: 0.78rem;
-    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
   }
   .badge.bad {
     background: var(--stamp);
@@ -631,31 +676,35 @@
     color: var(--accent-ink);
   }
   .badge.ok {
-    border: 1px solid var(--rule);
+    border: 1px solid var(--line);
     color: var(--ink-soft);
   }
   .bad-text {
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--stamp) 40%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--stamp) 10%, transparent);
     color: var(--ink);
-    border-left: 3px solid var(--stamp);
-    padding-left: 8px;
   }
   .line {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-top: 6px;
+    margin-top: 8px;
   }
   .tag {
     flex: 0 0 auto;
-    padding: 0 5px;
-    border: 1px solid var(--ink-soft);
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
     color: var(--ink-soft);
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
   }
   .tag.bot {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--ink-soft);
+    color: var(--ink-strong);
   }
   .moves {
     display: flex;
@@ -664,20 +713,20 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    line-height: 1.5;
   }
   .moves li + li::before {
     content: '→';
     /* inline-block keeps the split move's underline off the arrow */
     display: inline-block;
-    margin: 0 6px;
-    color: var(--ink-soft);
+    margin: 0 8px;
+    color: var(--ink-faint);
   }
   /* Where your turn and the bot's part. */
   .moves li.split {
+    color: var(--ink-strong);
     font-weight: 600;
     text-decoration: underline 2px var(--stamp);
-    text-underline-offset: 3px;
+    text-underline-offset: 4px;
   }
   .why {
     color: var(--ink);
@@ -686,25 +735,35 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 16px;
   }
   .buttons button,
   .button,
   .seg button {
     padding: 4px 12px;
     border: 1px solid var(--line);
-    background: var(--card-bg);
-    color: var(--ink);
+    border-radius: var(--radius);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
-    font-size: 0.82rem;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
-    border-radius: var(--radius);
+    transition:
+      background-color 0.3s var(--ease),
+      transform 0.3s var(--ease);
   }
   .buttons button:hover,
   .button:hover,
   .seg button:hover {
-    border-color: var(--ink);
+    background: #313131;
+  }
+  .buttons button:active,
+  .button:active,
+  .seg button:active {
+    transform: scale(0.98);
   }
   .games .button {
     border-color: var(--primary);
@@ -717,17 +776,22 @@
     background: var(--press);
   }
   .seg {
-    display: flex;
-    gap: 0;
-    margin-bottom: 8px;
+    display: inline-flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 4px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
   }
-  .seg button + button {
-    margin-left: -1px;
+  .seg button {
+    border-color: transparent;
+    background: none;
+    color: var(--ink-soft);
   }
   .seg button.on {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: var(--primary-ink);
+    background: var(--control);
+    color: var(--ink-strong);
   }
   /* Board.svelte sizes its cards from this box (container query units). */
   .table {
@@ -736,13 +800,16 @@
     container-type: size;
   }
   .viewer h4 {
-    margin: 10px 0 4px;
-    font-size: 0.85rem;
+    margin: 16px 0 8px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
   }
   .cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-    gap: 6px;
+    gap: 8px;
   }
   .cards button {
     padding: 0;
@@ -751,24 +818,24 @@
     cursor: zoom-in;
   }
   .note {
-    margin-top: 20px;
-    color: var(--ink-soft);
-    font-size: 0.78rem;
-    line-height: 1.6;
+    margin-top: 32px;
+    color: var(--ink-faint);
+    font-size: 12px;
+    line-height: 20px;
   }
   @media (max-width: 640px) {
     .record {
       grid-template-columns: 1fr;
     }
     .vs li {
-      grid-template-columns: 1fr 3.4rem;
+      grid-template-columns: 1fr 3.5rem;
     }
     .vs .bar {
       grid-column: 1 / -1;
       grid-row: 2;
     }
     .games li {
-      grid-template-columns: 4.2rem minmax(0, 1fr);
+      grid-template-columns: 4.5rem minmax(0, 1fr);
     }
     .act {
       grid-column: 2;

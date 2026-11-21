@@ -1175,57 +1175,65 @@
 <style>
   /* The match sheet: your corner, VS, the bot's corner, then the settings and start. */
   .setup {
-    max-width: 920px;
-    margin: 8px auto 0;
-    border: 1px solid var(--line);
+    max-width: 960px;
+    margin: 0 auto;
+    border: 1px solid var(--rule);
     background: var(--card-bg);
-    box-shadow: var(--shadow);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
   }
   .sheet-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 12px;
-    padding: 22px 24px 16px;
-    border-bottom: 1px solid var(--line);
+    gap: 16px;
+    padding: 32px 32px 24px;
+    border-bottom: 1px solid var(--rule);
   }
   .sheet-head h1 {
     margin: 0;
-    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-size: 30px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .sheet-head .eyebrow {
-    margin: 0 0 2px;
+    margin: 0 0 4px;
   }
   .match {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr);
-    border-bottom: 1px solid var(--rule);
+    grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
   }
   .corner {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 18px 24px 20px;
+    gap: 12px;
+    padding: 24px 32px 32px;
   }
   .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     align-self: flex-start;
-    padding-left: 8px;
-    border-left: 3px solid var(--primary);
     color: var(--ink-soft);
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    line-height: 1.2;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
   }
-  .them .who {
-    border-left-color: var(--stamp);
+  .who::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-strong);
+  }
+  .them .who::before {
+    background: var(--stamp);
   }
   .fan {
     position: relative;
     height: clamp(8.5rem, 22vw, 10.5rem);
-    margin: 4px 0 2px;
+    margin: 8px 0;
   }
   .fc {
     position: absolute;
@@ -1234,8 +1242,8 @@
     width: 6.6rem;
     border-radius: 6px;
     box-shadow:
-      0 0 0 1px #15181d1a,
-      0 6px 14px -8px #15181d80;
+      0 0 0 1px #ffffff14,
+      -8px 0 16px -8px #000;
   }
   .fc :global(.back) {
     display: block;
@@ -1248,54 +1256,73 @@
     translate: -50% -50%;
     display: grid;
     place-items: center;
-    width: 3rem;
-    height: 3rem;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: var(--ink);
-    color: var(--paper);
-    font-family: var(--font-heading);
+    background: var(--primary);
+    color: var(--primary-ink);
     font-weight: 600;
-    font-size: 1.6rem;
+    font-size: 24px;
     line-height: 1;
-    box-shadow: 0 0 0 3px var(--card-bg);
+    box-shadow: 0 0 0 4px var(--card-bg);
   }
   .more {
     align-self: flex-start;
-    font-size: 0.85rem;
     color: var(--ink-soft);
-    text-underline-offset: 3px;
+    font-size: 14px;
+    line-height: 20px;
+    text-underline-offset: 4px;
+    transition: color 0.3s var(--ease);
   }
   .more:hover {
-    color: var(--primary);
+    color: var(--ink-strong);
   }
+  /* A hairline down the middle with VS on it. */
   .vs {
+    position: relative;
     display: grid;
     place-items: center;
-    border-left: 1px solid var(--rule);
-    border-right: 1px solid var(--rule);
+  }
+  .vs::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    bottom: 24px;
+    left: 50%;
+    width: 1px;
+    background: var(--rule);
   }
   .vs span {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--card-bg);
     color: var(--ink-soft);
-    font-family: var(--font-heading);
+    font-size: 12px;
+    line-height: 16px;
     font-weight: 600;
-    font-size: 1.05rem;
   }
   .prefs {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 12px 16px;
-    padding: 16px 24px 20px;
-    background: var(--paper);
+    padding: 24px 32px;
+    border-top: 1px solid var(--rule);
+    background: var(--raised);
   }
   .prefs label {
-    font-size: 0.85rem;
     color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
   }
   .start {
     margin-left: auto;
-    padding: 10px 32px;
-    font-size: 1.02rem;
+    padding: 8px 24px;
   }
   .chip {
     padding: 0 8px;
@@ -1315,13 +1342,21 @@
       grid-template-columns: 1fr;
     }
     .vs {
-      height: 2.6rem;
-      border: 0;
-      border-top: 1px solid var(--rule);
-      border-bottom: 1px solid var(--rule);
+      height: 40px;
     }
-    .vs span {
-      font-size: 0.95rem;
+    .vs::before {
+      top: 50%;
+      bottom: auto;
+      left: 24px;
+      right: 24px;
+      width: auto;
+      height: 1px;
+    }
+    .sheet-head,
+    .corner,
+    .prefs {
+      padding-left: 16px;
+      padding-right: 16px;
     }
     .start {
       width: 100%;
@@ -1334,34 +1369,54 @@
     font-weight: 500;
   }
   select {
-    padding: 6px 8px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
-    background: var(--card-bg);
-    color: var(--ink);
+    background: var(--raised);
+    color: var(--ink-strong);
     font: inherit;
     border-radius: var(--radius);
+    transition: border-color 0.3s var(--ease);
+  }
+  select:hover {
+    border-color: #4a4a4a;
+  }
+  .corner select,
+  .prefs select {
+    background: var(--paper);
   }
   button {
-    padding: 6px 14px;
+    padding: 4px 12px;
     border: 1px solid var(--line);
-    background: var(--card-bg);
-    color: var(--ink);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
     cursor: pointer;
     border-radius: var(--radius);
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition:
+      background-color 0.3s var(--ease),
+      border-color 0.3s var(--ease),
+      transform 0.3s var(--ease);
   }
   button:hover:not(:disabled) {
-    border-color: var(--ink);
+    background: #313131;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.98);
   }
   button:disabled {
     opacity: 0.4;
     cursor: default;
   }
   .primary {
+    padding: 8px 12px;
     border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
+    font-size: 16px;
+    line-height: 24px;
     font-weight: 600;
   }
   .primary:hover:not(:disabled) {
@@ -1383,9 +1438,9 @@
     z-index: 30;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 10px;
+    gap: 12px;
     height: 100dvh;
-    padding: 8px 12px calc(6px + env(safe-area-inset-bottom));
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     background-color: var(--paper);
   }
   .main {
@@ -1399,9 +1454,14 @@
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 14px;
+    gap: 4px 16px;
     align-items: center;
-    font-size: 0.92rem;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .status strong {
+    color: var(--ink-strong);
+    font-weight: 600;
   }
   .top-tools {
     display: flex;
@@ -1409,8 +1469,9 @@
     margin-left: auto;
   }
   button.small {
-    padding: 3px 10px;
-    font-size: 0.82rem;
+    padding: 4px 12px;
+    font-size: 12px;
+    line-height: 16px;
   }
   /* The table: card sizes come from this box (container query units in Board.svelte). */
   .table {
@@ -1426,8 +1487,8 @@
     display: grid;
     place-items: center;
     padding: 12px;
-    border-radius: 6px;
-    background: #0d1014a6;
+    border-radius: var(--radius-lg);
+    background: #000000b3;
   }
   .choice-layer :global(.choice) {
     width: min(780px, 100%);
@@ -1445,23 +1506,41 @@
     top: 10px;
     z-index: 5;
     width: min(340px, calc(100% - 20px));
-    padding: 10px 12px;
-    border-radius: var(--radius);
-    border-left: 3px solid var(--stamp);
-    background: color-mix(in srgb, var(--card-bg) 96%, transparent);
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: #1f1f1ff2;
     color: var(--ink);
-    box-shadow: 0 10px 26px #0006;
-    font-size: 0.8rem;
-    animation: recap-in 0.3s ease-out 0.4s backwards;
+    box-shadow: var(--shadow-lg);
+    font-size: 12px;
+    line-height: 16px;
+    animation: recap-in 0.5s var(--ease) 0.4s backwards;
+  }
+  .recap-layer header strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-strong);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+  }
+  .recap-layer header strong::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--stamp);
   }
   .recap-layer header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
   }
   .recap-layer header button {
+    padding: 0 4px;
     border: 0;
     background: none;
     color: var(--ink-soft);
@@ -1472,7 +1551,7 @@
     padding-left: 18px;
   }
   .recap-layer li {
-    line-height: 1.45;
+    line-height: 20px;
   }
   .recap-layer .more {
     list-style: none;
@@ -1484,15 +1563,15 @@
     left: 10px;
     top: 10px;
     z-index: 5;
-    padding: 3px 12px;
-    border: 0;
-    border-left: 3px solid var(--stamp);
+    padding: 4px 12px;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+    background: #1f1f1ff2;
     color: var(--ink);
-    font-size: 0.76rem;
-    font-weight: 600;
-    box-shadow: 0 4px 12px #0005;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
     cursor: pointer;
   }
   @keyframes recap-in {
@@ -1519,25 +1598,28 @@
   }
   .result {
     color: var(--stamp);
-    font-family: var(--font-display);
-    font-size: 1.2rem;
+    font-size: 18px;
+    line-height: 28px;
   }
   .opp {
     color: var(--ink-soft);
-    font-size: 0.9rem;
   }
   .link {
     border: 0;
     padding: 0;
     background: none;
-    color: var(--primary);
+    color: var(--ink-soft);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-underline-offset: 4px;
+  }
+  .link:hover:not(:disabled) {
+    background: none;
+    color: var(--ink-strong);
   }
   .bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
   }
   /* The once-a-turn plays: free ones outlined, used ones ticked and faded, a barred one struck through. */
@@ -1547,18 +1629,19 @@
     gap: 4px;
   }
   .use {
-    padding: 1px 8px;
-    border: 1px solid var(--primary);
-    border-radius: 2px;
-    color: var(--primary);
-    font-size: 0.74rem;
-    font-weight: 600;
+    padding: 2px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink-strong);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
     white-space: nowrap;
   }
   .use.used {
-    border-color: var(--line);
-    background: var(--paper-deep);
-    color: var(--ink-soft);
+    border-color: var(--rule);
+    background: var(--raised);
+    color: var(--ink-faint);
   }
   .use.barred {
     border-color: var(--line);
@@ -1567,18 +1650,19 @@
   }
   /* Ending the turn while an attack is still there: asked in the dock, the attack first. */
   .end-warn {
-    padding: 8px 10px;
-    border: 1px solid var(--accent);
-    border-left-width: 3px;
-    border-radius: var(--radius);
-    background: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
   }
   .warn-text {
     flex: 1 1 260px;
-    font-size: 0.88rem;
+    font-size: 14px;
+    line-height: 20px;
   }
   .warn-text strong {
-    color: var(--stamp);
+    color: var(--accent);
+    font-weight: 600;
   }
   /* Ending the turn: the one big button, as on a game screen. */
   .bar .end {
@@ -1586,16 +1670,19 @@
     border: 1px solid var(--stamp);
     background: var(--stamp);
     color: #fff;
+    font-size: 16px;
+    line-height: 24px;
     font-weight: 600;
   }
-  .bar .end:hover {
-    border-color: color-mix(in srgb, var(--stamp) 80%, #000);
-    background: color-mix(in srgb, var(--stamp) 80%, #000);
+  .bar .end:hover:not(:disabled) {
+    border-color: #c93c41;
+    background: #c93c41;
   }
   .hint {
     margin: 0;
-    font-size: 0.85rem;
     color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
   }
   /* The hand and buttons stay on screen while the board scrolls, so a drag can always reach a target. */
   .dock {
@@ -1640,11 +1727,12 @@
     left: 0;
     top: 0;
     transform: translate(-50%, 56px);
-    padding: 3px 10px;
-    border-radius: 3px;
-    background: #15181de6;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #000000e6;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 12px;
+    line-height: 16px;
     white-space: nowrap;
   }
   .drag-ghost.touch .ghost-label {
@@ -1663,10 +1751,13 @@
     transform: translateX(-50%);
     margin: 0;
     padding: 4px 12px;
+    border: 1px solid color-mix(in srgb, var(--stamp) 45%, transparent);
+    border-radius: var(--radius);
     background: var(--card-bg);
     color: var(--stamp);
-    font-size: 0.85rem;
-    box-shadow: 0 4px 12px -4px #000a;
+    font-size: 14px;
+    line-height: 20px;
+    box-shadow: var(--shadow-lg);
   }
   .side {
     display: flex;
@@ -1683,18 +1774,22 @@
     position: fixed;
     inset: 0;
     z-index: 35;
-    background: #0d101480;
+    background: #00000099;
   }
   .panel {
-    padding: 10px 12px;
-    border: 1px solid var(--line);
+    padding: 12px 16px;
+    border: 1px solid var(--rule);
     background: var(--card-bg);
-    font-size: 0.85rem;
-    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 20px;
+    border-radius: var(--radius-lg);
   }
   .panel h3 {
-    margin: 0 0 6px;
-    font-size: 0.95rem;
+    margin: 0 0 4px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
   }
   .panel p {
     margin: 0 0 4px;
@@ -1705,18 +1800,22 @@
   .tools {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
   }
   .anim-pick {
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
+    gap: 8px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
     font-weight: 400;
   }
   .anim-pick select {
-    padding: 4px 6px;
+    padding: 4px 8px;
+    font-size: 14px;
+    line-height: 20px;
   }
   .backdrop {
     position: fixed;
@@ -1725,19 +1824,22 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: color-mix(in srgb, #15181d 60%, transparent);
+    background: #000000b3;
   }
   .discard {
     width: min(860px, 100%);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    padding: 16px;
+    padding: 24px;
     border: 1px solid var(--line);
     background: var(--card-bg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
   }
   .discard h3 {
-    margin: 0 0 10px;
+    margin: 0 0 16px;
+    font-size: 20px;
+    line-height: 28px;
   }
   .grid {
     display: grid;

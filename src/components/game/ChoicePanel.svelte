@@ -169,11 +169,11 @@
 
 <style>
   .choice {
-    padding: 12px;
+    padding: 16px;
     border: 1px solid var(--line);
     background: var(--card-bg);
     box-shadow: var(--shadow-lg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   .head {
     display: flex;
@@ -275,16 +275,17 @@
     gap: 6px;
   }
   .lbl {
-    padding: 6px 12px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
-    background: var(--card-bg);
-    color: var(--ink);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
     cursor: pointer;
     border-radius: var(--radius);
+    transition: background-color 0.3s var(--ease);
   }
   .lbl:hover {
-    border-color: var(--ink);
+    background: #313131;
   }
   .lbl.big {
     padding: 8px 16px;
@@ -304,9 +305,9 @@
   }
   .zone .actions {
     position: sticky;
-    bottom: -12px;
-    margin: 10px -12px -12px;
-    padding: 10px 12px;
+    bottom: -16px;
+    margin: 12px -16px -16px;
+    padding: 12px 16px;
     background: var(--card-bg);
     border-top: 1px solid var(--line);
   }

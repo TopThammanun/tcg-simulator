@@ -133,12 +133,17 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
-  Theme: formal and quiet, tokens on `:root` in `layouts/Base.astro` (neutral paper page, white header with a hairline
-  and the current page underlined, `--primary` navy for actions with `--press` its hover, square buttons (`--radius`
-  4px), `--stamp` crimson only for emphasis, `--accent` ochre for what can be played or picked, `--line` / `--rule`
-  hairlines; Noto Serif Thai for headings (`--font-heading`), IBM Plex Sans Thai for text and controls, IBM Plex Mono
-  for figures). No pill buttons, sticker labels, tilted cards or confetti; the playmat is slate (`.board` in
-  Board.svelte). Original styling only: no official logos or game trade dress.
+  Theme: one dark, flat theme, tokens on `:root` in `layouts/Base.astro` (black page, `--card-bg` #181818 /
+  `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` / `--rule` hairlines; `--primary` white for the one
+  main action, `--accent` amber for what can be played or picked, `--stamp` red for danger and the opponent;
+  `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve). One type family: Geist
+  for Latin and figures with Noto Sans Thai for Thai (`--font-body`), Geist Mono for numbers; named text styles
+  (`.heading-1` … `.caption-5`) on a 12/14/16/18/20/24/30/36/48/60 scale, spacing on 4/8/12/16/24/32/40/48/64/80/96.
+  No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. Header: a floating bar,
+  a full-height menu on phones. Home: hero with a real game screenshot (`public/home/board.jpg`, retake it after
+  restyling the play screen), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
+  `headlines()` in `lib/decks.ts`), steps, a tagline lit word by word on scroll, FAQ (facts only). The playmat is
+  flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress.
 
 ## Versions
 

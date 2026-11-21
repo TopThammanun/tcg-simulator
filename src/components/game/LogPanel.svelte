@@ -41,7 +41,7 @@
     border: 1px solid var(--line);
     background: var(--card-bg);
     font-size: 0.8rem;
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
   }
   .line {
     padding: 2px 8px;

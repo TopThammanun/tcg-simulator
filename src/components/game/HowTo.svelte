@@ -69,11 +69,11 @@
     width: min(560px, calc(100vw - 32px));
     max-height: calc(100dvh - 32px);
     overflow-y: auto;
-    padding: 24px 24px 20px;
+    padding: 32px;
     background: var(--card-bg);
     border: 1px solid var(--line);
     box-shadow: var(--shadow-lg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-xl);
   }
   h2 {
     margin: 0 0 12px;

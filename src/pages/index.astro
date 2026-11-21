@@ -1,314 +1,456 @@
 ---
+import DeckCard from '../components/DeckCard.astro';
 import Base from '../layouts/Base.astro';
-import { archetypes, loadDecks } from '../lib/decks';
+import { archetypes, headlines, loadDecks } from '../lib/decks';
+import { SUPPORTED } from '../ui/decklist';
 import limitless from '../../data/meta/limitless.json';
 
 const decks = await loadDecks();
 const opponents = archetypes(decks);
 const maxShare = Math.max(...opponents.map((a) => a.metaShare));
 const updated = new Date(limitless.fetched).toLocaleDateString('th-TH', { dateStyle: 'medium' });
+const num = (n: number) => n.toLocaleString('en-US');
+const artOf = (slug: string) => headlines(decks.find((d) => d.slug === slug)!)[0]?.print.image.high;
 
-// The hero's row of cards: each archetype's headline Pokémon (the one the deck is named after, else its biggest rule-box Pokémon).
-type Line = (typeof decks)[number]['lines'][number];
-const score = (deckName: string, l: Line) =>
-  (deckName.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) + (l.card.category === 'pokemon' ? l.card.prizes * 10 : 0) + l.entry.count;
-const fan = opponents
-  .slice(0, 5)
-  .map((a) => {
-    const d = decks.find((x) => x.slug === a.slugs[0])!;
-    const best = d.lines
-      .filter((l) => l.entry.section === 'pokemon' && l.print.image.high)
-      .sort((x, y) => score(d.meta.name, y) - score(d.meta.name, x))[0];
-    return best && { src: best.print.image.high!, name: best.card.name, deck: a.name };
-  })
-  .filter((x) => !!x);
-
-const features = [
+const steps = [
   {
-    title: 'บอทเล่นเด็ค meta',
-    text: 'list จากทัวร์นาเมนต์ล่าสุดบน Limitless สุ่มคู่แข่งตามสัดส่วนที่เจอจริง หรือเลือกซ้อม matchup ที่อยากซ้อม',
+    title: 'เลือกเด็ค',
+    text: 'เลือกเด็คใน meta หรือวาง list ที่ export จาก Limitless หรือ Pokémon TCG Live แล้วเลือกคู่แข่ง หรือสุ่มตามสัดส่วนที่เจอจริง',
   },
   {
-    title: 'เล่นเหมือนโต๊ะจริง',
-    text: 'ค้นเด็คแล้วเห็นทั้งเด็ค การ์ดที่กำลังใช้ขึ้นกลางสนามจนเอฟเฟกต์จบ ไม่มีตัวช่วยหรือย้อน ตามกฎ Standard',
+    title: 'เล่นกับบอท',
+    text: 'เล่นตามกฎ Standard เหมือนที่โต๊ะ ค้นเด็คแล้วเห็นทั้งเด็ค เลือก Prize เอง ไม่มีตัวช่วยหรือย้อนตา',
   },
   {
     title: 'ทบทวนเกม',
-    text: 'เล่นจบแล้วดูว่าเทิร์นไหนที่เกมพลิก บอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่',
+    text: 'ดู win% ทุกเทิร์น เทิร์นที่เกมพลิก และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่',
+  },
+];
+
+// The tagline, word by word (Thai has no spaces between words, so the words come from the segmenter).
+const TAGLINE = ['บอทเล่น list เดียวกับผู้เล่นที่ติดอันดับ', 'คุณได้ซ้อม matchup ที่จะเจอในทัวร์จริง'];
+const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
+const taglineWords = TAGLINE.map((line) => {
+  const words: string[] = [];
+  for (const { segment, isWordLike } of segmenter.segment(line)) {
+    if (!isWordLike && words.length) words[words.length - 1] += segment;
+    else words.push(segment);
+  }
+  return words;
+});
+
+const faq = [
+  {
+    q: 'ต้องสมัครสมาชิกไหม',
+    a: 'ไม่ต้อง เปิดเว็บแล้วเล่นได้เลย เกมที่เล่นจบและ list ของคุณเก็บไว้ในเบราว์เซอร์นี้',
+  },
+  {
+    q: 'เด็คของบอทมาจากไหน',
+    a: `list จริงจากทัวร์นาเมนต์บน Limitless เลือกเด็คที่มีสัดส่วนสูงสุดใน ${limitless.days} วันล่าสุด จากทัวร์นาเมนต์ที่มีผู้เล่น ${limitless.minPlayers} คนขึ้นไป อัปเดต ${updated}`,
+  },
+  {
+    q: 'บอทเล่นเก่งแค่ไหน',
+    a: 'บอทใช้ neural network ที่ฝึกจากการเล่นกับตัวเอง และคิดล่วงหน้าหลายทางก่อนเลือกเล่น บอทไม่เห็นการ์ดที่คุณซ่อนอยู่ คาดเดาจากสิ่งที่เปิดแล้วเท่านั้น',
+  },
+  {
+    q: 'ใช้ list ของตัวเองได้ไหม',
+    a: `ได้ วาง list ที่หน้าเด็ค ตอนนี้รองรับการ์ด ${SUPPORTED.length} ใบที่เด็คใน meta ใช้ ถ้ามีใบที่ยังไม่รองรับ เว็บจะบอกว่าใบไหน`,
+  },
+  {
+    q: 'เล่นบนมือถือได้ไหม',
+    a: 'ได้ สนามปรับขนาดตามจอ ลากการ์ดหรือแตะเพื่อเล่น และกดค้างที่การ์ดเพื่ออ่าน',
+  },
+  {
+    q: 'win% ในหน้าทบทวนคำนวณยังไง',
+    a: 'ประเมินด้วย network ของบอทตัวเดียวกับที่คุณเล่นด้วย เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่หลายแบบ เป็นค่าประมาณสำหรับหาเทิร์นที่ควรดูซ้ำ',
   },
 ];
 ---
 
 <Base title="หน้าแรก">
   <section class="hero">
-    <div class="pitch">
-      <p class="eyebrow">Pokémon TCG · Standard</p>
-      <h1>ซ้อม matchup<br />กับเด็คใน meta</h1>
-      <p class="lede">
-        เลือกเด็คที่คุณจะเล่น หรือวาง list ของคุณเอง แล้วเล่นกับบอทที่ใช้เด็คอันดับต้นของ meta ตามกฎจริง ในเบราว์เซอร์
-        ไม่ต้องสมัครสมาชิก
-      </p>
-      <div class="ctas">
-        <a class="cta" href="/play/">เล่นกับบอท</a>
-        <a class="cta alt" href="/decks/">ดูเด็คทั้งหมด</a>
-      </div>
-    </div>
-    <figure class="spread">
-      <div class="cards" aria-hidden="true">
-        {fan.map((c, i) => <img src={c.src} alt="" width="600" height="825" style={`--i:${i}`} />)}
-      </div>
-      <figcaption>เด็คอันดับ 1–{fan.length} ตามสัดส่วนบน Limitless</figcaption>
+    <p class="proof caption-4">
+      ข้อมูลจาก Limitless · <span class="mono">{num(limitless.tournaments)}</span> ทัวร์นาเมนต์ ·
+      <span class="mono">{num(limitless.players)}</span> ผู้เล่น · <span class="mono">{limitless.days}</span> วันล่าสุด
+    </p>
+    <h1 class="heading-1">ซ้อมกับเด็คที่ครอง meta<br />ก่อนเจอกันในทัวร์จริง</h1>
+    <p class="sub body-7">
+      เลือกเด็คของคุณหรือวาง list เอง แล้วเล่นกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด<br />
+      ตามกฎ Standard ในเบราว์เซอร์ ไม่ต้องสมัคร
+    </p>
+    <a class="btn primary" href="/play/">เริ่มเล่นกับบอท</a>
+    <figure class="shot">
+      <img
+        src="/home/board.jpg"
+        alt="หน้าจอเกม: สนามของคุณด้านล่าง สนามของบอทด้านบน การ์ดในมือ และ log ด้านขวา"
+        width="1440"
+        height="900"
+        fetchpriority="high"
+      />
     </figure>
   </section>
 
-  <section class="features" aria-label="ทำอะไรได้บ้าง">
-    {
-      features.map((f, i) => (
-        <div>
-          <span class="mono num">{String(i + 1).padStart(2, '0')}</span>
-          <h2>{f.title}</h2>
-          <p>{f.text}</p>
-        </div>
-      ))
-    }
+  <section class="section" aria-labelledby="meta-title">
+    <header class="section-head reveal">
+      <div>
+        <h2 id="meta-title" class="heading-3">เด็คที่คุณจะเจอ</h2>
+        <p class="body-3 muted">สัดส่วนใน meta จาก Limitless {limitless.days} วันล่าสุด อัปเดต {updated}</p>
+      </div>
+      <a class="btn" href="/decks/">ดู list ทั้งหมด</a>
+    </header>
+    <div class="decks reveal">
+      {
+        opponents.map((a, i) => (
+          <DeckCard
+            href={`/decks/${a.slugs[0]}/`}
+            name={a.name}
+            rank={i + 1}
+            share={a.metaShare}
+            {maxShare}
+            art={artOf(a.slugs[0]!)}
+          />
+        ))
+      }
+    </div>
   </section>
 
-  <section class="meta" aria-labelledby="meta-title">
-    <header>
-      <h2 id="meta-title">คู่แข่งตอนนี้</h2>
-      <p class="note">สัดส่วนใน meta จาก Limitless · อัปเดต {updated}</p>
+  <section class="section" aria-labelledby="how-title">
+    <header class="section-head reveal">
+      <h2 id="how-title" class="heading-3">ใช้งานยังไง</h2>
     </header>
-    <table>
-      <thead>
-        <tr>
-          <th class="rank" scope="col">อันดับ</th>
-          <th scope="col">เด็ค</th>
-          <th class="share" scope="col">สัดส่วน</th>
-          <th class="pct" scope="col">%</th>
-        </tr>
-      </thead>
-      <tbody>
-        {
-          opponents.map((a, i) => (
-            <tr>
-              <td class="rank mono">{i + 1}</td>
-              <td>
-                <a href={`/decks/${a.slugs[0]}/`}>{a.name}</a>
-              </td>
-              <td class="share">
-                <span class="bar" style={`--w:${(a.metaShare / maxShare) * 100}%`} />
-              </td>
-              <td class="pct mono">{a.metaShare.toFixed(1)}</td>
-            </tr>
-          ))
-        }
-      </tbody>
-    </table>
+    <ol class="steps">
+      {
+        steps.map((s, i) => (
+          <li class="reveal" style={`--i:${i}`}>
+            <span class="mono caption-4 step-no">{String(i + 1).padStart(2, '0')}</span>
+            <h3 class="title-1">{s.title}</h3>
+            <p class="body-6 muted">{s.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="tagline-wrap" aria-label="สิ่งที่คุณได้">
+    <p class="tagline heading-3">
+      {
+        taglineWords.map((line) => (
+          <span class="tl">
+            {line.map((w) => (
+              <span class="w">{w}</span>
+            ))}
+          </span>
+        ))
+      }
+    </p>
+  </section>
+
+  <section class="section faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" class="heading-3 reveal">คำถามที่พบบ่อย</h2>
+    <div class="qa reveal">
+      {
+        faq.map((f) => (
+          <details>
+            <summary class="title-2">
+              {f.q}
+              <span class="plus" aria-hidden="true" />
+            </summary>
+            <p class="body-3 muted">{f.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="final reveal" aria-labelledby="final-title">
+    <h2 id="final-title" class="heading-4">พร้อมซ้อม matchup แรกของคุณ</h2>
+    <p class="body-3 muted">เลือกเด็ค เลือกคู่แข่ง แล้วเริ่มเกมได้ทันที</p>
+    <a class="btn primary" href="/play/">เริ่มเล่นกับบอท</a>
   </section>
 </Base>
 
+<script>
+  // The tagline lights up word by word as it scrolls through the screen (one listener, once per frame).
+  const tagline = document.querySelector<HTMLElement>('.tagline');
+  const words = tagline ? [...tagline.querySelectorAll<HTMLElement>('.w')] : [];
+  if (tagline && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const r = tagline.getBoundingClientRect();
+      const start = innerHeight * 0.85;
+      const end = innerHeight * 0.4;
+      const p = (start - r.top) / (start - end + r.height);
+      const lit = Math.round(Math.min(1, Math.max(0, p)) * words.length);
+      words.forEach((w, i) => w.classList.toggle('on', i < lit));
+    };
+    addEventListener(
+      'scroll',
+      () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(update);
+      },
+      { passive: true },
+    );
+    update();
+  } else words.forEach((w) => w.classList.add('on'));
+</script>
+
 <style>
-  .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
-    align-items: center;
-    gap: 48px;
-    padding: 24px 0 40px;
+  .muted {
+    color: var(--ink-soft);
   }
-  .eyebrow {
-    margin-bottom: 14px;
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 0 0;
+    text-align: center;
+  }
+  .hero > * {
+    animation: hero-in 0.7s var(--ease) both;
+  }
+  .hero > :nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .hero > :nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .hero > :nth-child(4) {
+    animation-delay: 180ms;
+  }
+  .hero > :nth-child(5) {
+    animation-delay: 300ms;
+  }
+  @keyframes hero-in {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+  }
+  .proof {
+    margin: 0 0 24px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-soft);
+  }
+  .proof .mono {
+    color: var(--ink-strong);
   }
   h1 {
-    font-size: clamp(2.2rem, 5.2vw, 3.6rem);
-    font-weight: 700;
-    margin: 0 0 18px;
+    max-width: 680px;
+    margin: 0 0 24px;
+    background: linear-gradient(90deg, #ffffff, #9b9b9b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
-  .lede {
-    max-width: 52ch;
-    font-size: 1.08rem;
+  .sub {
+    max-width: 680px;
+    margin: 0 0 32px;
     color: var(--ink-soft);
-    margin: 0 0 28px;
   }
-  .ctas {
+  /* The game itself, framed. */
+  .shot {
+    width: 100%;
+    margin: 64px 0 0;
+    padding: 8px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xl);
+    background: var(--card-bg);
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+  }
+  .section {
+    padding-top: 96px;
+  }
+  .section-head {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 24px;
+    margin-bottom: 32px;
   }
-  .cta {
-    display: inline-block;
-    padding: 11px 22px;
-    border: 1px solid var(--primary);
-    border-radius: var(--radius);
-    background: var(--primary);
-    color: var(--primary-ink);
-    font-weight: 600;
-    text-decoration: none;
-    transition: background 0.15s ease, border-color 0.15s ease;
+  .section-head h2 {
+    margin: 0 0 8px;
   }
-  .cta:hover {
-    background: var(--press);
-    border-color: var(--press);
-  }
-  .cta.alt {
-    background: transparent;
-    border-color: var(--line);
-    color: var(--ink);
-  }
-  .cta.alt:hover {
-    border-color: var(--ink);
-    background: transparent;
-  }
-  /* The top decks' headline Pokémon laid flat in a row, each over the one before. */
-  .spread {
+  .section-head p {
     margin: 0;
   }
-  .cards {
-    position: relative;
-    height: calc(9rem * 88 / 63);
+  .decks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
   }
-  .cards img {
-    position: absolute;
-    top: 0;
-    left: calc(var(--i) * 5.25rem);
-    width: 9rem;
-    height: auto;
-    border-radius: 4.5% / 3.2%;
-    box-shadow:
-      0 0 0 1px #15181d1a,
-      -6px 0 16px -10px #15181d80;
-  }
-  .spread figcaption {
-    margin-top: 12px;
-    color: var(--ink-soft);
-    font-size: 0.8rem;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .cards img {
-      animation: lay 0.5s ease-out backwards;
-      animation-delay: calc(80ms + var(--i) * 60ms);
-    }
-    @keyframes lay {
-      from {
-        opacity: 0;
-        transform: translateX(-12px);
-      }
-    }
-  }
-  .features {
+  .steps {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 32px;
-    padding: 36px 0 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  .features div {
-    padding-top: 14px;
-    border-top: 2px solid var(--ink);
+  .steps li {
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    transition-delay: calc(var(--i) * 80ms);
   }
-  .num {
+  .step-no {
+    color: var(--ink-faint);
+  }
+  .steps h3 {
+    margin: 8px 0 8px;
+  }
+  .steps p {
+    margin: 0;
+  }
+  /* The tagline: muted until it scrolls into view, then lit word by word. */
+  .tagline-wrap {
+    padding: 160px 0 64px;
+  }
+  .tagline {
+    max-width: 760px;
+    margin: 0 auto;
+    color: var(--ink-strong);
+    text-align: center;
+  }
+  .tl {
     display: block;
-    color: var(--ink-soft);
-    font-size: 0.8rem;
-    margin-bottom: 6px;
   }
-  .features h2 {
-    font-size: 1.15rem;
-    margin: 0 0 6px;
+  .w {
+    transition: color 0.5s var(--ease);
   }
-  .features p {
-    margin: 0;
-    color: var(--ink-soft);
-    font-size: 0.92rem;
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .w:not(.on) {
+      color: #ededed4d;
+    }
   }
-  .meta {
-    margin-top: 48px;
+  .faq {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 32px 64px;
+    align-items: start;
   }
-  .meta header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 4px 16px;
-    margin-bottom: 8px;
-  }
-  .meta h2 {
-    font-size: 1.5rem;
+  .faq h2 {
     margin: 0;
   }
-  .note {
-    margin: 0;
-    color: var(--ink-soft);
-    font-size: 0.8rem;
+  .qa {
+    border-top: 1px solid var(--rule);
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    border-top: 2px solid var(--ink);
-  }
-  th {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--line);
-    color: var(--ink-soft);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-align: left;
-  }
-  td {
-    padding: 11px 10px;
+  details {
     border-bottom: 1px solid var(--rule);
   }
-  tbody tr:hover {
+  summary {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 0;
+    color: var(--ink-strong);
+    list-style: none;
+    cursor: pointer;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .plus {
+    position: relative;
+    flex: none;
+    width: 16px;
+    height: 28px;
+  }
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    top: 13px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--ink-soft);
+    transition: transform 0.5s var(--ease);
+  }
+  .plus::after {
+    transform: rotate(90deg);
+  }
+  details[open] .plus::after {
+    transform: rotate(0deg);
+  }
+  details p {
+    max-width: 640px;
+    margin: 0;
+    padding: 0 32px 24px 0;
+  }
+  .final {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 96px;
+    padding: 64px 24px;
+    border: 1px solid var(--rule);
+    border-radius: 24px;
     background: var(--card-bg);
+    text-align: center;
   }
-  .rank {
-    width: 4.5rem;
-    color: var(--ink-soft);
+  .final h2 {
+    margin: 0 0 8px;
   }
-  td a {
-    font-weight: 600;
-    text-decoration: none;
-  }
-  td a:hover {
-    color: var(--primary);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-  .share {
-    width: 45%;
-  }
-  .bar {
-    display: block;
-    height: 6px;
-    background: linear-gradient(to right, var(--primary) var(--w), var(--paper-deep) var(--w));
-  }
-  .pct {
-    width: 4.5rem;
-    text-align: right;
-    font-weight: 500;
+  .final p {
+    margin: 0 0 24px;
   }
   @media (max-width: 900px) {
-    .hero {
+    .decks {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .steps {
       grid-template-columns: 1fr;
-      gap: 28px;
-      padding-bottom: 36px;
+      gap: 24px;
     }
-    .cards {
-      height: calc(6rem * 88 / 63);
-    }
-    .cards img {
-      width: 6rem;
-      left: calc(var(--i) * 3.6rem);
+    .faq {
+      grid-template-columns: 1fr;
     }
   }
   @media (max-width: 640px) {
-    .features {
-      grid-template-columns: 1fr;
-      gap: 20px;
+    .hero {
+      padding-top: 24px;
     }
-    .share {
-      display: none;
+    .decks {
+      gap: 8px;
     }
-    .rank {
-      width: 3rem;
+    .proof {
+      border-radius: var(--radius-lg);
+    }
+    .shot {
+      margin-top: 48px;
+      padding: 4px;
+      border-radius: var(--radius-lg);
+    }
+    .section {
+      padding-top: 80px;
+    }
+    .tagline-wrap {
+      padding: 96px 0 32px;
+    }
+    .final {
+      padding: 48px 16px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero > * {
+      animation-name: fade;
+    }
+    @keyframes fade {
+      from {
+        opacity: 0;
+      }
     }
   }
 </style>

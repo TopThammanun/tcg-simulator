@@ -1,0 +1,48 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="ไม่พบหน้านี้">
+  <section class="missing">
+    <p class="mono caption-4 code">404</p>
+    <h1 class="heading-3">ไม่พบหน้านี้</h1>
+    <p class="body-3 muted">ลิงก์อาจเก่าหรือพิมพ์ผิด กลับไปหน้าแรก หรือเริ่มเกมใหม่กับบอทได้เลย</p>
+    <p class="actions">
+      <a class="btn primary" href="/play/">เริ่มเล่นกับบอท</a>
+      <a class="btn" href="/">กลับหน้าแรก</a>
+    </p>
+  </section>
+</Base>
+
+<style>
+  .missing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 96px 0;
+    text-align: center;
+  }
+  .code {
+    margin: 0 0 16px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-soft);
+  }
+  h1 {
+    margin: 0 0 12px;
+  }
+  .muted {
+    margin: 0 0 32px;
+    color: var(--ink-soft);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+  }
+</style>

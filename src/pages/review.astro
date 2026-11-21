@@ -6,8 +6,8 @@ import Base from '../layouts/Base.astro';
 <Base title="ประวัติเกม">
   <header class="page-head">
     <p class="eyebrow">หลังเกม · เทิร์นไหนที่เกมพลิก</p>
-    <h1>ประวัติเกม</h1>
-    <p class="how">
+    <h1 class="heading-3">ประวัติเกม</h1>
+    <p class="how body-7">
       เกมที่คุณเล่นจบจะถูกเก็บไว้ในเบราว์เซอร์นี้ กดทบทวนเพื่อดู win% ทุกเทิร์น เทิร์นที่ควรดูก่อน
       และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่ได้
     </p>
@@ -17,20 +17,18 @@ import Base from '../layouts/Base.astro';
 
 <style>
   .page-head {
-    margin-bottom: 8px;
+    max-width: 680px;
+    margin-bottom: 40px;
   }
   /* One game's review has its own heading. */
   :global(main:has(.head)) .page-head {
     display: none;
   }
   h1 {
-    margin: 0 0 4px;
-    font-size: clamp(2rem, 5vw, 3.2rem);
+    margin: 0 0 12px;
   }
   .how {
-    margin: 0 0 8px;
+    margin: 0;
     color: var(--ink-soft);
-    font-size: 0.95rem;
-    max-width: 70ch;
   }
 </style>

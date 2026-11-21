@@ -59,14 +59,12 @@
   .bar {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     padding: 8px 12px;
-    border-radius: var(--radius);
-    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent) 8%, var(--card-bg));
     color: var(--ink);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
-    box-shadow: var(--shadow);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   }
   .src {
     flex: none;

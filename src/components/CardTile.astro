@@ -55,13 +55,10 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     cursor: zoom-in;
     font: inherit;
     color: inherit;
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease;
+    transition: transform 0.5s var(--ease);
   }
   .tile:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
   }
   img {
     display: block;
@@ -77,10 +74,8 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     padding: 9% 8%;
     overflow: hidden;
     border-radius: inherit;
-    border: 2px solid var(--line);
-    background:
-      repeating-linear-gradient(-45deg, transparent 0 6px, color-mix(in srgb, var(--rule) 35%, transparent) 6px 7px),
-      var(--card-bg);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
   }
   .tile[data-broken] img {
     display: none;
@@ -90,16 +85,18 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
   }
   .count {
     position: absolute;
-    top: -6px;
-    left: -6px;
-    min-width: 2.1em;
-    padding: 1px 6px;
-    background: var(--ink);
-    color: var(--paper);
-    font-weight: 600;
-    font-size: 0.8rem;
+    top: -8px;
+    left: -8px;
+    min-width: 28px;
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    background: var(--control);
+    color: #fff;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 16px;
     text-align: center;
-    border-radius: 2px;
+    border-radius: 6px;
   }
   .note {
     position: absolute;

@@ -264,8 +264,8 @@
     }
   }
   .board {
-    --mat-ink: #e8efe9;
-    --line: #ffffff26;
+    --mat-ink: #ededed;
+    --line: #ffffff1f;
     --pad: 14px;
     --row-gap: 14px;
     /* Card sizes come from the space the table has (its container, .table in Game.svelte): the table
@@ -293,28 +293,18 @@
     column-gap: 12px;
     row-gap: var(--row-gap);
     padding: 0 var(--pad) 20px;
-    border-radius: 6px;
-    background-color: #1a283b;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-      radial-gradient(120% 80% at 50% 50%, #22344c 0%, #1a283b 60%, #131e2e 100%);
+    border-radius: var(--radius-lg);
+    background: #181818;
     color: var(--mat-ink);
-    box-shadow:
-      inset 0 0 0 1px #ffffff14,
-      inset 0 0 60px #0007,
-      0 14px 30px -18px #000c;
+    box-shadow: inset 0 0 0 1px #272727;
     overflow: hidden;
-    transition: box-shadow 0.15s ease;
+    transition: box-shadow 0.3s var(--ease);
   }
   .board.play-ready {
-    box-shadow:
-      inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
-      inset 0 0 60px #0007;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
   }
   .board.play-over {
-    box-shadow:
-      inset 0 0 0 4px var(--accent),
-      inset 0 0 60px color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: inset 0 0 0 3px var(--accent);
   }
   /* Over the bot's hand at the top edge, clear of the cards. */
   .play-hint {
@@ -338,7 +328,7 @@
     grid-row: 1 / 5;
     grid-column: 1 / -1;
     margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--row-gap) / 2);
-    background: linear-gradient(#0000002e, #00000014);
+    background: #0000002e;
     pointer-events: none;
   }
   .midline {
@@ -358,7 +348,7 @@
     right: 6%;
     top: -2px;
     height: 2px;
-    background: linear-gradient(90deg, transparent, var(--glow, var(--accent)) 20% 80%, transparent);
+    background: var(--glow, var(--accent));
     opacity: 0;
     transition:
       opacity 0.4s ease,
@@ -369,7 +359,7 @@
     transform: translateY(calc(var(--row-gap) * 0.6));
   }
   .board.turn-theirs .midline::before {
-    --glow: #e2574b;
+    --glow: var(--stamp);
     opacity: 0.7;
     transform: translateY(calc(var(--row-gap) * -0.6));
   }
@@ -384,8 +374,8 @@
     transform: translate(-50%, -50%);
     border: 1px solid #ffffff40;
     border-radius: 50%;
-    background: #1a283b;
-    color: #e2574b;
+    background: #181818;
+    color: var(--stamp);
     font-size: 10px;
   }
 

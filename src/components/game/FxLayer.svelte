@@ -98,25 +98,16 @@
 
   /* Attack name: a slanted strip with the attacker's type colour. */
   .fx-layer :global(.fx-banner) {
-    padding: 8px 30px 8px 22px;
-    border-left: 10px solid var(--c);
-    background: linear-gradient(90deg, color-mix(in srgb, var(--c) 55%, #15181d), #15181df0 45%, #15181dd0);
+    padding: 8px 24px;
+    border: 1px solid color-mix(in srgb, var(--c) 70%, #fff);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--c) 30%, #000000f0);
     color: #fff;
-    font-family: var(--font-heading);
-    font-size: clamp(1.1rem, 3.2vw, 1.7rem);
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
     white-space: nowrap;
-    text-shadow: 0 2px 0 #0008;
-    box-shadow:
-      0 0 0 1px #ffffff22,
-      0 14px 30px -10px #000d;
-  }
-  .fx-layer :global(.fx-banner.theirs) {
-    border-left: 0;
-    border-right: 10px solid var(--c);
-    padding: 8px 22px 8px 30px;
-    background: linear-gradient(270deg, color-mix(in srgb, var(--c) 55%, #15181d), #15181df0 45%, #15181dd0);
+    box-shadow: var(--shadow-lg);
   }
 
   .fx-layer :global(.fx-ring) {
@@ -251,7 +242,7 @@
     justify-content: center;
     gap: 2px;
     padding: 10px 0;
-    background: linear-gradient(90deg, transparent, #15181de8 18%, #15181de8 82%, transparent);
+    background: #000000e0;
     border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     color: #fff;
