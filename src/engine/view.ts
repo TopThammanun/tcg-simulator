@@ -1,7 +1,7 @@
 // What a player is allowed to know. The UI renders viewFor(); bots plan on determinize(), which
 // re-deals every card the player can't see (and reseeds the RNG), so look-ahead can't peek.
 import { derive, shuffleInPlace } from './rng';
-import { cloneState, knownTopCards, opp } from './state';
+import { cloneState, knownTopCards, opp, revealedHand } from './state';
 import type { CardId, GameState, PlayerId } from './types';
 
 export const HIDDEN = -1;
@@ -32,8 +32,9 @@ export function viewFor(s: GameState, viewer: PlayerId): GameState {
 
 /**
  * A full game state consistent with what `viewer` knows: viewer's deck and prizes are re-shuffled
- * together (except the cards the viewer knows are on top of the deck, which stay there), the opponent's
- * hand, deck and prizes are re-dealt, and coin flips/shuffles are reseeded.
+ * together (except the cards the viewer knows are on top of the deck, which stay there, and the Prize cards
+ * when the viewer has looked through the deck since they were set), the opponent's hand, deck and prizes are
+ * re-dealt (except the cards of their hand the viewer saw go there), and coin flips/shuffles are reseeded.
  * Two states that differ only in where the hidden cards are give the same result for the same seed.
  */
 export function determinize(s: GameState, viewer: PlayerId, seed: number): GameState {
@@ -44,10 +45,13 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
   const them = d.players[opp(viewer)];
   const known = knownTopCards(me);
   const rest = me.deck.slice(known.length);
-  r = redealZones([rest, me.prizes], r);
+  r = redealZones(me.prizesKnown ? [rest] : [rest, me.prizes], r);
   me.deck = [...known, ...rest];
   me.knownTop = known;
-  redealZones([them.hand, them.deck, them.prizes], r);
+  const seen = revealedHand(them);
+  const hidden = them.hand.filter((c) => !seen.includes(c));
+  redealZones([hidden, them.deck, them.prizes], r);
+  them.hand = [...seen, ...hidden];
   them.knownTop = [];
   d.rng = { shuffle: [derive(seed, 11), derive(seed, 12)], coin: derive(seed, 13) };
   d.quiet = true;
@@ -59,7 +63,8 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
 /**
  * The real game dealt again when a saved game is picked up ("play on from here"), so going back never shows the cards
  * still to come: `viewer`'s deck and prizes, and the opponent's hand, deck and prizes, are re-dealt and the
- * RNG reseeded. Cards a player knows are on top of their own deck stay there; the game goes on logging.
+ * RNG reseeded. Cards a player knows are on top of their own deck stay there, as do the viewer's Prize cards once
+ * known and the cards of the opponent's hand the viewer saw go there; the game goes on logging.
  */
 export function redeal(s: GameState, viewer: PlayerId, seed: number): GameState {
   if (s.pending) throw new Error('redeal a state without a pending choice');
@@ -69,7 +74,15 @@ export function redeal(s: GameState, viewer: PlayerId, seed: number): GameState 
     const ps = d.players[p];
     const known = knownTopCards(ps);
     const rest = ps.deck.slice(known.length);
-    r = redealZones(p === viewer ? [rest, ps.prizes] : [ps.hand, rest, ps.prizes], r);
+    if (p === viewer) r = redealZones(ps.prizesKnown ? [rest] : [rest, ps.prizes], r);
+    else {
+      const seen = revealedHand(ps);
+      const hidden = ps.hand.filter((c) => !seen.includes(c));
+      r = redealZones([hidden, rest, ps.prizes], r);
+      ps.hand = [...seen, ...hidden];
+      // Their Prize cards are new to them.
+      ps.prizesKnown = false;
+    }
     ps.deck = [...known, ...rest];
   }
   d.rng = { shuffle: [derive(seed, 21), derive(seed, 22)], coin: derive(seed, 23) };

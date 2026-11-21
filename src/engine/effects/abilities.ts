@@ -72,6 +72,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
         prompt: 'Attract Customers: เลือก Supporter',
         min: 0,
         secret: true,
+        reveal: true,
         view: top,
         source: 'tatsugiri',
       });
@@ -86,7 +87,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       return !!a && abilityOn(s, a, 'Festival Lead') && s.players[p].deck.length > 0;
     },
     use: (ctx, p) => {
-      const picked = ctx.search(p, () => true, { prompt: 'Boom Boom Groove: ค้นการ์ด 1 ใบ', max: 1, source: 'thwackey' });
+      const picked = ctx.search(p, () => true, { prompt: 'Boom Boom Groove: ค้นการ์ด 1 ใบ', max: 1, source: 'thwackey', any: true });
       ctx.toHand(p, picked);
       ctx.shuffle(p);
     },

@@ -23,11 +23,17 @@ export interface PickOpts {
   ordered?: boolean;
   /** The cards looked at (ChoiceRequest.view). */
   view?: CardId[];
+  /** The picks are shown to the opponent ("reveal them"): if they go to the hand, the opponent knows they are there. */
+  reveal?: boolean;
+  /** search(): for any card ("search your deck for a card"), so the card is not revealed. */
+  any?: boolean;
 }
 
 export class Ctx {
   private answered = 0;
   private logCopied = false;
+  /** Cards picked and revealed during this action (PickOpts.reveal): toHand() tells the opponent about them. */
+  private revealing = new Set<CardId>();
 
   constructor(
     readonly s: GameState,
@@ -90,7 +96,10 @@ export class Ctx {
   }
 
   pickCards(player: PlayerId, cards: CardId[], o: PickOpts): CardId[] {
-    return this.choose({
+    // Looking through the whole deck tells a player which of their cards are Prizes.
+    const ps = this.ps(player);
+    if (o.view && o.view.length > 0 && o.view.length === ps.deck.length && this.s.phase === 'main' && o.view.every((c) => ps.deck.includes(c))) ps.prizesKnown = true;
+    const picks = this.choose({
       player,
       purpose: o.purpose ?? 'take',
       prompt: o.prompt,
@@ -103,6 +112,15 @@ export class Ctx {
       min: o.min ?? 1,
       max: o.max ?? 1,
     });
+    if (o.reveal) for (const c of picks) this.revealing.add(c);
+    return picks;
+  }
+
+  /** The opponent of p now knows these cards are in p's hand (PlayerState.revealed). */
+  reveal(p: PlayerId, cards: CardId[]): void {
+    const ps = this.ps(p);
+    const known = (ps.revealed ??= []);
+    for (const c of cards) if (!known.includes(c)) known.push(c);
   }
 
   pickSlots(player: PlayerId, slots: Slot[], o: PickOpts & { repeat?: boolean }): Slot[] {
@@ -174,19 +192,31 @@ export class Ctx {
 
   /** Remove `card` from wherever it is among p's hand/deck/discard/prizes. */
   take(p: PlayerId, card: CardId): CardId {
+    this.takeFrom(p, card);
+    return card;
+  }
+
+  /** take(), saying which zone the card left. A card leaving the hand is no longer known to be there. */
+  private takeFrom(p: PlayerId, card: CardId): 'hand' | 'deck' | 'discard' | 'prizes' {
     const ps = this.ps(p);
-    for (const zone of [ps.hand, ps.deck, ps.discard, ps.prizes]) {
+    for (const [name, zone] of [['hand', ps.hand], ['deck', ps.deck], ['discard', ps.discard], ['prizes', ps.prizes]] as const) {
       const i = zone.indexOf(card);
       if (i >= 0) {
         zone.splice(i, 1);
-        return card;
+        if (name === 'hand' && ps.revealed?.includes(card)) ps.revealed = ps.revealed.filter((c) => c !== card);
+        return name;
       }
     }
     throw new Error(`card ${card} is not in a zone of player ${p}`);
   }
 
+  /** Into the hand. The opponent knows the cards from the discard pile and the deck cards a search revealed. */
   toHand(p: PlayerId, cards: CardId[]): void {
-    for (const c of cards) this.ps(p).hand.push(this.take(p, c));
+    for (const c of cards) {
+      const from = this.takeFrom(p, c);
+      this.ps(p).hand.push(c);
+      if (from === 'discard' || (from === 'deck' && this.revealing.has(c))) this.reveal(p, [c]);
+    }
   }
 
   toDiscard(p: PlayerId, cards: CardId[]): void {
@@ -199,7 +229,10 @@ export class Ctx {
     this.shuffle(p);
   }
 
-  /** Search the deck (secret to opponents). Returns the picked cards, still in the deck. */
+  /**
+   * Search the deck (secret to opponents). Returns the picked cards, still in the deck. A search for a kind of card
+   * reveals what it finds (the rules: "reveal it"); a search for any card (`any`) does not.
+   */
   search(p: PlayerId, filter: (key: string) => boolean, o: PickOpts): CardId[] {
     const ps = this.ps(p);
     const found = ps.deck.filter((c) => filter(keyOf(this.s, c)));
@@ -210,6 +243,7 @@ export class Ctx {
       secret: true,
       min: 0,
       view: ps.deck.slice(),
+      reveal: !o.any,
       ...o,
     });
   }

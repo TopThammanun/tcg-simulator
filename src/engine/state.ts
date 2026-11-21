@@ -80,7 +80,20 @@ function emptyPlayer(deck: CardId[]): PlayerState {
     koByAttackThisTurn: false,
     mulligans: 0,
     knownTop: [],
+    prizesKnown: false,
+    revealed: [],
+    played: [],
+    lastPlayed: [],
+    attacked: null,
+    lastAttack: null,
+    turnPrizes: 6,
+    lastPrizes: 0,
   };
+}
+
+/** The cards in this player's hand that the opponent knows are there (PlayerState.revealed still in the hand). */
+export function revealedHand(ps: PlayerState): CardId[] {
+  return (ps.revealed ?? []).filter((c) => ps.hand.includes(c));
 }
 
 /** The cards on top of this player's deck that the player knows, top first (what is still valid of `knownTop`). */
@@ -153,6 +166,9 @@ function clonePlayer(ps: PlayerState): PlayerState {
     namedUsed: ps.namedUsed.slice(),
     buffs: ps.buffs.slice(),
     knownTop: ps.knownTop.slice(),
+    revealed: ps.revealed?.slice(),
+    played: ps.played?.slice(),
+    lastPlayed: ps.lastPlayed?.slice(),
   };
 }
 

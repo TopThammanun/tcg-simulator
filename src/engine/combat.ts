@@ -8,6 +8,7 @@ import {
   addCondition,
   checkKOs,
   endTurn,
+  hpLeft,
   isActive,
   ownerOf,
   slotsWithAbility,
@@ -15,7 +16,7 @@ import {
   toolKey,
   usableAttacks,
 } from './rules';
-import { keyOf, mustSlot, opp, topDef, topKey } from './state';
+import { keyOf, mustSlot, opp, slotsOf, topDef, topKey } from './state';
 import type { CardId, Condition, GameState, Mark, PlayerId, Slot, SlotId } from './types';
 
 export interface HitOpts {
@@ -209,8 +210,14 @@ export function performAttack(ctx: Ctx, p: PlayerId, name: string, from?: SlotId
   const attack = topDef(s, src).attacks.find((x) => x.name === name);
   if (!attack) throw new Error(`no attack ${name}`);
   const userUid = s.players[p].active!.uid;
+  // HP the opponent's Pokémon lose to this attack (a Knocked Out one: all it had), for PlayerState.attacked.
+  const before = new Map(slotsOf(s.players[opp(p)]).map((sl) => [sl.uid, hpLeft(s, sl)]));
   resolveAttack(ctx, p, attack);
   festivalLead(ctx, p, userUid);
+  const now = new Map(slotsOf(s.players[opp(p)]).map((sl) => [sl.uid, hpLeft(s, sl)]));
+  let damage = 0;
+  for (const [uid, hp] of before) damage += Math.max(0, hp - Math.max(0, now.get(uid) ?? 0));
+  s.players[p].attacked = { name, damage };
   endTurn(ctx);
 }
 

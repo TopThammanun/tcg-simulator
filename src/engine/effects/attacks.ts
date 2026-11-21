@@ -242,6 +242,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
     });
     a.user.energy = a.user.energy.filter((x) => x !== e);
     a.s.players[a.me].hand.push(e!);
+    a.ctx.reveal(a.me, [e!]);
   },
   'Bellowing Thunder': (a) => {
     const mine = slotsOf(a.s.players[a.me]).flatMap((sl) =>
@@ -282,7 +283,9 @@ export const ATTACKS: Record<string, AttackImpl> = {
     const ps = a.s.players[a.me];
     const u = a.user;
     a.ctx.detachSlot(a.me, u);
-    ps.hand.push(...u.stack, ...u.energy, ...(u.tool !== null ? [u.tool] : []));
+    const back = [...u.stack, ...u.energy, ...(u.tool !== null ? [u.tool] : [])];
+    ps.hand.push(...back);
+    a.ctx.reveal(a.me, back);
     a.ctx.log(`${topDef(a.s, u).name} กลับขึ้นมือ`);
   },
 
@@ -344,7 +347,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
   // ---- Talonflame ex ----
   'Talon Hunt': (a) => {
     a.hit(a.defender, a.base);
-    const picked = a.ctx.search(a.me, () => true, { prompt: 'Talon Hunt: ค้นหาการ์ดได้สูงสุด 2 ใบ', max: 2, source: 'talonflame-ex' });
+    const picked = a.ctx.search(a.me, () => true, { prompt: 'Talon Hunt: ค้นหาการ์ดได้สูงสุด 2 ใบ', max: 2, source: 'talonflame-ex', any: true });
     a.ctx.toHand(a.me, picked);
     a.ctx.shuffle(a.me);
   },

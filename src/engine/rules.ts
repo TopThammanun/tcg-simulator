@@ -296,7 +296,14 @@ function takePrizes(ctx: Ctx, p: PlayerId, n: number): void {
 export function endTurn(ctx: Ctx): void {
   const s = ctx.s;
   const p = s.current;
-  s.players[p].buffs = [];
+  const ps = s.players[p];
+  ps.buffs = [];
+  // This turn becomes "their turn before" (what the opponent saw: cards played, the attack, Prizes taken).
+  ps.lastPlayed = ps.played ?? [];
+  ps.played = [];
+  ps.lastAttack = ps.attacked ?? null;
+  ps.attacked = null;
+  ps.lastPrizes = (ps.turnPrizes ?? ps.prizes.length) - ps.prizes.length;
 
   // Between turns: Poison puts 1 damage counter on the Poisoned Active Pokémon.
   cleanConditions(s);
@@ -317,6 +324,7 @@ export function startTurn(ctx: Ctx, p: PlayerId): void {
   s.turn += 1;
   s.current = p;
   const ps = s.players[p];
+  ps.turnPrizes = ps.prizes.length;
   ps.supporterPlayed = false;
   ps.energyAttached = false;
   ps.retreated = false;

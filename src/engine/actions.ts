@@ -69,6 +69,8 @@ function run(base: GameState, action: Action, answers: number[][]): GameState {
     }
     if (!(e instanceof GameOver)) throw e;
   }
+  // A revealed card that left the hand is no longer known to be there.
+  for (const ps of s.players) if (ps.revealed?.length) ps.revealed = ps.revealed.filter((c) => ps.hand.includes(c));
   s.steps = base.steps + 1;
   return s;
 }
@@ -233,6 +235,8 @@ function execute(ctx: Ctx, action: Action): void {
   const s = ctx.s;
   const p = s.current;
   const ps = ctx.ps(p);
+  // Cards played from the hand, in public: what the opponent saw this turn (PlayerState.played).
+  if (action.t === 'bench' || action.t === 'evolve' || action.t === 'energy' || action.t === 'tool' || action.t === 'trainer') (ps.played ??= []).push(action.card);
   switch (action.t) {
     case 'setup':
       setup(ctx);

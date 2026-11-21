@@ -63,6 +63,21 @@ export interface PlayerState {
    * Academy at Night). Only the part still on top counts (knownTopCards() in state.ts); a shuffle clears it.
    */
   knownTop: CardId[];
+  // What a player can know without seeing hidden cards (BOT-NEXT.md N4): kept here so the bots, their look-ahead
+  // (determinize) and the review read it alike. Optional: states built before these existed lack them.
+  /** This player has looked through their whole deck since the Prize cards were set, so knows which cards are Prizes. */
+  prizesKnown?: boolean;
+  /** Cards in this player's hand the opponent saw go there: revealed by a search, or taken from the discard pile or play (revealedHand()). */
+  revealed?: CardId[];
+  /** Cards this player played from the hand this turn (Bench, evolution, attached, Trainers), and in their turn before. */
+  played?: CardId[];
+  lastPlayed?: CardId[];
+  /** The attack this player used this turn and the damage it did to the opponent's Pokémon; the same for their turn before. */
+  attacked?: { name: string; damage: number } | null;
+  lastAttack?: { name: string; damage: number } | null;
+  /** Prize cards left when this player's turn began, and the Prize cards they took in their turn before. */
+  turnPrizes?: number;
+  lastPrizes?: number;
 }
 
 export interface Rules {
