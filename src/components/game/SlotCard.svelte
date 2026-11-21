@@ -8,6 +8,7 @@
   import type { CardId, GameState, Slot } from '../../engine/types';
   import { def } from '../../engine/db';
   import { CONDITION } from '../../ui/slot-info';
+  import { energyIcon } from '../../ui/symbols';
   import CardFace from './CardFace.svelte';
 
   let {
@@ -61,10 +62,6 @@
   const health = $derived(left / hp > 0.5 ? 'ok' : left / hp > 0.25 ? 'hurt' : 'low');
   const energy = $derived(slot.energy.map((e) => ({ id: e, type: provides(keyOf(s, e)), key: keyOf(s, e) })));
   const tool = $derived(toolKey(s, slot));
-  const LETTER: Record<string, string> = {
-    Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
-    Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
-  };
 </script>
 
 <div
@@ -114,13 +111,21 @@
             class="pip pickable"
             class:on={pickedValues.has(pickable.get(e.id)!)}
             data-card={e.id}
-            style={`--c:var(--t-${e.type.toLowerCase()})`}
+            style:background-image={`url(${energyIcon(e.type)})`}
             title={def(e.key).name}
             aria-label={`เลือก ${def(e.key).name}`}
-            onclick={() => onpickcard?.(pickable.get(e.id)!)}>{LETTER[e.type]}</button
+            onclick={() => onpickcard?.(pickable.get(e.id)!)}></button
           >
         {:else}
-          <span class="pip" class:off={!!pickable} data-card={e.id} style={`--c:var(--t-${e.type.toLowerCase()})`} title={def(e.key).name}>{LETTER[e.type]}</span>
+          <span
+            class="pip"
+            class:off={!!pickable}
+            data-card={e.id}
+            role="img"
+            aria-label={def(e.key).name}
+            style:background-image={`url(${energyIcon(e.type)})`}
+            title={def(e.key).name}
+          ></span>
         {/if}
       {/each}
     </span>
@@ -314,20 +319,17 @@
   .energy.many .pip + .pip {
     margin-left: -6px;
   }
+  /* The Energy symbol as printed (src/ui/symbols.ts). */
   .pip {
-    display: inline-grid;
-    place-items: center;
-    width: 15px;
-    height: 15px;
+    display: block;
+    width: 17px;
+    height: 17px;
     flex: 0 0 auto;
     border-radius: 50%;
-    border: 1.5px solid #f3eee2;
-    background: var(--c);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.52rem;
-    font-weight: 700;
-    box-shadow: 0 1px 2px #000a;
+    background: #555 center / cover no-repeat;
+    box-shadow:
+      0 0 0 1px #000a,
+      0 1px 3px #000c;
     pointer-events: auto;
   }
   /* Something to do here (an attack or an Ability): a slow gold glow; tap for the pop-up. */
@@ -366,12 +368,11 @@
     z-index: 4;
   }
   .pip.pickable {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     padding: 0;
-    font-size: 0.72rem;
     cursor: pointer;
-    border: 2px solid #fff;
+    border: 0;
     animation: pip-pick 1.1s ease-in-out infinite;
   }
   .pip.pickable:hover,
@@ -390,7 +391,6 @@
   }
   .pip.pickable.on {
     transform: translateY(-6px) scale(1.12);
-    border-color: var(--accent);
     animation: none;
     box-shadow: 0 0 0 3px var(--accent), 0 4px 8px #000a;
   }
@@ -435,9 +435,8 @@
       font-size: 0.7rem;
     }
     .pip {
-      width: 13px;
-      height: 13px;
-      font-size: 0.48rem;
+      width: 14px;
+      height: 14px;
     }
     .tool {
       top: -7px;

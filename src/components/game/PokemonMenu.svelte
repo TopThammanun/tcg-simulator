@@ -11,6 +11,8 @@
   import type { SlotInfo } from '../../ui/slot-info';
   import { motion } from '../../ui/anim/motion';
   import CardFace from './CardFace.svelte';
+  import EffectText from './EffectText.svelte';
+  import Energy from './Energy.svelte';
 
   let {
     menu,
@@ -35,10 +37,6 @@
     onclose: () => void;
   } = $props();
 
-  const LETTER: Record<string, string> = {
-    Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
-    Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
-  };
   const WIDTH = 330;
   let height = $state(0);
   let vw = $state(1024);
@@ -80,7 +78,7 @@
   </header>
   {#if info && (info.energy.length || info.tool || info.conditions.length || info.marks.length)}
     <div class="state">
-      {#each info.energy as e}<span class="chip" style={`--c:var(--t-${e.type.toLowerCase()})`}>{e.name}</span>{/each}
+      {#each info.energy as e}<span class="chip energy" style={`--c:var(--t-${e.type.toLowerCase()})`}><Energy type={e.type} />{e.name}</span>{/each}
       {#if info.tool}<span class="chip tool">{info.tool}</span>{/if}
       {#each info.conditions as c}<span class="chip cond" title={c.does}>{c.name}</span>{/each}
       {#each info.marks as m}<span class="chip cond">{m}</span>{/each}
@@ -98,7 +96,7 @@
           <span class="auto">{ab.passive ? 'ทำงานเอง' : 'ใช้ไม่ได้ตอนนี้'}</span>
         {/if}
       </div>
-      <p class="text">{ab.effect}</p>
+      <p class="text"><EffectText text={ab.effect} /></p>
     </section>
   {/each}
 
@@ -110,13 +108,13 @@
         <div class="attack" class:off={!atk.action}>
           <span class="line">
             <span class="cost">
-              {#each atk.cost as c}<i style={`--c:var(--t-${c.toLowerCase()})`}>{LETTER[c]}</i>{/each}
+              {#each atk.cost as c}<Energy type={c} />{/each}
               {#if atk.cost.length === 0}<i class="free">–</i>{/if}
             </span>
             <span class="aname">{atk.name}{atk.from ? ` (จาก ${atk.from})` : ''}</span>
             <span class="dmg mono">{atk.damage}</span>
           </span>
-          {#if atk.effect}<span class="text">{atk.effect}</span>{/if}
+          {#if atk.effect}<span class="text"><EffectText text={atk.effect} /></span>{/if}
           {#if atk.reason}<span class="why">{atk.reason}</span>{/if}
           {#if pvText}<span class="pv" class:ko={pv!.ko > 0} class:sure={pv!.ko >= 1}>{pvText}</span>{/if}
           <button type="button" class="go" disabled={!atk.action} onclick={() => atk.action && onact(atk.action)}>
@@ -212,6 +210,12 @@
     color: #fff;
     font-size: 0.72rem;
     font-weight: 600;
+  }
+  .state .chip.energy {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 2px;
   }
   .state .chip.tool {
     background: #ffffff2e;
@@ -344,23 +348,21 @@
     display: flex;
     gap: 2px;
   }
-  .cost i {
+  .cost :global(.energy) {
+    width: 19px;
+    height: 19px;
+  }
+  .cost i.free {
     display: inline-grid;
     place-items: center;
-    width: 17px;
-    height: 17px;
+    width: 19px;
+    height: 19px;
+    border: 1.5px solid #ffffff44;
     border-radius: 50%;
-    border: 1.5px solid #f3eee2;
-    background: var(--c, #888);
-    color: #fff;
     font-family: var(--font-mono);
     font-size: 0.56rem;
     font-style: normal;
     font-weight: 700;
-  }
-  .cost i.free {
-    background: transparent;
-    border-color: #ffffff44;
   }
   .aname {
     flex: 1;

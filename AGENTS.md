@@ -106,7 +106,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   managed by `MyDecks.svelte` on `/decks/`; `decklist.ts` checks them and names unsupported cards),
   `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
-  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `menu.ts`
+  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `symbols.ts` (the real
+  Energy symbols and coin, PokéWiki's pictures cut to webp circles in `public/energy/` and `public/coin/`; drawn by
+  `components/game/Energy.svelte`, card text with {G}… by `EffectText.svelte`, the coin by `fx.ts`), `menu.ts`
   (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
   rendered by `PokemonMenu.svelte` — attacking and retreating happen there, not in the dock; reading never acts:
   each attack has its own button, a retreat is picked then confirmed).
@@ -146,7 +148,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   a full-height menu on phones. Home: hero with a real game screenshot (`public/home/board.jpg`, retake it after
   restyling the play screen), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
   `headlines()` in `lib/decks.ts`), steps, a tagline lit word by word on scroll, FAQ (facts only). The playmat is
-  flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress.
+  flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
+  site's own design; the game pieces on the table (card images and back, Energy symbols, the coin) are the real ones.
 
 ## Versions
 

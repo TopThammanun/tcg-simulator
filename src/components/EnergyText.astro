@@ -1,43 +1,27 @@
 ---
-// Card text writes Energy as {G}, {P}…; render those as coloured pips.
+// Card text writes Energy as {G}, {P}…; render those as the Energy symbols printed on the cards.
+import { energyIcon, energyParts } from '../ui/symbols';
+
 interface Props {
   text: string;
 }
 const { text } = Astro.props;
-
-const TYPE_BY_SYMBOL: Record<string, string> = {
-  G: 'grass', R: 'fire', W: 'water', L: 'lightning', P: 'psychic', F: 'fighting',
-  D: 'darkness', M: 'metal', N: 'dragon', Y: 'fairy', C: 'colorless',
-};
-const parts = text.split(/(\{[A-Z]\})/).filter(Boolean);
 ---
 
 {
-  parts.map((p) => {
-    const type = /^\{[A-Z]\}$/.test(p) ? TYPE_BY_SYMBOL[p[1]!] : undefined;
-    return type ? (
-      <span class="pip" style={`--c:var(--t-${type})`} title={type}>
-        {p[1]}
-      </span>
-    ) : (
-      p
-    );
-  })
+  energyParts(text).map((p) =>
+    'type' in p ? <span class="pip" role="img" aria-label={p.type} title={p.type} style={`background-image:url(${energyIcon(p.type)})`} /> : p.text,
+  )
 }
 
 <style>
   .pip {
-    display: inline-grid;
-    place-items: center;
-    width: 1.35em;
-    height: 1.35em;
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
     border-radius: 50%;
-    background: var(--c);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.72em;
-    font-weight: 600;
-    box-shadow: inset 0 -1px 0 #0003;
-    vertical-align: middle;
+    background: center / cover no-repeat;
+    box-shadow: 0 0 0 1px #0008;
+    vertical-align: -0.22em;
   }
 </style>

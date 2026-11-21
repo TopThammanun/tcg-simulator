@@ -141,7 +141,7 @@
     color: #fff;
   }
 
-  /* Coins: heads gold, tails silver. */
+  /* Coins: a real Pokémon coin (src/ui/symbols.ts), Pikachu heads and the Poké Ball back tails. */
   .fx-layer :global(.fx-coin) {
     perspective: 500px;
   }
@@ -154,26 +154,29 @@
   .fx-layer :global(.fx-coin-spin span) {
     position: absolute;
     inset: 0;
-    display: grid;
-    place-items: center;
     border-radius: 50%;
+    background: #2a2a2a center / cover no-repeat;
     backface-visibility: hidden;
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-    font-weight: 700;
+    /* A faint rim, so the black back stands out on the dark playmat. */
     box-shadow:
-      inset 0 0 0 4px #0002,
-      inset 0 -6px 10px #0003,
+      inset 0 0 0 1px #ffffff2e,
       0 8px 18px -6px #000c;
-  }
-  .fx-layer :global(.fx-coin-spin .heads) {
-    background: radial-gradient(circle at 35% 30%, #fff3c2, var(--accent) 45%, #b8861d);
-    color: #5a3d06;
   }
   .fx-layer :global(.fx-coin-spin .tails) {
     transform: rotateY(180deg);
-    background: radial-gradient(circle at 35% 30%, #ffffff, #c9cdd2 45%, #7d848c);
-    color: #2c3238;
+  }
+  .fx-layer :global(.fx-coin-label) {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 8px);
+    padding: 2px 10px;
+    border-radius: 3px;
+    background: #15181de6;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px -4px #000c;
   }
 
   /* A hit: a burst in the attacker's type colour with shards. */

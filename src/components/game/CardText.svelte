@@ -3,13 +3,11 @@
   // with their cost, or the Trainer / Energy effect. Used by the card view (CardInfo) and the card picked up from the
   // hand (HandDetail).
   import { def } from '../../engine/db';
+  import EffectText from './EffectText.svelte';
+  import Energy from './Energy.svelte';
 
   let { cardKey, compact = false }: { cardKey: string; compact?: boolean } = $props();
   const d = $derived(def(cardKey));
-  const LETTER: Record<string, string> = {
-    Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
-    Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
-  };
 </script>
 
 <div class="text" class:compact>
@@ -20,25 +18,25 @@
       · {d.hp} HP · {d.types.join('/')}{d.tera ? ' · Tera' : ''}{d.prizes > 1 ? ` · ${d.prizes} prize` : ''}
     </p>
     {#each d.abilities as a}
-      <p><span class="tag">Ability</span> <strong>{a.name}</strong><br />{a.effect}</p>
+      <p><span class="tag">Ability</span> <strong>{a.name}</strong><br /><EffectText text={a.effect} /></p>
     {/each}
     {#each d.attacks as a}
       <p>
         <span class="cost">
-          {#each a.cost as c}<i class="e" style={`--c:var(--t-${c.toLowerCase()})`}>{LETTER[c]}</i>{:else}<i class="e free">0</i>{/each}
+          {#each a.cost as c}<Energy type={c} />{:else}<i class="e free">0</i>{/each}
         </span>
         <strong>{a.name}</strong>
         <span class="mono dmg">{a.damage}</span>
-        {#if a.effect}<br />{a.effect}{/if}
+        {#if a.effect}<br /><EffectText text={a.effect} />{/if}
       </p>
     {/each}
     <p class="sub mono">
-      weak {d.weaknesses.map((w) => `${LETTER[w.type]}${w.value}`).join(' ') || '—'} · resist
-      {d.resistances.map((w) => `${LETTER[w.type]}${w.value}`).join(' ') || '—'} · retreat {d.retreat}
+      weak {#each d.weaknesses as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · resist
+      {#each d.resistances as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · retreat {d.retreat}
     </p>
   {:else}
     <p class="sub">{d.category === 'trainer' ? d.trainerType : `${d.energyType} Energy`}{d.aceSpec ? ' · ACE SPEC' : ''}</p>
-    {#if d.effect}<p class="effect">{d.effect}</p>{/if}
+    {#if d.effect}<p class="effect"><EffectText text={d.effect} /></p>{/if}
   {/if}
 </div>
 
@@ -74,21 +72,17 @@
     vertical-align: -2px;
     margin-right: 4px;
   }
-  .e {
+  .e.free {
     display: inline-grid;
     place-items: center;
-    width: 1.15em;
-    height: 1.15em;
+    width: 1.2em;
+    height: 1.2em;
     border-radius: 50%;
-    background: var(--c, #ccc);
+    background: #bbb;
     color: #fff;
     font-style: normal;
     font-size: 0.72em;
     font-weight: 700;
-    box-shadow: inset 0 0 0 1px #0003;
-  }
-  .e.free {
-    background: #bbb;
   }
   .dmg {
     float: right;

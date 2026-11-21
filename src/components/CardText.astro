@@ -1,6 +1,7 @@
 ---
 // Card text in English as printed. Used for the detail view and as the image fallback frame.
 import type { CardDef, EnergyType } from '../data/cards';
+import { energyIcon } from '../ui/symbols';
 import EnergyText from './EnergyText.astro';
 
 interface Props {
@@ -9,12 +10,8 @@ interface Props {
 }
 const { card, compact = false } = Astro.props;
 
-const SYMBOL: Record<EnergyType, string> = {
-  Grass: 'G', Fire: 'R', Water: 'W', Lightning: 'L', Psychic: 'P', Fighting: 'F',
-  Darkness: 'D', Metal: 'M', Dragon: 'N', Fairy: 'Y', Colorless: 'C',
-};
 const STAGE: Record<string, string> = { Basic: 'Basic', Stage1: 'Stage 1', Stage2: 'Stage 2' };
-const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
+const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
 ---
 
 <div class:list={['card-text', { compact }]}>
@@ -30,9 +27,7 @@ const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
           <span>{STAGE[card.stage]}</span>
           {card.evolvesFrom && <span>จาก {card.evolvesFrom}</span>}
           {card.types.map((t) => (
-            <span class="pip" style={typeVar(t)} title={t}>
-              {SYMBOL[t]}
-            </span>
+            <span class="pip" role="img" aria-label={t} title={t} style={icon(t)} />
           ))}
           {card.tera && <span class="tag">Tera</span>}
           {card.prizes > 1 && <span class="tag">{card.prizes} prize</span>}
@@ -52,9 +47,7 @@ const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
             <span class="cost">
               {a.cost.length === 0 && <span class="pip free">0</span>}
               {a.cost.map((t) => (
-                <span class="pip" style={typeVar(t)} title={t}>
-                  {SYMBOL[t]}
-                </span>
+                <span class="pip" role="img" aria-label={t} title={t} style={icon(t)} />
               ))}
             </span>
             <strong>{a.name}</strong>
@@ -67,8 +60,25 @@ const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
           </p>
         ))}
         <p class="foot mono">
-          weak {card.weaknesses.map((w) => `${SYMBOL[w.type]}${w.value}`).join(' ') || '—'} · resist{' '}
-          {card.resistances.map((w) => `${SYMBOL[w.type]}${w.value}`).join(' ') || '—'} · retreat {card.retreat}
+          weak{' '}
+          {card.weaknesses.length
+            ? card.weaknesses.map((w) => (
+                <>
+                  <span class="pip" role="img" aria-label={w.type} title={w.type} style={icon(w.type)} />
+                  {w.value}{' '}
+                </>
+              ))
+            : '— '}
+          · resist{' '}
+          {card.resistances.length
+            ? card.resistances.map((w) => (
+                <>
+                  <span class="pip" role="img" aria-label={w.type} title={w.type} style={icon(w.type)} />
+                  {w.value}{' '}
+                </>
+              ))
+            : '— '}
+          · retreat {card.retreat}
         </p>
       </>
     )
@@ -81,9 +91,7 @@ const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
           <span>{card.category === 'trainer' ? card.trainerType : `${card.energyType} Energy`}</span>
           {card.aceSpec && <span class="tag">ACE SPEC</span>}
           {card.category === 'energy' && card.provides && (
-            <span class="pip" style={typeVar(card.provides)}>
-              {SYMBOL[card.provides]}
-            </span>
+            <span class="pip" role="img" aria-label={card.provides} title={card.provides} style={icon(card.provides)} />
           )}
         </div>
         {card.effect && !compact && (
@@ -172,21 +180,23 @@ const typeVar = (t: EnergyType) => `--c:var(--t-${t.toLowerCase()})`;
     border-top: 1px dashed var(--rule);
     padding-top: 4px;
   }
+  /* The Energy symbol as printed (src/ui/symbols.ts). */
   .pip {
     display: inline-grid;
     place-items: center;
-    width: 1.35em;
-    height: 1.35em;
+    width: 1.2em;
+    height: 1.2em;
     border-radius: 50%;
-    background: var(--c);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.72em;
-    font-weight: 600;
-    box-shadow: inset 0 -1px 0 #0003;
-    vertical-align: middle;
+    background: center / cover no-repeat;
+    box-shadow: 0 0 0 1px #0008;
+    vertical-align: -0.22em;
   }
   .pip.free {
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    width: 1.35em;
+    height: 1.35em;
+    vertical-align: middle;
     background: transparent;
     color: var(--ink-soft);
     box-shadow: inset 0 0 0 1px var(--rule);

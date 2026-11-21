@@ -6,6 +6,7 @@ import { def, imageFor } from '../../engine/db';
 import { topKey } from '../../engine/state';
 import type { CardId, GameState, PlayerId, SlotId } from '../../engine/types';
 import { CARD_BACK } from '../card-back';
+import { COIN } from '../symbols';
 import { PHASES, type AnimEvent, type Phase, type Place } from './events';
 
 export type AnimLevel = 'full' | 'fast' | 'off';
@@ -89,7 +90,10 @@ export class Fx {
   constructor(
     private layer: HTMLElement,
     private root: HTMLElement,
-  ) {}
+  ) {
+    // The opening coin toss is the first thing played: have its faces loaded by then.
+    for (const src of Object.values(COIN)) new Image().src = src;
+  }
 
   private get k() {
     return this.level === 'fast' ? 0.5 : 1;
@@ -441,10 +445,18 @@ export class Fx {
     const y = c.board.top + c.board.height / 2 - size / 2;
     const coin = this.node('fx-coin', new DOMRect(x, y, size, size));
     const spin = el('div', 'fx-coin-spin');
-    spin.append(el('span', 'heads', 'หัว'), el('span', 'tails', 'ก้อย'));
-    coin.append(spin);
+    // A real coin: Pikachu is heads, the Poké Ball back is tails; the word shows once it lands.
+    const face = (side: 'heads' | 'tails') => {
+      const n = el('span', side);
+      n.style.backgroundImage = `url(${COIN[side]})`;
+      return n;
+    };
+    spin.append(face('heads'), face('tails'));
+    const label = el('span', 'fx-coin-label', heads ? 'หัว' : 'ก้อย');
+    coin.append(spin, label);
     const turns = 5 * 360 + (heads ? 0 : 180);
     const dur = 900 * k;
+    this.anim(label, [{ opacity: 0, transform: 'translate(-50%, -4px)' }, { opacity: 1, transform: 'translate(-50%, 0)' }], { duration: 180 * k, delay: t + dur * 0.7 });
     // Every coin stays until the last one has landed.
     const hold = 720 * k * (n - 1 - i) + 450 * k;
     this.drop(
