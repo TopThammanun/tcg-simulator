@@ -43,6 +43,7 @@ def main():
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--games", type=int, default=3840)
     ap.add_argument("--only", default="", help="these runs only (comma-separated names of RUNS)")
+    ap.add_argument("--threads", type=int, default=12, help="for the matches against the control")
     a = ap.parse_args(argv)
     root = os.path.abspath(a.root)
     names = a.only.split(",") if a.only else list(RUNS)
@@ -70,7 +71,7 @@ def main():
             "out": os.path.join(ROOT, ".cache", "learn", tag),
             "games": a.games,
             "base": 87_000_000,
-            "threads": 12,
+            "threads": a.threads,
             "players": {"A": {"kind": "net", "weights": mine, "temperature": 0}, "B": {"kind": "net", "weights": control, "temperature": 0}},
             "pairs": [{"a": "A", "b": "B", "share": 1, **({"decksA": {a.deck: 1}, "decksB": {a.deck: 1}} if a.deck else {})}],
             "server": {"concurrent": 64, "lanes": 1},
