@@ -1,6 +1,6 @@
 <script lang="ts">
   // A choice made on the table (a Pokémon: your new Active, Boss's Orders' target, where Energy goes; an Energy
-  // attached to a Pokémon; your face-down Prize cards): only a short bar with what is asked, the card asking, and what this card's earlier
+  // attached to a Pokémon): only a short bar with what is asked, the card asking, and what this card's earlier
   // questions were answered with. You tap on the table itself; a pick of several has its buttons here.
   import { fly } from 'svelte/transition';
   import { CARDS } from '../../engine/db';
@@ -28,9 +28,7 @@
   const single = $derived(req.min === 1 && req.max === 1);
   const ready = $derived(picks.length >= req.min && picks.length <= req.max);
   const onEnergy = $derived(req.options.length > 0 && req.options[0]!.slot === undefined);
-  const how = $derived(
-    req.hint === 'prizes' ? 'แตะ Prize ที่จะเก็บ (คว่ำอยู่: ใบไหนก็ได้)' : onEnergy ? 'แตะพลังงานบน Pokémon ที่สว่าง' : 'แตะ Pokémon ที่สว่างบนสนาม',
-  );
+  const how = $derived(onEnergy ? 'แตะพลังงานบน Pokémon ที่สว่าง' : 'แตะ Pokémon ที่สว่างบนสนาม');
   const source = $derived(req.source && CARDS[req.source] ? req.source : null);
 </script>
 

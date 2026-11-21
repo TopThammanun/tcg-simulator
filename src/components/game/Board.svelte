@@ -36,7 +36,6 @@
     pickedValues = new Set(),
     onpickcard,
     prizeGrid = null,
-    prizePick = null,
     choosing = false,
     chosen = new Map(),
     onslot,
@@ -68,8 +67,6 @@
     onpickcard?: (value: number) => void;
     /** Each player's Prize grid: the Prize pile's index at each spot, or null for a gap (default: filled in order). */
     prizeGrid?: [(number | null)[], (number | null)[]] | null;
-    /** Your Prize cards are being picked: tap one (its pile index); the ones marked so far. */
-    prizePick?: { picked: Set<number>; onpick: (index: number) => void } | null;
     /** A choice is made on the table now: the Pokémon that aren't options step back. */
     choosing?: boolean;
     /** Pokémon picked earlier for the card being played, with a word ("จาก"). */
@@ -128,20 +125,10 @@
   {@const open = Math.max(0, benchLimit(s, p) - ps.bench.length - ghosts.length)}
   <section class="side" class:mine class:theirs={!mine} aria-label={mine ? 'สนามของคุณ' : 'สนามของบอท'}>
     <div class="prizes" title="Prize ที่เหลือ">
-      <div class="prize-grid" class:picking={mine && !!prizePick} data-zone={`prizes-${p}`}>
+      <div class="prize-grid" data-zone={`prizes-${p}`}>
         {#each { length: PRIZES } as _, i}
           {@const at = prizeGrid ? prizeGrid[p][i] : i < ps.prizes.length ? i : null}
-          {#if mine && prizePick && at !== null && at !== undefined}
-            <button
-              type="button"
-              class="prize-slot pick"
-              class:on={prizePick.picked.has(at)}
-              aria-label={`เก็บ Prize ใบที่ ${i + 1}`}
-              onclick={() => prizePick.onpick(at)}><CardBack /></button
-            >
-          {:else}
-            <span class="prize-slot">{#if at !== null && at !== undefined}<CardBack />{/if}</span>
-          {/if}
+          <span class="prize-slot">{#if at !== null && at !== undefined}<CardBack />{/if}</span>
         {/each}
       </div>
       <span class="count"><span class="n mono">{ps.prizes.length}</span><span class="lbl">Prize</span></span>
@@ -454,40 +441,6 @@
     border-radius: 4px;
     outline: 1px dashed #ffffff2a;
     outline-offset: -1px;
-  }
-  /* Taking Prize cards: each face-down card is a button; the marked ones lift. */
-  .prize-grid.picking {
-    position: relative;
-    z-index: 4;
-  }
-  .prize-slot.pick {
-    display: block;
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-    animation: prize-pick 1.2s ease-in-out infinite;
-    transition: transform 0.12s ease;
-  }
-  .prize-slot.pick:hover,
-  .prize-slot.pick:focus-visible {
-    transform: scale(1.08);
-  }
-  .prize-slot.pick.on {
-    transform: translateY(-5px) scale(1.08);
-    outline: 3px solid var(--stamp);
-    animation: none;
-  }
-  @keyframes prize-pick {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 transparent;
-    }
-    50% {
-      box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 70%, transparent);
-    }
   }
   .count {
     display: flex;

@@ -8,7 +8,7 @@
   import { fade, scale } from 'svelte/transition';
   import { actor, apply, createGame, legalActions } from '../../engine/actions';
   import { maxHp } from '../../engine/rules';
-  import { keyOf, slotsOf, topKey } from '../../engine/state';
+  import { keyOf, slotsOf, topDef, topKey } from '../../engine/state';
   import type { Action, CardId, ChoiceRequest, GameState, PlayerId, SlotId } from '../../engine/types';
   import { redeal, viewFor } from '../../engine/view';
   import { makeBot } from '../../bots/core';
@@ -35,6 +35,7 @@
   import CardFace from './CardFace.svelte';
   import CardInfo from './CardInfo.svelte';
   import ChoiceBar from './ChoiceBar.svelte';
+  import PrizePick from './PrizePick.svelte';
   import ChoicePanel from './ChoicePanel.svelte';
   import HandDetail from './HandDetail.svelte';
   import HandView from './HandView.svelte';
@@ -286,10 +287,19 @@
     req ? (req.options[0]?.slot !== undefined ? 'slot' : req.options[0]?.card !== undefined ? 'card' : 'label') : null,
   );
   const setupReq = $derived(req && (req.purpose === 'setup-active' || req.purpose === 'setup-bench') ? req : null);
-  /** Which face-down Prize cards to take (engine/rules.ts takePrizes): tapped in your Prize grid. */
+  /** Which face-down Prize cards to take (engine/rules.ts takePrizes): picked full screen (PrizePick.svelte). */
   const prizeReq = $derived(req?.hint === 'prizes' ? req : null);
-  /** The choice is made by tapping on the table (a Pokémon, an Energy on one, a Prize card), not in a box. */
-  const onTable = $derived(!!req && !setupReq && (choiceKind === 'slot' || !!attachedPick || !!prizeReq));
+  /** The bot's Pokémon this play Knocked Out: in play before it, gone now (named over the Prize cards). */
+  const knockedOut = $derived.by(() => {
+    const p = prizeReq && cur?.pending;
+    if (!p) return [];
+    const now = new Set(slotsOf(cur!.players[1]).map((sl) => sl.uid));
+    return slotsOf(p.base.players[1])
+      .filter((sl) => !now.has(sl.uid))
+      .map((sl) => topDef(p.base, sl).name);
+  });
+  /** The choice is made by tapping on the table (a Pokémon, an Energy on one), not in a box. */
+  const onTable = $derived(!!req && !setupReq && (choiceKind === 'slot' || !!attachedPick));
   /**
    * Where each Prize card lies in its grid: a taken one leaves a gap, as at a real table (a Prize picked from the
    * middle leaves the middle empty). Remembered by card, in this script only (the page never sees which card a
@@ -499,6 +509,9 @@
   let busyUntil = 0;
   let showOver = $state(false);
   let overTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The Prize picker opens once the Knock Out has been shown. */
+  let prizeOpen = $state(false);
+  let prizeTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     if (fxLayer && !fx) {
       fx = new Fx(fxLayer, document.body);
@@ -528,7 +541,10 @@
         animated = -1;
         return;
       }
-      if (idx === animated) return;
+      if (idx === animated) {
+        prizeOpen = list[idx]!.pending?.request.hint === 'prizes';
+        return;
+      }
       const next = list[idx]!;
       let total = 0;
       if (fx && snap && effectiveAnim !== 'off' && v === null && (idx === 0 || idx > animated)) {
@@ -557,6 +573,9 @@
       clearTimeout(overTimer);
       if (next.winner === null) showOver = false;
       else if (!showOver) overTimer = setTimeout(() => (showOver = true), total + (total ? 400 : 0));
+      clearTimeout(prizeTimer);
+      prizeOpen = false;
+      if (next.pending?.request.hint === 'prizes') prizeTimer = setTimeout(() => (prizeOpen = true), total);
     });
   });
 
@@ -743,6 +762,12 @@
         if (ca?.kind === 'now') step(ca.action);
       }
     } else if (cmd.t === 'hand') {
+      // Your Prize spots by number while they are picked.
+      if (prizeReq) {
+        const at = prizeOpen ? prizeGrid?.[0][cmd.index] : undefined;
+        if (at !== null && at !== undefined) pick(at);
+        return;
+      }
       if (req && !setupReq) return;
       const own = cur.players[0].hand;
       const c = (sortHand ? sortedHand(cur, own) : own)[cmd.index];
@@ -899,7 +924,6 @@
         pickedValues={new Set(picks)}
         onpickcard={pick}
         {prizeGrid}
-        prizePick={prizeReq ? { picked: new Set(picks), onpick: pick } : null}
         choosing={onTable}
         chosen={chosenSlots}
         {ready}
@@ -913,7 +937,7 @@
 
       <!-- Picking cards or an option opens a box over the table; a Pokémon or an attached Energy is tapped on the
            table itself (the dock says what is asked). The card picked up from your hand shows its text. -->
-      {#if req && !setupReq && !onTable}
+      {#if req && !setupReq && !onTable && !prizeReq}
         <div class="choice-layer">{@render choice()}</div>
       {:else if selected !== null && !req && cur.players[0].hand.includes(selected)}
         <div class="detail-layer">
@@ -1062,6 +1086,18 @@
 <FxLayer bind:layer={fxLayer} />
 
 {#if howto}<HowTo onclose={() => (howto = false)} />{/if}
+
+{#if prizeReq && prizeOpen && prizeGrid}
+  <PrizePick
+    req={prizeReq}
+    {knockedOut}
+    grid={prizeGrid[0]}
+    {picks}
+    onpick={pick}
+    onsubmit={() => step({ t: 'choose', picks })}
+    onclear={() => (picks = [])}
+  />
+{/if}
 
 {#if showOver && cur && cur.winner !== null && viewing === null}
   <GameOver

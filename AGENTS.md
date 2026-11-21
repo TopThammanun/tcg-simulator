@@ -119,11 +119,12 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
   game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo; a tap picks a hand card up
   and shows its text (`HandDetail.svelte`, over the opponent's side; a second tap or its button plays it, a drag plays
-  it at once). A choice of Pokémon, of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
-  grow) or of your Prize cards is made on the table: the dock shows `ChoiceBar.svelte` (what is asked, this card's
-  earlier answers) and the Pokémon that aren't options dim. Prize cards: `rules.pickPrizes` (the play screen only)
-  asks player 0 which face-down Prize to take, by position; bots and look-ahead take them in order (`determinize()`
-  turns it off); a taken Prize leaves its gap (`prizeGrid` in Game.svelte). A card picked from a box is marked, then
+  it at once). A choice of Pokémon or of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
+  grow) is made on the table: the dock shows `ChoiceBar.svelte` (what is asked, this card's earlier answers) and the
+  Pokémon that aren't options dim. Prize cards: `rules.pickPrizes` (the play screen only) asks player 0 which
+  face-down Prize to take, by position; bots and look-ahead take them in order (`determinize()` turns it off); the
+  pick fills the screen once the Knock Out has been animated (`PrizePick.svelte`: one tap takes one, several are
+  marked then confirmed, keys 1–6 / Enter); a taken Prize leaves its gap (`prizeGrid` in Game.svelte). A card picked from a box is marked, then
   confirmed. `?test=1` exposes `window.__tcg` (`state()`, `history()`, `load(state)`: play on from a built position,
   see the e2e tests). A choice shows the card whose effect asks,
   and an effect that looks at a pile (`ChoiceRequest.view`: a deck search shows the whole deck, "look at the top N"

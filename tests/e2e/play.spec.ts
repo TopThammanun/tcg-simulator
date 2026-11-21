@@ -384,10 +384,15 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   const headbutt = page.locator('.pmenu .attack').filter({ hasText: 'Jet Headbutt' });
   await expect(headbutt.locator('.pv')).toHaveText('KO ตัวหลักได้แน่นอน');
   await headbutt.getByRole('button').click();
-  const prizes = page.locator('.side.mine .prize-slot.pick');
+  // The Prize cards come up full screen, face down in their order on the mat.
+  const prizePick = page.getByRole('dialog', { name: 'เลือก Prize' });
+  await expect(prizePick).toContainText('Budew ของบอทถูก Knock Out');
+  await expect(prizePick).toContainText('เลือก Prize 1 ใบ');
+  const prizes = prizePick.getByRole('button', { name: /เก็บ Prize ใบที่/ });
   await expect(prizes).toHaveCount(6);
   await prizes.nth(3).click();
   await expect.poll(async () => (await state(page)).players[0].prizes.length).toBe(5);
+  await expect(prizePick).toHaveCount(0);
   const s = await state(page);
   expect(s.players[0].hand.map((c: number) => s.cards[c].key)).toContain('dreepy');
   // The taken Prize leaves its gap where it was.
