@@ -16,17 +16,7 @@
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
   import { def } from '../../engine/db';
-  import {
-    actionLabel,
-    benchHint,
-    describeAction,
-    handActions,
-    keyCommand,
-    sortedHand,
-    targetOf,
-    turnUses,
-    waitingText,
-  } from '../../ui/play';
+  import { actionLabel, benchHint, describeAction, handActions, keyCommand, sortedHand, targetOf } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -35,13 +25,24 @@
   import { slotMenu } from '../../ui/menu';
   import { previewAttack } from '../../ui/preview';
   import { slotInfo } from '../../ui/slot-info';
-  import { lastOpponentTurn, shortRecap } from '../../ui/recap';
+  import { lastOpponentTurn } from '../../ui/recap';
   import { cue as cueSound, KEY_VOICES, playVoice, setSound, voiceFor } from '../../ui/sound';
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
   import { replay, type Redeal, type SavedGame } from '../../review/record';
   import { getGame, saveGame } from '../../review/store';
+  import { clearCurrent, loadCurrent, saveCurrent, type CurrentGame } from '../../review/current';
+  import { actionBar, type BarAction } from '../../ui/action-bar';
+  import { loadSeenTips, nextTip, saveSeenTips, TIPS, type TipId } from '../../ui/tips';
+  import ActionBar from './ActionBar.svelte';
+  import Inspector from './Inspector.svelte';
+  import TopBar from './TopBar.svelte';
+  import Button from '../ui/Button.svelte';
+  import IconButton from '../ui/IconButton.svelte';
+  import Segmented from '../ui/Segmented.svelte';
+  import Sheet from '../ui/Sheet.svelte';
+  import Switch from '../ui/Switch.svelte';
   import Board, { type BoardDrag } from './Board.svelte';
   import CardBack from './CardBack.svelte';
   import CardFace from './CardFace.svelte';
@@ -61,7 +62,6 @@
   let { decks }: { decks: MetaDeck[] } = $props();
 
   const SETTINGS_KEY = 'tcg-sim:play-settings';
-  const HOWTO_KEY = 'tcg-sim:seen-howto';
 
   function loadSettings(): Record<string, unknown> {
     try {
@@ -85,6 +85,16 @@
   const wantOpp = params.get('opp') ?? (saved.opponent as string) ?? 'random';
   let opponent = $state(meta.some((d) => d.slug === wantOpp) ? wantOpp : 'random');
   const SPEEDS = [150, 500, 1100];
+  const SPEED_OPTIONS = [
+    { value: 150, label: 'เร็ว' },
+    { value: 500, label: 'ปกติ' },
+    { value: 1100, label: 'ช้า' },
+  ];
+  const ANIM_OPTIONS: { value: AnimLevel; label: string }[] = [
+    { value: 'full', label: 'เต็ม' },
+    { value: 'fast', label: 'เร็ว' },
+    { value: 'off', label: 'ปิด' },
+  ];
   let speed = $state(params.has('speed') ? Number(params.get('speed')) : SPEEDS.includes(saved.speed as number) ? (saved.speed as number) : 500);
   const fixedSeed = params.has('seed') ? Number(params.get('seed')) : null;
   let seed = fixedSeed ?? Math.floor(Math.random() * 1e9);
@@ -116,6 +126,13 @@
   /** Undos that dealt the hidden cards again (saved with the game, so it replays). */
   let redeals: Redeal[] = [];
   let howto = $state(false);
+  /** The game menu (new game, how to play, settings), and on a phone the bot's last turn, each in a sheet. */
+  let menuOpen = $state(false);
+  let recapOpen = $state(false);
+  /** A game left unfinished in this browser (review/current.ts): offered on the match sheet. */
+  let unfinished = $state.raw<CurrentGame | null>(watch || params.has('resume') ? null : loadCurrent());
+  /** Moves made in this page since a position was loaded by the tests (__tcg.load): such a game isn't kept. */
+  let loaded = false;
   /** Where each card of a deck's fan sits: the headline Pokémon in the middle, the next two either side. */
   const FAN = [0, -1, 1];
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -160,6 +177,27 @@
   }
   let discardOf = $state<PlayerId | null>(null);
   let error = $state('');
+
+  // The card text panel (computers): the face-up card under the mouse for a moment, else the card picked up from the
+  // hand, else the last one shown. Cards carry `data-inspect` (their key) and Pokémon in play `data-slot`.
+  let hovered = $state<{ key: string; slot: SlotId | null } | null>(null);
+  let lastShown = $state<{ key: string; slot: SlotId | null } | null>(null);
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+  function onPointerOver(e: PointerEvent) {
+    if (e.pointerType !== 'mouse' || narrow) return;
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-inspect]');
+    clearTimeout(hoverTimer);
+    if (!el) {
+      hoverTimer = setTimeout(() => (hovered = null), 120);
+      return;
+    }
+    const slotEl = el.closest<HTMLElement>('[data-slot]');
+    const next = { key: el.dataset.inspect!, slot: slotEl ? Number(slotEl.dataset.slot) : null };
+    hoverTimer = setTimeout(() => (hovered = lastShown = next), 120);
+  }
+
+  // One-time tips in the command bar (ui/tips.ts).
+  let seenTips = $state(loadSeenTips());
 
   // Drag and drop: what is being dragged, where each zone's drop leads, and the pointer position.
   interface Drop {
@@ -208,20 +246,13 @@
   const req = $derived(myTurn && cur!.pending ? cur!.pending.request : null);
   const legal = $derived(myTurn && !cur!.pending ? legalActions(cur!) : []);
   const hand = $derived(myTurn && !cur!.pending ? handActions(cur!) : new Map());
-  const RECAP_LINES = 6;
+  /**
+   * What the bot did on its last turn, while your turn hasn't started moving: its lines are marked in the log (a
+   * computer), or a button in the command bar opens them (a phone). Nothing is laid over the table.
+   */
   const recap = $derived(
     myTurn && !req && viewing === null && cur && recapClosed !== cur.turn ? lastOpponentTurn(cur) : [],
   );
-  const recapShort = $derived(shortRecap(recap, RECAP_LINES));
-  /** Open when it appears, folded into a small pill after a few seconds (it sits over the bot's side). */
-  let recapFull = $state(true);
-  const recapTurn = $derived(recap.length ? cur!.turn : -1);
-  $effect(() => {
-    if (recapTurn < 0) return;
-    recapFull = true;
-    const t = setTimeout(() => (recapFull = false), 8000);
-    return () => clearTimeout(t);
-  });
   const attacksLeft = $derived([...new Set(legal.filter((a) => a.t === 'attack').map((a) => (a as { name: string }).name))]);
   /** The card picked up from your hand (its text over the bot's side; what it does, in the dock). */
   const held = $derived(selected !== null && cur && !req && cur.players[0].hand.includes(selected) ? selected : null);
@@ -371,6 +402,119 @@
   );
   const botDeck = $derived(decks.find((d) => d.slug === botSlug));
 
+  /** The top line: whose turn it is, or the result; the two decks; the links at the end. */
+  const topTitle = $derived(
+    !cur
+      ? ''
+      : cur.winner !== null
+        ? `${cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · ${cur.winReason}`
+        : viewing !== null
+          ? 'กำลังดูสนามย้อนหลัง'
+          : watch
+            ? `ดูบอทเล่น · เทิร์น ${cur.turn}`
+            : `เทิร์น ${cur.turn} · ${actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}`,
+  );
+  const topSub = $derived(
+    cur && cur.winner === null && viewing === null && !watch
+      ? [`${mineName} vs ${botDeck?.name ?? ''}`, ...(resumedFrom ? [`เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น ${resumedFrom.turn})`] : [])]
+      : [],
+  );
+  const topLinks = $derived(
+    cur && cur.winner !== null
+      ? [
+          ...(savedId !== null ? [{ href: `/review/?id=${savedId}`, label: 'ทบทวนเกมนี้' }] : []),
+          { href: `/decks/${botSlug}/`, label: `ดู list ที่บอทใช้ (${botDeck?.name ?? ''})` },
+        ]
+      : [],
+  );
+
+  /** What the card text panel shows (computers). */
+  const inspected = $derived(hovered ?? (held !== null && cur ? { key: keyOf(cur, held), slot: null } : lastShown));
+  /** The tip for now, if one is still unseen (shown in the command bar, gone once you move). */
+  const tip = $derived<TipId | null>(
+    myTurn && !req && held === null && !confirmEnd && !watch && !testing
+      ? nextTip({ free: true, canAttack: attacksLeft.length > 0, desktop: !narrow }, seenTips)
+      : null,
+  );
+  /** A choice in a box over the table (ChoicePanel): its buttons are in the command bar. */
+  const boxReq = $derived(req && !setupReq && !onTable && !prizeReq ? req : null);
+  const bar = $derived(
+    cur
+      ? actionBar({
+          s: cur,
+          myTurn,
+          legal,
+          watch,
+          viewing: viewing !== null,
+          confirmEnd,
+          confirmNew,
+          attacksLeft,
+          held:
+            held !== null
+              ? {
+                  name: def(keyOf(cur, held)).name,
+                  actions: heldActions,
+                  why: heldWhy,
+                  playLabel: heldActions?.kind === 'now' ? actionLabel(cur, heldActions.action) : undefined,
+                }
+              : undefined,
+          setup: setupReq
+            ? {
+                step: setupReq.purpose === 'setup-active' ? 'active' : 'bench',
+                hint: benchHint(setupReq, picks.length, benchLimit(cur, 0) - cur.players[0].bench.length),
+                picked: picks.length,
+              }
+            : undefined,
+          box: boxReq ? { req: boxReq, picks, cards: choiceKind === 'card' || !!boxReq.view?.length } : undefined,
+          recap: narrow ? recap.length : 0,
+          tip: tip ? TIPS[tip] : null,
+          prompt: req?.prompt,
+        })
+      : null,
+  );
+
+  /** A button of the command bar. */
+  function onBar(id: BarAction) {
+    if (!cur) return;
+    switch (id) {
+      case 'end':
+        if (attacksLeft.length) confirmEnd = true;
+        else step({ t: 'end' });
+        break;
+      case 'end-anyway':
+        step({ t: 'end' });
+        break;
+      case 'back-to-attack':
+        confirmEnd = false;
+        menuFor = cur.players[0].active?.uid ?? null;
+        menuAnchor = menuFor !== null ? (document.querySelector(`[data-slot="${menuFor}"] .card`)?.getBoundingClientRect() ?? null) : null;
+        break;
+      case 'stay':
+        confirmNew = false;
+        break;
+      case 'leave':
+        newGame(true);
+        break;
+      case 'cancel':
+        selected = null;
+        break;
+      case 'play':
+        if (heldActions?.kind === 'now') step(heldActions.action);
+        break;
+      case 'setup-clear':
+      case 'box-clear':
+        picks = [];
+        break;
+      case 'setup-confirm':
+      case 'box-confirm':
+        step({ t: 'choose', picks });
+        break;
+      case 'recap':
+        recapOpen = true;
+        break;
+    }
+  }
+
   function saveSettings() {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({ opponent, speed, mine: mineId, anim: animLevel, sortHand, sound: soundOn }));
@@ -395,9 +539,8 @@
     redeals = [];
     savedId = null;
     resumedFrom = null;
-    bot?.dispose();
-    // Watching a game plays it with the bots the simulator uses (the bot without look-ahead).
-    bot = remoteBot({ slug: pick.slug, oppSlug: minePlan, seed: seed ^ 0x2545f491, policy: DEFAULT_POLICY, fast: watch });
+    curBotSeed = seed ^ 0x2545f491;
+    botFor(pick.slug, curBotSeed);
     if (watch) meBot = makeBot(planFor(minePlan), { seed: seed ^ 0x1b873593 });
     error = '';
     viewing = null;
@@ -416,30 +559,53 @@
         rules: { twinShotelsPiercesBenchShields: pierce, pickPrizes: true },
       }),
     ];
-    if (!watch && !testing && !seenHowTo()) howto = true;
+    loaded = false;
+    unfinished = null;
   }
 
   /** Back to the match sheet; a game still being played is only left once the dock's question is answered. */
   function newGame(sure = false) {
     sideOpen = false;
+    menuOpen = false;
     if (!sure && cur && cur.winner === null && !watch) {
       confirmNew = true;
       return;
     }
     confirmNew = false;
     showOver = false;
+    menuOpen = false;
+    if (cur && cur.winner === null) clearCurrent();
     states = [];
   }
 
-  /** Whether "วิธีเล่น" has been shown before (and from now on it has). */
-  function seenHowTo(): boolean {
-    try {
-      if (localStorage.getItem(HOWTO_KEY)) return true;
-      localStorage.setItem(HOWTO_KEY, '1');
-    } catch {
-      /* storage blocked: show it every time */
-    }
-    return false;
+  /** The bot for a game: it thinks in a Web Worker (src/bots/worker.ts) so its search never freezes the page. */
+  function botFor(slug: string, botSeed: number, policy = DEFAULT_POLICY) {
+    bot?.dispose();
+    // Watching a game plays it with the bots the simulator uses (the bot without look-ahead).
+    bot = remoteBot({ slug, oppSlug: minePlan, seed: botSeed, policy, fast: watch });
+  }
+
+  /** Go on with the game left unfinished in this browser: the same deal and moves, so the very same position. */
+  function goOn(c: CurrentGame) {
+    const g = c.game;
+    seed = g.seed;
+    botSlug = g.opponent;
+    minePlan = g.mine ?? 'player';
+    mineName = g.mineName ?? 'list ของคุณ';
+    gameDecks = g.decks;
+    preloadDecks(...g.decks);
+    redeals = (g.redeals ?? []).slice();
+    savedId = null;
+    showOver = false;
+    error = '';
+    viewing = null;
+    resumedFrom = c.resumedFrom ?? null;
+    botFor(g.opponent, c.botSeed, g.policy);
+    curBotSeed = c.botSeed;
+    history = g.actions.slice();
+    states = replay(g);
+    loaded = false;
+    unfinished = null;
   }
 
   /** Pick a saved game up at state `at` (your turn): the same seed, lists and moves up to there. */
@@ -462,8 +628,8 @@
     error = '';
     viewing = null;
     resumedFrom = { id, turn: all[upto]!.turn };
-    bot?.dispose();
-    bot = remoteBot({ slug: g.opponent, oppSlug: minePlan, seed: g.seed ^ 0x2545f491 ^ upto, policy: g.policy });
+    curBotSeed = g.seed ^ 0x2545f491 ^ upto;
+    botFor(g.opponent, curBotSeed, g.policy);
     history = g.actions.slice(0, upto);
     // What you couldn't see is dealt again, so playing on doesn't show what was to come.
     redeals = (g.redeals ?? []).filter((r) => r.at <= upto);
@@ -476,13 +642,11 @@
     }
   }
 
-  // A finished game of yours is saved for the review page (watch-mode games only with &save=1).
-  let saving = false;
-  $effect(() => {
-    const s = cur;
-    if (!s || s.winner === null || savedId !== null || saving || (watch && !params.has('save'))) return;
-    saving = true;
-    const g: SavedGame = {
+  /** The bot's seed for this game (kept with an unfinished game, so it goes on the same way). */
+  let curBotSeed = 0;
+  /** The game as a record (seed, lists, moves, re-deals): saved when it ends, kept in this browser until then. */
+  function record(s: GameState): SavedGame {
+    return {
       savedAt: Date.now(),
       seed,
       opponent: botSlug,
@@ -494,12 +658,29 @@
       rules: { ...s.rules },
       policy: { ...DEFAULT_POLICY },
       decks: [gameDecks[0].slice(), gameDecks[1].slice()],
-      actions: history.slice(),
+      actions: $state.snapshot(history) as Action[],
       winner: s.winner,
       reason: s.winReason,
       turns: s.turn,
     };
-    saveGame(g)
+  }
+  // After every move of a game being played, it is kept in this browser (review/current.ts); not while watching the
+  // bots, nor a position the tests built.
+  $effect(() => {
+    const s = cur;
+    void history;
+    if (!s || watch || loaded) return;
+    if (s.winner !== null) clearCurrent();
+    else untrack(() => saveCurrent({ game: record(s), botSeed: curBotSeed, turn: s.turn, resumedFrom }));
+  });
+
+  // A finished game of yours is saved for the review page (watch-mode games only with &save=1).
+  let saving = false;
+  $effect(() => {
+    const s = cur;
+    if (!s || s.winner === null || savedId !== null || saving || (watch && !params.has('save'))) return;
+    saving = true;
+    saveGame(record(s))
       .then((id) => (savedId = id))
       .catch(() => (error = 'บันทึกเกมไม่ได้'))
       .finally(() => (saving = false));
@@ -509,8 +690,15 @@
     fx?.finish();
     drag = null;
     confirmEnd = false;
-    // A move of yours answers "ทิ้งเกมนี้?" with no; the bot's moves leave the question up.
-    if (cur && actor(cur) === 0) (recapClosed = cur.turn), (confirmNew = false);
+    // A move of yours answers "ทิ้งเกมนี้?" with no; the bot's moves leave the question up. A tip shown is now seen.
+    if (cur && actor(cur) === 0) {
+      recapClosed = cur.turn;
+      confirmNew = false;
+      if (tip) {
+        seenTips = new Set([...seenTips, tip]);
+        saveSeenTips(seenTips);
+      }
+    }
     // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
     // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
     a = $state.snapshot(a);
@@ -645,6 +833,7 @@
       state: () => cur,
       history: () => history,
       load: (s: GameState) => {
+        loaded = true;
         states = [s];
         history = [];
         selected = null;
@@ -763,7 +952,8 @@
     const el = e.target as HTMLElement | null;
     const typing = !!el && (!!el.closest('input, select, textarea') || el.isContentEditable);
     const cmd = keyCommand({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, typing });
-    if (!cmd || !cur || howto || drag) return;
+    // A sheet (the menu, the bot's last turn) or "วิธีเล่น" over the game takes the keys.
+    if (!cmd || !cur || howto || drag || menuOpen || recapOpen) return;
     if (cmd.t === 'close') {
       // The topmost thing first.
       if (zoom) (zoom = null), (zoomSlot = null);
@@ -835,6 +1025,20 @@
       <button type="button" class="link" onclick={() => (howto = true)}>วิธีเล่น</button>
     </header>
 
+    {#if unfinished}
+      {@const g = unfinished.game}
+      <div class="unfinished" role="region" aria-label="เกมที่ค้างไว้">
+        <div>
+          <strong>มีเกมที่ค้างไว้</strong>
+          <span>เทิร์น {unfinished.turn} · {g.mineName ?? 'list ของคุณ'} vs {g.opponentName}</span>
+        </div>
+        <span class="acts">
+          <Button onclick={() => (clearCurrent(), (unfinished = null))}>ทิ้ง</Button>
+          <Button variant="primary" onclick={() => goOn(unfinished!)}>เล่นต่อเกมที่ค้างไว้</Button>
+        </span>
+      </div>
+    {/if}
+
     <div class="match">
       <div class="corner you">
         <span class="who">คุณ</span>
@@ -889,66 +1093,35 @@
     </div>
 
     <div class="prefs">
-      <label>
-        ความเร็วบอท
-        <select bind:value={speed}>
-          <option value={150}>เร็ว</option>
-          <option value={500}>ปกติ</option>
-          <option value={1100}>ช้า</option>
-        </select>
-      </label>
-      <label>
-        Animation
-        <select bind:value={animLevel}>
-          <option value="full">เต็ม</option>
-          <option value="fast">เร็ว</option>
-          <option value="off">ปิด</option>
-        </select>
-      </label>
-      <button type="button" class="primary start" onclick={() => start()}>เริ่มเกม</button>
+      <Segmented label="ความเร็วบอท" options={SPEED_OPTIONS} bind:value={speed} />
+      <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} />
+      <Button variant="primary" class="start" onclick={() => start()}>เริ่มเกม</Button>
     </div>
   </section>
 {:else if shown}
   {#snippet choice()}
-    <ChoicePanel
-      s={cur!}
-      req={req!}
-      {picks}
-      onpick={pick}
-      onsubmit={() => step({ t: 'choose', picks })}
-      onclear={() => (picks = [])}
-      onzoom={(k) => zoomTo(k)}
-    />
+    <ChoicePanel s={cur!} req={req!} {picks} onpick={pick} onzoom={(k) => zoomTo(k)} />
   {/snippet}
-  <div class="game" class:dragging>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="game" class:dragging onpointerover={onPointerOver}>
     <div class="rotate" role="status">
       <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="6" width="20" height="36" rx="3" /><path d="M40 20a14 14 0 0 1-6 14M38 34h-4v-4" /></svg>
       <strong>หมุนจอเป็นแนวตั้งเพื่อเล่น</strong>
       <span>จอนี้เตี้ยเกินกว่าจะวางสนามได้ครบ (ถ้าเป็นคอมพิวเตอร์ ขยายหน้าต่างให้สูงขึ้น)</span>
     </div>
     <div class="main">
-      <div class="status">
-        {#if cur.winner !== null}
-          <strong class="result">{cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · {cur.winReason}</strong>
-          {#if savedId !== null}<a href={`/review/?id=${savedId}`}>ทบทวนเกมนี้ →</a>{/if}
-          <a href={`/decks/${botSlug}/`}>ดู list ที่บอทใช้ ({botDeck?.name}) →</a>
-        {:else if viewing !== null}
-          <strong>กำลังดูสนามย้อนหลัง</strong>
-          <button type="button" class="link" onclick={() => (viewing = null)}>กลับไปเกมปัจจุบัน</button>
-        {:else if watch}
-          <strong>ดูบอทเล่น · เทิร์น {cur.turn}</strong>
-        {:else}
-          <strong>เทิร์น {cur.turn} · {actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}</strong>
-          <span class="opp">{mineName} vs {botDeck?.name}</span>
-          {#if resumedFrom}<span class="opp">เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น {resumedFrom.turn})</span>{/if}
-        {/if}
-        <span class="top-tools">
-          {#if narrow}
-            <button type="button" class="small" aria-expanded={sideOpen} onclick={() => (sideOpen = !sideOpen)}>ข้อมูล · log</button>
-            <button type="button" class="small" onclick={() => newGame()}>เกมใหม่</button>
-          {/if}
-        </span>
-      </div>
+      <TopBar
+        title={topTitle}
+        result={cur.winner !== null}
+        sub={topSub}
+        links={topLinks}
+        back={viewing !== null ? () => (viewing = null) : null}
+        {menuOpen}
+        logOpen={sideOpen}
+        {narrow}
+        onmenu={() => (menuOpen = !menuOpen)}
+        onlog={() => (sideOpen = !sideOpen)}
+      />
 
       <div class="table">
       <Board
@@ -976,47 +1149,23 @@
         onstadium={() => step({ t: 'stadium' })}
       />
 
-      <!-- Picking cards or an option opens a box over the table; a Pokémon or an attached Energy is tapped on the
-           table itself (the dock says what is asked). The card picked up from your hand shows its text. -->
-      {#if req && !setupReq && !onTable && !prizeReq}
+      <!-- Picking cards or an option opens a box over the table (its buttons are in the command bar); a Pokémon or an
+           attached Energy is tapped on the table itself. The card picked up from your hand: its text in the side
+           column on a computer, over the bot's side on a phone. -->
+      {#if boxReq}
         <div class="choice-layer">{@render choice()}</div>
-      {:else if held !== null}
+      {:else if held !== null && narrow}
         <div class="detail-layer">
           <HandDetail s={cur} card={held} onclose={() => (selected = null)} onzoom={(k) => zoomTo(k)} />
         </div>
-      {/if}
-      <!-- What the bot did on its turn, when yours starts: gone with your first move. -->
-      {#if recap.length && selected === null && !req && !recapFull}
-        <button type="button" class="recap-pill" onclick={() => (recapFull = true)}>บอทเล่นอะไรไป ({recap.length})</button>
-      {:else if recap.length && selected === null && !req}
-        <aside class="recap-layer" aria-label="เทิร์นที่แล้วของบอท">
-          <header>
-            <strong>บอทเล่นไปเมื่อเทิร์นที่แล้ว</strong>
-            <button type="button" aria-label="ปิด" onclick={() => (recapClosed = cur.turn)}>✕</button>
-          </header>
-          <ul>
-            {#each recapShort.head as line}<li>{line}</li>{/each}
-            {#if recapShort.skipped}<li class="more">… อีก {recapShort.skipped} บรรทัด (ดูใน log)</li>{/if}
-            {#each recapShort.tail as line}<li>{line}</li>{/each}
-          </ul>
-        </aside>
       {/if}
       {#if error}<p class="error">{error}</p>{/if}
       </div>
 
       <div class="dock">
-        <!-- The command bar: always there and always the same height (the table above never moves), what is going on
-             at the left, the buttons for it at the right. -->
+        <!-- The command bar: always there and always the same height (the table above never moves). -->
         <div class="cmd">
-          {#if confirmNew}
-            <div class="bar warn" role="alertdialog" aria-label="ทิ้งเกมนี้">
-              <span class="say"><strong>ทิ้งเกมนี้?</strong> เกมที่ยังไม่จบจะไม่ถูกบันทึก</span>
-              <span class="acts">
-                <button type="button" onclick={() => (confirmNew = false)}>เล่นต่อ</button>
-                <button type="button" class="danger" onclick={() => newGame(true)}>ทิ้งเกม</button>
-              </span>
-            </div>
-          {:else if req && !setupReq && onTable}
+          {#if !confirmNew && req && !setupReq && onTable}
             <ChoiceBar
               {req}
               {picks}
@@ -1025,82 +1174,8 @@
               onclear={() => (picks = [])}
               onzoom={(k) => zoomTo(k)}
             />
-          {:else if myTurn && !req && confirmEnd}
-            <div class="bar warn" role="alertdialog" aria-label="ยังโจมตีได้">
-              <span class="say"><strong>ยังโจมตีได้</strong> ({attacksLeft.join(', ')}) · จบเทิร์นโดยไม่โจมตี?</span>
-              <span class="acts">
-                <button
-                  type="button"
-                  class="primary"
-                  onclick={() => {
-                    confirmEnd = false;
-                    menuFor = cur.players[0].active?.uid ?? null;
-                  }}>กลับไปโจมตี</button
-                >
-                <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์นเลย</button>
-              </span>
-            </div>
-          {:else if myTurn && !req && held !== null}
-            <!-- A card picked up from your hand: its text is over the bot's side, what it does is here. -->
-            <div class="bar">
-              <span class="say">
-                <strong>{def(keyOf(cur, held)).name}</strong>
-                {#if heldActions?.kind === 'now'}
-                  <span class="sub">แตะการ์ดอีกครั้ง หรือกดปุ่มเพื่อใช้ · ลากลงสนามก็ได้</span>
-                {:else if heldActions?.kind === 'target'}
-                  <span class="sub">แตะ Pokémon ที่สว่าง หรือลากการ์ดไปวาง</span>
-                {:else}
-                  <span class="sub why" role="note">ใช้ตอนนี้ไม่ได้{heldWhy ? `: ${heldWhy}` : ''}</span>
-                {/if}
-              </span>
-              <span class="acts">
-                <button type="button" onclick={() => (selected = null)}>ยกเลิก</button>
-                {#if heldActions?.kind === 'now'}
-                  <button type="button" class="primary" onclick={() => step(heldActions.action)}>{actionLabel(cur, heldActions.action)}</button>
-                {/if}
-              </span>
-            </div>
-          {:else if myTurn && !req}
-            <div class="bar">
-              <span class="say">
-                <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
-                  {#each turnUses(cur) as u (u.label)}
-                    <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
-                  {/each}
-                </span>
-                <span class="sub hint">แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability</span>
-              </span>
-              <span class="acts">
-                <button
-                  type="button"
-                  class="end"
-                  aria-keyshortcuts="E"
-                  title="จบเทิร์น (E)"
-                  onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}>จบเทิร์น</button
-                >
-              </span>
-            </div>
-          {:else if setupReq}
-            <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
-              {#if setupReq.purpose === 'setup-active'}
-                <span class="say"><strong>เลือกตัวหลัก</strong><span class="sub">ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด</span></span>
-              {:else}
-                <span class="say">
-                  <strong>ลง Bench</strong>
-                  <span class="sub">{benchHint(setupReq, picks.length, benchLimit(cur, 0) - cur.players[0].bench.length)}</span>
-                </span>
-                <span class="acts">
-                  {#if picks.length}<button type="button" onclick={() => (picks = [])}>ล้าง</button>{/if}
-                  <button type="button" class="primary" onclick={() => step({ t: 'choose', picks })}>
-                    ยืนยัน{picks.length ? ` (ลง Bench ${picks.length} ตัว)` : ' (ไม่ลง Bench)'}
-                  </button>
-                </span>
-              {/if}
-            </div>
-          {:else}
-            <div class="bar idle" aria-live="polite">
-              <span class="say">{waitingText(cur, { watch, viewing: viewing !== null, prompt: req?.prompt })}</span>
-            </div>
+          {:else if bar}
+            <ActionBar {bar} onaction={onBar} />
           {/if}
         </div>
 
@@ -1122,37 +1197,55 @@
     {#if narrow && sideOpen}
       <div class="side-backdrop" role="presentation" onclick={() => (sideOpen = false)}></div>
     {/if}
-    <aside class="side" class:open={sideOpen}>
+    <!-- Computers: the card text panel and the log. Phones: the log in a drawer. -->
+    <aside class="side" class:open={sideOpen} aria-label={narrow ? 'บันทึกเกม' : undefined}>
       {#if narrow}
-        <button type="button" class="small close-side" onclick={() => (sideOpen = false)}>ปิด ✕</button>
+        <div class="side-head">
+          <strong>บันทึกเกม</strong>
+          <IconButton icon="close" label="ปิด" onclick={() => (sideOpen = false)} />
+        </div>
+      {:else}
+        <Inspector
+          cardKey={inspected?.key ?? null}
+          info={inspected?.slot != null && shown ? slotInfo(shown, inspected.slot) : null}
+          held={!hovered && held !== null}
+          onzoom={(k) => zoomTo(k)}
+        />
       {/if}
-      <section class="panel">
-        <h3>ข้อมูลคู่แข่ง</h3>
-        <p>มือบอท {cur.players[1].hand.length} ใบ · เด็ค {cur.players[1].deck.length} ใบ · Prize {cur.players[1].prizes.length} ใบ</p>
-      </section>
-      <LogPanel log={cur.log} {viewing} onview={(st) => (viewing = st)} />
-      <div class="tools">
-        <button type="button" onclick={() => newGame()}>เกมใหม่</button>
-        <label class="anim-pick">
-          Animation
-          <select bind:value={animLevel} onchange={saveSettings}>
-            <option value="full">เต็ม</option>
-            <option value="fast">เร็ว</option>
-            <option value="off">ปิด</option>
-          </select>
-        </label>
-        <label class="anim-pick">
-          <input type="checkbox" bind:checked={sortHand} onchange={saveSettings} />
-          เรียงการ์ดในมือ
-        </label>
-        <label class="anim-pick">
-          <input type="checkbox" bind:checked={soundOn} onchange={saveSettings} />
-          เสียง
-        </label>
-        <button type="button" onclick={() => (howto = true)}>วิธีเล่น</button>
-      </div>
+      <LogPanel log={cur.log} {viewing} recent={recap.length ? cur.turn - 1 : null} onview={(st) => (viewing = st)} />
     </aside>
   </div>
+{/if}
+
+{#if menuOpen && cur}
+  <Sheet title="เมนูเกม" onclose={() => (menuOpen = false)}>
+    <div class="menu">
+      <div class="menu-acts">
+        <Button wide onclick={() => newGame()}>เกมใหม่</Button>
+        <Button wide onclick={() => ((howto = true), (menuOpen = false))}>วิธีเล่น</Button>
+      </div>
+      <Segmented label="ความเร็วบอท" options={SPEED_OPTIONS} bind:value={speed} onchange={saveSettings} />
+      <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} onchange={saveSettings} />
+      <div class="switches">
+        <Switch label="เสียง" bind:checked={soundOn} onchange={saveSettings} />
+        <Switch label="เรียงการ์ดในมือ" bind:checked={sortHand} onchange={saveSettings} />
+      </div>
+      <nav class="menu-links" aria-label="ไปหน้าอื่น">
+        <a href={`/decks/${botSlug}/`}>ดู list ที่บอทใช้ ({botDeck?.name ?? ''})</a>
+        <a href="/review/">ประวัติเกม</a>
+        <a href="/">กลับหน้าแรก</a>
+      </nav>
+      {#if cur.winner === null && !watch}<p class="menu-note">เกมที่ยังไม่จบเก็บไว้ในเบราว์เซอร์นี้ ปิดหน้าแล้วกลับมาเล่นต่อได้</p>{/if}
+    </div>
+  </Sheet>
+{/if}
+
+{#if recapOpen && recap.length}
+  <Sheet title="บอทเล่นไปเมื่อเทิร์นที่แล้ว" onclose={() => (recapOpen = false)}>
+    <ul class="recap-list" aria-label="เทิร์นที่แล้วของบอท">
+      {#each recap as line}<li>{line}</li>{/each}
+    </ul>
+  </Sheet>
 {/if}
 
 <FxLayer bind:layer={fxLayer} />
@@ -1233,6 +1326,7 @@
         {#each shown.players[discardOf].discard as c, i (c)}
           <button
             type="button"
+            data-inspect={keyOf(shown, c)}
             onclick={(e) => (e.stopPropagation(), zoomTo(keyOf(shown, c)))}
             in:scale={{ start: 0.8, delay: motion(Math.min(i, 24) * 18), duration: motion(200) }}
           >
@@ -1392,27 +1486,11 @@
     border-top: 1px solid var(--rule);
     background: var(--raised);
   }
-  .prefs label {
-    color: var(--ink-soft);
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .start {
+  .prefs :global(.start) {
     margin-left: auto;
     padding: 8px 24px;
-  }
-  .chip {
-    padding: 0 8px;
-    border: 1.5px solid var(--teal);
-    color: var(--teal);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-  }
-  .chip.real {
-    border-color: var(--stamp);
-    color: var(--stamp);
+    font-size: 16px;
+    line-height: 24px;
   }
   @media (max-width: 720px) {
     .match {
@@ -1441,37 +1519,34 @@
       bottom: 0;
       /* Over the decks' card fans (their cards are stacked up to z-index 3). */
       z-index: 5;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       padding-top: 12px;
       padding-bottom: calc(12px + env(safe-area-inset-bottom));
     }
-    .start {
-      flex: 1 1 auto;
-      min-height: 44px;
+    .prefs :global(.start) {
+      grid-column: 1 / -1;
+      margin: 0;
     }
   }
-  label {
+  .corner label {
     display: flex;
     flex-direction: column;
     gap: 4px;
     font-weight: 500;
   }
-  select {
+  .corner select {
     padding: 8px 12px;
     border: 1px solid var(--line);
-    background: var(--raised);
+    background: var(--paper);
     color: var(--ink-strong);
     font: inherit;
     border-radius: var(--radius);
     transition: border-color 0.3s var(--ease);
   }
-  select:hover {
+  .corner select:hover {
     border-color: #4a4a4a;
-  }
-  .corner select,
-  .prefs select {
-    background: var(--paper);
   }
   button {
     padding: 4px 12px;
@@ -1499,34 +1574,20 @@
     opacity: 0.4;
     cursor: default;
   }
-  .primary {
-    padding: 8px 12px;
-    border-color: var(--primary);
-    background: var(--primary);
-    color: var(--primary-ink);
-    font-size: 16px;
-    line-height: 24px;
-    font-weight: 600;
-  }
-  .primary:hover:not(:disabled) {
-    border-color: var(--press);
-    background: var(--press);
-  }
-  .ghost {
-    background: transparent;
-  }
   /* A game fills the screen like the real game: status line, table, then your hand. Nothing scrolls
      except the side column. */
   :global(html.playing),
   :global(html.playing body) {
     overflow: hidden;
+    /* No pull-to-refresh or swipe-back bounce while a game is on. */
+    overscroll-behavior: none;
   }
   .game {
     position: fixed;
     inset: 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 380px);
     gap: 12px;
     height: 100dvh;
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
@@ -1538,29 +1599,6 @@
     gap: 6px;
     min-width: 0;
     min-height: 0;
-  }
-  .status {
-    flex: 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    align-items: center;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .status strong {
-    color: var(--ink-strong);
-    font-weight: 600;
-  }
-  .top-tools {
-    display: flex;
-    gap: 6px;
-    margin-left: auto;
-  }
-  button.small {
-    padding: 4px 12px;
-    font-size: 12px;
-    line-height: 16px;
   }
   /* The table: card sizes come from this box (container query units in Board.svelte). */
   .table {
@@ -1589,86 +1627,6 @@
     width: min(1060px, 100%);
   }
   /* The bot's last turn in a few lines, top left over its side; it leaves with your first move. */
-  .recap-layer {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 5;
-    width: min(340px, calc(100% - 20px));
-    padding: 12px 16px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: #1f1f1ff2;
-    color: var(--ink);
-    box-shadow: var(--shadow-lg);
-    font-size: 12px;
-    line-height: 16px;
-    animation: recap-in 0.5s var(--ease) 0.4s backwards;
-  }
-  .recap-layer header strong {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--ink-strong);
-    font-size: 14px;
-    line-height: 20px;
-    font-weight: 500;
-  }
-  .recap-layer header strong::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--stamp);
-  }
-  .recap-layer header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .recap-layer header button {
-    padding: 0 4px;
-    border: 0;
-    background: none;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-  .recap-layer ul {
-    margin: 0;
-    padding-left: 18px;
-  }
-  .recap-layer li {
-    line-height: 20px;
-  }
-  .recap-layer .more {
-    list-style: none;
-    margin-left: -18px;
-    color: var(--ink-soft);
-  }
-  .recap-pill {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 5;
-    padding: 4px 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #1f1f1ff2;
-    color: var(--ink);
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-    box-shadow: var(--shadow-lg);
-    cursor: pointer;
-  }
-  @keyframes recap-in {
-    from {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-  }
   /* The card picked up from the hand: its text over the opponent's side (top right), no taller than that half, so
      your Pokémon, where it is played, stay free to tap. Wide enough that the longest card text fits. */
   .detail-layer {
@@ -1686,14 +1644,6 @@
   .detail-layer > :global(*) {
     max-height: calc(50cqh - 10px);
     pointer-events: auto;
-  }
-  .result {
-    color: var(--stamp);
-    font-size: 18px;
-    line-height: 28px;
-  }
-  .opp {
-    color: var(--ink-soft);
   }
   .link {
     border: 0;
@@ -1718,155 +1668,9 @@
   .cmd > :global(*) {
     height: 100%;
   }
-  .bar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    min-width: 0;
-    padding: 0 4px 0 12px;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-lg);
-    background: var(--card-bg);
-  }
-  .say {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    flex: 1 1 auto;
-    min-width: 0;
-    max-height: 100%;
-    overflow: hidden;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .say strong {
-    overflow: hidden;
-    color: var(--ink-strong);
-    font-weight: 600;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .sub {
-    display: -webkit-box;
-    overflow: hidden;
-    color: var(--ink-soft);
-    font-size: 12px;
-    line-height: 16px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-  .sub.why {
-    color: var(--stamp);
-    font-weight: 500;
-  }
-  .idle .say {
-    display: -webkit-box;
-    color: var(--ink-soft);
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-  .acts {
-    display: flex;
-    flex: 0 0 auto;
-    gap: 8px;
-    align-items: center;
-  }
-  .acts button {
-    padding: 8px 16px;
-    white-space: nowrap;
-  }
-  .acts .primary {
-    padding: 8px 20px;
-  }
   /* The once-a-turn plays: free ones outlined, used ones ticked and filled, a barred one struck through. */
-  .uses {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .use {
-    padding: 1px 8px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--ink-strong);
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  .use.used {
-    border-color: var(--rule);
-    background: var(--control);
-    color: var(--ink-soft);
-  }
-  .use.barred {
-    border-color: var(--line);
-    color: var(--ink-soft);
-    text-decoration: line-through;
-  }
   /* A question before something that can't be taken back (ending the turn with an attack left, leaving the game). */
-  .bar.warn {
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    background: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
-  }
-  .bar.warn .say strong {
-    color: var(--accent);
-  }
-  .bar.warn .say {
-    display: block;
-  }
-  .danger {
-    border-color: var(--stamp);
-    background: var(--stamp);
-    color: #fff;
-    font-weight: 600;
-  }
-  .danger:hover:not(:disabled) {
-    border-color: #c93c41;
-    background: #c93c41;
-  }
   /* Ending the turn: the one big button, as on a game screen. */
-  .bar .end {
-    padding: 8px 24px;
-    border: 1px solid var(--stamp);
-    background: var(--stamp);
-    color: #fff;
-    font-size: 16px;
-    line-height: 24px;
-    font-weight: 600;
-  }
-  .bar .end:hover:not(:disabled) {
-    border-color: #c93c41;
-    background: #c93c41;
-  }
-  /* Phones: the bar keeps to what is going on now; how to play is in "วิธีเล่น". */
-  @media (max-width: 700px) {
-    .sub.hint {
-      display: none;
-    }
-    /* Three lines of a question fit the bar. */
-    .bar.warn .say {
-      font-size: 12px;
-      line-height: 16px;
-    }
-    .bar {
-      gap: 8px;
-      padding-left: 10px;
-    }
-    .acts {
-      gap: 4px;
-    }
-    .acts button,
-    .acts .primary,
-    .bar .end {
-      padding: 8px 12px;
-      font-size: 14px;
-      line-height: 20px;
-    }
-  }
   /* The hand and buttons stay on screen while the board scrolls, so a drag can always reach a target. */
   .dock {
     position: relative;
@@ -1942,63 +1746,102 @@
     line-height: 20px;
     box-shadow: var(--shadow-lg);
   }
+  /* The card text panel above the log (computers); the log alone in a drawer (phones). */
   .side {
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
   }
-  .close-side {
-    align-self: flex-end;
+  .side-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-strong);
+    font-size: 16px;
+    line-height: 24px;
+  }
+  /* A game left unfinished, offered at the top of the match sheet. */
+  .unfinished {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--accent) 8%, var(--card-bg));
+  }
+  .unfinished div {
+    display: flex;
+    flex-direction: column;
+  }
+  .unfinished strong {
+    color: var(--ink-strong);
+    font-weight: 600;
+  }
+  .unfinished span {
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .unfinished .acts {
+    display: flex;
+    gap: 8px;
+  }
+  /* The game menu (a sheet). */
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .menu-acts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .switches {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 4px 0;
+  }
+  .menu-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .menu-links a {
+    padding: 6px 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
+    text-decoration: none;
+    transition: color 0.3s var(--ease);
+  }
+  .menu-links a:hover {
+    color: var(--ink-strong);
+  }
+  .menu-note {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .recap-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 14px;
+    line-height: 24px;
   }
   .side-backdrop {
     position: fixed;
     inset: 0;
     z-index: 35;
     background: #00000099;
-  }
-  .panel {
-    padding: 12px 16px;
-    border: 1px solid var(--rule);
-    background: var(--card-bg);
-    font-size: 14px;
-    line-height: 20px;
-    border-radius: var(--radius-lg);
-  }
-  .panel h3 {
-    margin: 0 0 4px;
-    color: var(--ink-soft);
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-  }
-  .panel p {
-    margin: 0 0 4px;
-  }
-  .muted {
-    color: var(--ink-soft);
-  }
-  .tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-  .anim-pick {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    color: var(--ink-soft);
-    font-size: 14px;
-    line-height: 20px;
-    font-weight: 400;
-  }
-  .anim-pick select {
-    padding: 4px 8px;
-    font-size: 14px;
-    line-height: 20px;
   }
   .backdrop {
     position: fixed;
@@ -2034,9 +1877,6 @@
     border: 0;
     background: none;
   }
-  .mono {
-    font-family: var(--font-mono);
-  }
   @media (max-width: 980px) {
     .game {
       grid-template-columns: minmax(0, 1fr);
@@ -2066,13 +1906,6 @@
     .main {
       gap: 4px;
     }
-    .status {
-      font-size: 0.8rem;
-      gap: 2px 10px;
-    }
-    .opp {
-      display: none;
-    }
     .detail-layer {
       left: 6px;
       right: 6px;
@@ -2085,26 +1918,8 @@
   }
   /* Touch screens: everything pressed with a finger is at least 44px (cards and log lines aside). */
   @media (pointer: coarse) {
-    button,
-    select {
+    button {
       min-height: 44px;
-    }
-    .acts button {
-      min-width: 44px;
-    }
-    .recap-layer header button {
-      min-width: 44px;
-      margin: -12px -12px -12px 0;
-    }
-    .recap-pill {
-      min-height: 44px;
-    }
-    .anim-pick {
-      min-height: 44px;
-    }
-    .anim-pick input {
-      width: 20px;
-      height: 20px;
     }
   }
   /* A phone on its side (or a very short window): the table can't fit, so ask for the other way round. */

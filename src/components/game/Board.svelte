@@ -146,7 +146,13 @@
         </span>
         <span class="lbl">เด็ค</span>
       </div>
-      <button type="button" class="pile discard" onclick={() => ondiscard(p)} title={`ดูกองทิ้ง (${ps.discard.length} ใบ)`}>
+      <button
+        type="button"
+        class="pile discard"
+        data-inspect={top !== undefined ? keyOf(s, top) : undefined}
+        onclick={() => ondiscard(p)}
+        title={`ดูกองทิ้ง (${ps.discard.length} ใบ)`}
+      >
         <span class="spot" data-zone={`discard-${p}`}>
           {#if top !== undefined}<CardFace cardKey={keyOf(s, top)} />{/if}
           <span class="n mono">{ps.discard.length}</span>
@@ -219,6 +225,7 @@
         type="button"
         class="stadium"
         data-card={s.stadium?.card}
+        data-inspect={stadium}
         class:usable={canUseStadium}
         class:yours={s.stadium?.owner === 0}
         onclick={() => (canUseStadium ? onstadium?.() : onzoom(stadium))}
@@ -239,7 +246,6 @@
 
   <div class="turn" aria-hidden="true">
     {#if s.phase === 'main' && s.winner === null}
-      <span class="turn-no">เทิร์น {s.turn}</span>
       <span class="whose" class:you={s.current === 0}>{s.current === 0 ? 'ตาคุณ' : 'ตาบอท'}</span>
     {/if}
   </div>
@@ -695,11 +701,6 @@
     z-index: 1;
     text-align: center;
   }
-  .turn-no {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    opacity: 0.75;
-  }
   .whose {
     padding: 4px 14px;
     border: 1px solid #ffffff30;
@@ -797,9 +798,6 @@
     }
     .owner {
       font-size: 0.54rem;
-    }
-    .turn-no {
-      font-size: 0.62rem;
     }
     .whose {
       padding: 3px 8px;

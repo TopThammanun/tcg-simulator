@@ -2,7 +2,8 @@
   // A pending choice for you: pick cards, Pokémon on the board (highlighted there too), or an option. The card
   // whose effect asks is shown while it resolves. When the effect looks at a pile (req.view: a deck search shows
   // the whole deck, "look at the top N" those cards), all of it is laid out as at a real table: the cards you may
-  // take lit, the rest dimmed, and any copy of a card you may take works (a search offers one card per name).
+  // take lit, the rest dimmed, and any copy of a card you may take works (a search offers one card per name). Cards are
+  // as big as the box allows, named underneath; confirming is done in the command bar under the table.
   import { fly } from 'svelte/transition';
   import { motion } from '../../ui/anim/motion';
   import { CARDS, def } from '../../engine/db';
@@ -15,21 +16,16 @@
     req,
     picks,
     onpick,
-    onsubmit,
-    onclear,
     onzoom,
   }: {
     s: GameState;
     req: ChoiceRequest;
     picks: number[];
     onpick: (v: number) => void;
-    onsubmit: () => void;
-    onclear: () => void;
     onzoom: (key: string) => void;
   } = $props();
 
   const kind = $derived(req.options[0]?.slot !== undefined ? 'slot' : req.options[0]?.card !== undefined || req.view?.length ? 'card' : 'label');
-  const ready = $derived(picks.length >= req.min && picks.length <= req.max);
   const counts = $derived(picks.reduce((m, v) => m.set(v, (m.get(v) ?? 0) + 1), new Map<number, number>()));
   const needs = $derived(
     req.min === req.max ? `เลือก ${req.max}` : req.min === 0 ? `เลือกได้ไม่เกิน ${req.max}` : `เลือก ${req.min}–${req.max}`,
@@ -89,6 +85,7 @@
         </span>
       {/if}
       {#if kind !== 'label'}<span class="need">{needs} · เลือกแล้ว {picks.length}</span>{/if}
+      {#if kind === 'card'}<span class="tip">กดค้าง / คลิกขวาที่การ์ดเพื่อดูใบใหญ่ · ยืนยันที่แถบด้านล่าง</span>{/if}
     </div>
   </div>
 
@@ -104,6 +101,7 @@
           class:on
           class:off={v === undefined}
           aria-disabled={v === undefined}
+          data-inspect={k}
           onclick={() => tap(c)}
           oncontextmenu={(e) => {
             e.preventDefault();
@@ -111,6 +109,7 @@
           }}
         >
           <CardFace cardKey={k} />
+          <span class="name">{def(k).name}</span>
           {#if on}
             <span class="badge">{req.ordered ? picks.indexOf(v!) + 1 : '✓'}</span>
           {/if}
@@ -125,6 +124,7 @@
           type="button"
           class="opt"
           class:on={counts.has(o.value)}
+          data-inspect={k}
           onclick={() => onpick(o.value)}
           oncontextmenu={(e) => {
             e.preventDefault();
@@ -132,6 +132,7 @@
           }}
         >
           <CardFace cardKey={k} />
+          <span class="name">{def(k).name}</span>
           {#if counts.has(o.value)}
             <span class="badge">{req.ordered ? picks.indexOf(o.value) + 1 : '✓'}</span>
           {/if}
@@ -155,16 +156,6 @@
     </div>
   {/if}
 
-  <!-- A card is marked first and confirmed (it can be looked at); a word is the answer at once. -->
-  {#if kind === 'card' || !(req.max === 1 && req.min === 1)}
-    <div class="actions">
-      {#if pile}<span class="tip">กดค้าง / คลิกขวาที่การ์ดเพื่อดูใหญ่</span>{/if}
-      <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>ล้าง</button>
-      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>
-        {picks.length === 0 && req.min === 0 && kind === 'card' ? 'ไม่เอาการ์ด' : 'ยืนยัน'}
-      </button>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -208,19 +199,20 @@
   .cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    max-height: 340px;
-    overflow-y: auto;
+    gap: 12px;
   }
+  /* A whole pile (a deck search): as many to a row as fit at a readable size. */
   .cards.grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    max-height: none;
-    overflow: visible;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
   }
   .opt {
     position: relative;
-    width: 86px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 120px;
     padding: 0;
     border: 0;
     background: none;
@@ -233,11 +225,26 @@
   .grid .opt {
     width: 100%;
   }
-  /* A phone fits more of the deck on screen with smaller cards. */
+  .name {
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  /* A phone: smaller cards, so more of a deck shows at once. */
   @media (max-width: 600px) {
+    .opt {
+      width: 88px;
+    }
     .cards.grid {
-      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-      gap: 5px;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 6px;
+    }
+    .grid .name {
+      display: none;
     }
   }
   .grid .opt:not(.off):hover {
@@ -248,8 +255,8 @@
     filter: grayscale(0.75);
     cursor: default;
   }
-  .opt.on {
-    outline: 3px solid var(--stamp);
+  .opt.on :global(.face) {
+    outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
   .badge {
@@ -258,11 +265,13 @@
     left: 4px;
     min-width: 20px;
     padding: 0 5px;
-    background: var(--stamp);
-    color: #fff;
+    background: var(--accent);
+    color: var(--accent-ink);
     border-radius: 4px;
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 600;
   }
   .hint {
     margin: 0 0 6px;
@@ -296,43 +305,11 @@
     background: var(--primary);
     color: var(--primary-ink);
   }
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .zone .actions {
-    position: sticky;
-    bottom: -16px;
-    margin: 12px -16px -16px;
-    padding: 12px 16px;
-    background: var(--card-bg);
-    border-top: 1px solid var(--line);
-  }
   .tip {
-    margin-right: auto;
-    font-size: 0.78rem;
+    flex-basis: 100%;
+    font-size: 12px;
+    line-height: 16px;
     color: var(--ink-soft);
-  }
-  .go,
-  .ghost {
-    padding: 6px 16px;
-    border: 1px solid var(--primary);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: var(--radius);
-  }
-  .go {
-    background: var(--primary);
-    color: var(--primary-ink);
-  }
-  .ghost {
-    border-color: var(--line);
-    background: transparent;
-    color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;

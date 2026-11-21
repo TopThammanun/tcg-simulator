@@ -275,16 +275,21 @@
     border-radius: 4px;
     background: #ffffff0a;
   }
+  /* Using an Ability, retreating: ordinary buttons (the attack is the main one). */
   .use {
     margin-left: auto;
-    padding: 4px 14px;
-    border: 0;
-    border-radius: 3px;
-    background: var(--accent);
-    color: var(--accent-ink);
+    padding: 6px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.3s var(--ease);
+  }
+  .use:hover:not(:disabled) {
+    background: #313131;
   }
   .use.wide {
     margin: 0;
@@ -320,23 +325,24 @@
   .attack .go {
     align-self: flex-end;
     margin-top: 4px;
-    padding: 5px 18px;
-    border: 0;
-    border-radius: 3px;
-    background: #c2362b;
-    color: #fff;
+    padding: 6px 20px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-ink);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.12s ease;
+    transition: background-color 0.3s var(--ease);
   }
   .attack .go:hover:not(:disabled) {
-    background: #a52b22;
+    border-color: var(--press);
+    background: var(--press);
   }
   .attack .go:disabled {
-    background: #ffffff14;
-    color: #9aa7a2;
-    box-shadow: none;
+    border-color: var(--line);
+    background: var(--control);
+    color: var(--ink-soft);
     cursor: not-allowed;
   }
   .line {

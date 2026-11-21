@@ -54,6 +54,7 @@
       type="button"
       class="hcard"
       data-card={c}
+      data-inspect={k}
       style:--rot={f.rot}
       style:--dy={f.dy}
       class:sel={selected === c}

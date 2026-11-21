@@ -1,5 +1,6 @@
 <script lang="ts">
-  // วิธีเล่น: how the table works, shown before your first game and from the "วิธีเล่น" button.
+  // วิธีเล่น: how the table works, from the match sheet's "วิธีเล่น" and the game menu (the first game isn't held up by
+  // it: tips come up in the command bar when their moment comes, ui/tips.ts).
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { motion } from '../../ui/anim/motion';
@@ -10,14 +11,21 @@
     { title: 'วางตัวเริ่มเกม', text: 'ลาก Basic Pokémon จากมือไปช่องตัวหลัก (หรือแตะการ์ด) แล้วเลือกลง Bench กดยืนยัน' },
     {
       title: 'อ่านแล้วเล่นการ์ดจากมือ',
-      text: 'แตะการ์ดในมือเพื่ออ่านเอฟเฟกต์ (ยังไม่ใช้) แล้วแตะซ้ำ กดปุ่มใช้ หรือแตะ Pokémon ที่สว่าง · ลากไปวางก็ได้: พลังงาน Tool ร่างวิวัฒนาการวางบน Pokémon, Basic ลง Bench, Item Supporter Stadium วางตรงไหนก็ได้',
+      text: 'แตะการ์ดในมือเพื่ออ่านเอฟเฟกต์ (ยังไม่ใช้) แล้วแตะซ้ำ กดปุ่มใช้ในแถบใต้สนาม หรือแตะ Pokémon ที่สว่าง · ลากไปวางก็ได้: พลังงาน Tool ร่างวิวัฒนาการวางบน Pokémon, Basic ลง Bench, Item Supporter Stadium วางตรงไหนก็ได้',
     },
     { title: 'โจมตี ถอย ใช้ Ability', text: 'แตะ Pokémon ของคุณเพื่ออ่านท่า แล้วกดปุ่ม "โจมตี" ของท่านั้น · ถอย: แตะตัวที่จะขึ้นมาแทน แล้วกดยืนยัน' },
     {
       title: 'เลือกบนสนาม',
       text: 'การ์ดที่ให้เลือก Pokémon (ตัวขึ้นแทนตัวที่ถูก KO, Boss\'s Orders) หรือพลังงานบน Pokémon (Energy Switch) ให้แตะบนสนามได้เลย · Prize ก็เลือกใบเองได้',
     },
-    { title: 'ดูการ์ดและย้อนดูสนาม', text: 'คลิกขวาหรือกดค้างที่การ์ดเพื่อดูใบใหญ่ · กดบรรทัดใน log เพื่อดูสนามตอนนั้น' },
+    {
+      title: 'อ่านการ์ดและย้อนดูสนาม',
+      text: 'คอมพิวเตอร์: ชี้เมาส์ที่การ์ด ข้อความเต็มขึ้นในช่องด้านขวา · มือถือ: กดค้างที่การ์ดเพื่อดูใบใหญ่ · กดบรรทัดใน log เพื่อดูสนามตอนนั้น (มือถือ: ปุ่ม log มุมขวาบน)',
+    },
+    {
+      title: 'เมนูเกม',
+      text: 'ปุ่ม ☰ มุมซ้ายบน: เกมใหม่ ความเร็วบอท Animation เสียง · เกมที่ยังไม่จบเก็บไว้ในเบราว์เซอร์ ปิดหน้าแล้วกลับมาเล่นต่อได้',
+    },
     {
       title: 'คีย์ลัด (คอมพิวเตอร์)',
       text: 'E จบเทิร์น (ถ้ายังโจมตีได้ กด E อีกครั้งเพื่อยืนยัน) · A ท่าโจมตีของตัวหลัก · 1–9 หยิบการ์ดใบที่ N ในมือ · Enter ใช้การ์ดที่หยิบ / ยืนยันที่เลือก · Esc ปิด',
@@ -37,7 +45,7 @@
 
 <div class="backdrop" role="presentation" onclick={onclose} transition:fade={{ duration: motion(180) }}></div>
 <div class="howto" role="dialog" aria-modal="true" aria-label="วิธีเล่น" in:scale={{ duration: motion(240), start: 0.97, easing: cubicOut }}>
-  <p class="eyebrow">ก่อนเริ่ม</p>
+  <p class="eyebrow">คู่มือ</p>
   <h2>วิธีเล่น</h2>
   <ol>
     {#each STEPS as s, i}
@@ -50,7 +58,7 @@
       </li>
     {/each}
   </ol>
-  <button type="button" class="primary" onclick={onclose}>เข้าใจแล้ว เริ่มเล่น</button>
+  <button type="button" class="primary" onclick={onclose}>เข้าใจแล้ว</button>
 </div>
 
 <style>

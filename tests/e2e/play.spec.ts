@@ -74,7 +74,7 @@ test('you can set up, attach Energy and end the turn; the bot then plays', async
   await page.goto('/play/?test=1&seed=101');
   await page.getByLabel('เด็คของคุณ').selectOption('basic-box');
   await page.getByRole('combobox', { name: /^คู่แข่ง/ }).selectOption('basic-box');
-  await page.getByLabel('ความเร็วบอท').selectOption('150');
+  await page.getByRole('radiogroup', { name: 'ความเร็วบอท' }).getByText('เร็ว', { exact: true }).click();
   await page.getByRole('button', { name: /เริ่มเกม/ }).click();
 
   await setUp(page);
@@ -124,6 +124,25 @@ async function endTurn(page: Page) {
   // Either the turn ended (the button goes with it) or the dock asks.
   await expect.poll(async () => (await warn.isVisible()) || !(await end.isVisible())).toBe(true);
   if (await warn.isVisible()) await warn.getByRole('button', { name: 'จบเทิร์นเลย' }).click();
+}
+
+/** The game menu (top left): new game, how to play, settings. */
+async function openMenu(page: Page) {
+  await page.getByRole('button', { name: 'เมนูเกม' }).click();
+  return page.getByRole('dialog', { name: 'เมนูเกม' });
+}
+
+/** "เกมใหม่" from the game menu. */
+async function newGame(page: Page) {
+  await (await openMenu(page)).getByRole('button', { name: 'เกมใหม่' }).click();
+}
+
+/** The animation setting, from the game menu. */
+async function setAnim(page: Page, level: 'เต็ม' | 'เร็ว' | 'ปิด') {
+  const menu = await openMenu(page);
+  await menu.getByRole('radiogroup', { name: 'Animation' }).getByText(level, { exact: true }).click();
+  await menu.getByRole('button', { name: 'ปิด' }).click();
+  await expect(menu).toHaveCount(0);
 }
 
 /** Start a seeded game, Basic Box vs Basic Box, and set up (Active = first Basic, no Bench). */
@@ -187,7 +206,7 @@ test('a played card flies to its place, and acting meanwhile skips the animation
 
 test('animations can be turned off', async ({ page }) => {
   await startGame(page, 101);
-  await page.locator('.anim-pick select').selectOption('off');
+  await setAnim(page, 'ปิด');
   await expect(page.locator('html')).toHaveAttribute('data-anim', 'off');
   const card = page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first();
   // Beside "จบเทิร์น": nothing used yet (you went first: no Supporter on turn 1).
@@ -251,7 +270,8 @@ test('a deck search shows your whole deck, the cards you may take lit; a tap pic
   await lit.nth(0).click();
   await lit.nth(1).click();
   await expect(choice.locator('.opt.on')).toHaveCount(2);
-  await choice.getByRole('button', { name: 'ยืนยัน' }).click();
+  // Confirmed in the command bar under the table.
+  await page.locator('.dock').getByRole('button', { name: 'ยืนยัน' }).click();
   await expect(choice).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state().players[0].bench.length as number)).toBe(bench + 2);
   // The picks went in as plain data (a $state proxy could not be posted to the bot's worker or saved).
@@ -300,7 +320,7 @@ async function loadPosition(page: Page) {
     };
     (window as unknown as { __tcg: { load: (s: unknown) => void } }).__tcg.load(s);
   });
-  await page.locator('.anim-pick select').selectOption('off');
+  await setAnim(page, 'ปิด');
 }
 
 const state = (page: Page) => page.evaluate(() => (window as unknown as { __tcg: { state: () => any } }).__tcg.state());
@@ -319,9 +339,11 @@ test('the keyboard: 1–9 picks up a hand card, A opens the attacks, E asks then
   // The animation menu was just used: keys typed into a field are its own.
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press('1');
-  await expect(page.locator('.detail-layer')).toContainText('Judge');
+  // A computer: the card picked up is read in the card text panel at the side.
+  await expect(page.locator('.inspector')).toContainText('Judge');
+  await expect(page.locator('.inspector')).toContainText('การ์ดที่หยิบจากมือ');
   await page.keyboard.press('Escape');
-  await expect(page.locator('.detail-layer')).toHaveCount(0);
+  await expect(page.locator('.inspector')).not.toContainText('การ์ดที่หยิบจากมือ');
   await page.keyboard.press('a');
   await expect(page.locator('.pmenu')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -352,10 +374,10 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   // A card that can't be played says why, in the dock by your hand.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
   await expect(page.locator('.dock .why')).toContainText('ถูก KO');
-  await page.locator('.detail-layer').getByRole('button', { name: 'ปิด' }).click();
+  await page.locator('.dock').getByRole('button', { name: 'ยกเลิก' }).click();
   // A tap shows the card's text, and the dock a button; nothing is played yet.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Energy Switch"]') }).click();
-  const detail = page.locator('.detail-layer');
+  const detail = page.locator('.inspector');
   await expect(detail).toContainText('Move a Basic Energy');
   expect((await state(page)).pending).toBeNull();
   await page.locator('.dock').getByRole('button', { name: 'ใช้ Energy Switch' }).click();
@@ -400,12 +422,13 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect(page.locator('.side.mine .prize-grid > :nth-child(4) > *')).toHaveCount(0);
   await expect(page.locator('.side.mine .prize-grid > :nth-child(5) > *')).toHaveCount(1);
 
-  // The bot plays turn 6; when yours starts, what it did is listed over its side.
+  // The bot plays turn 6; when yours starts, its lines are marked in the log (nothing is laid over the table), until
+  // your first move.
   await expect.poll(async () => { const t = await state(page); return t.turn === 7 && t.current === 0 && !t.pending; }, { timeout: 30_000 }).toBe(true);
-  const recap = page.getByLabel('เทิร์นที่แล้วของบอท');
-  await expect(recap).toContainText('บอท');
-  await recap.getByRole('button', { name: 'ปิด' }).click();
-  await expect(recap).toHaveCount(0);
+  const recent = page.locator('.log .line.recent');
+  await expect(recent.first()).toContainText('บอท');
+  await page.keyboard.press('Escape');
+  await expect(recent).toHaveCount(0);
 });
 
 /** The table's box on screen (it must not move or change size while a game is played). */
@@ -419,7 +442,7 @@ async function boardStaysPut(page: Page) {
   await expect.poll(async () => (await state(page)).current).toBe(1);
   await expect(page.locator('.cmd')).toContainText('ตาบอท');
   expect(await boardBox(page)).toEqual(mine);
-  await page.getByRole('button', { name: 'เกมใหม่' }).first().click();
+  await newGame(page);
   await expect(page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' })).toBeVisible();
   expect(await boardBox(page)).toEqual(mine);
 }
@@ -437,8 +460,11 @@ function longestCards(n: number): { key: string; name: string }[] {
     .map(([key, c]) => ({ key, name: c.name }));
 }
 
-/** The longest card texts, picked up from the hand: read whole, without scrolling the box, inside the bot's half. */
-async function longTextsFit(page: Page) {
+/**
+ * The longest card texts, picked up from the hand: read whole, without scrolling. A phone: in the box over the bot's
+ * half (not reaching into yours). A computer: in the card text panel at the side.
+ */
+async function longTextsFit(page: Page, phone: boolean) {
   await startGame(page, 101);
   const longest = longestCards(3);
   await page.evaluate((keys) => {
@@ -449,18 +475,17 @@ async function longTextsFit(page: Page) {
   }, longest.map((c) => c.key));
   for (const c of longest) {
     await page.locator('.hcard').filter({ has: page.locator(`img[alt="${c.name}"]`) }).first().click();
-    const box = page.locator('.detail-layer .detail');
+    const box = page.locator(phone ? '.detail-layer .detail' : '.inspector');
     await expect(box).toContainText(c.name);
     // Measured once it has flown in.
     await box.evaluate((d) => Promise.all(d.getAnimations().map((a) => a.finished)));
     const m = await box.evaluate((d) => {
-      const table = d.closest('.table')!.getBoundingClientRect();
+      const table = document.querySelector('.table')!.getBoundingClientRect();
       return { scroll: d.scrollHeight - d.clientHeight, bottom: d.getBoundingClientRect().bottom - table.top, half: table.height / 2 };
     });
     expect(m.scroll, `${c.name}: the text box scrolls`).toBeLessThanOrEqual(0);
-    expect(m.bottom, `${c.name}: the text box reaches into your half`).toBeLessThanOrEqual(m.half);
+    if (phone) expect(m.bottom, `${c.name}: the text box reaches into your half`).toBeLessThanOrEqual(m.half);
     await page.keyboard.press('Escape');
-    await expect(box).toHaveCount(0);
   }
 }
 
@@ -472,19 +497,42 @@ test('"เกมใหม่" during a game asks first; the game goes on unless 
   await startGame(page, 101);
   const turn = (await state(page)).turn;
   const ask = page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' });
-  await page.locator('.tools').getByRole('button', { name: 'เกมใหม่' }).click();
+  await newGame(page);
   await expect(ask).toBeVisible();
   await ask.getByRole('button', { name: 'เล่นต่อ' }).click();
   await expect(ask).toHaveCount(0);
   await expect(page.locator('.board')).toBeVisible();
   expect((await state(page)).turn).toBe(turn);
-  await page.locator('.tools').getByRole('button', { name: 'เกมใหม่' }).click();
+  await newGame(page);
   await ask.getByRole('button', { name: 'ทิ้งเกม' }).click();
   await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
 });
 
-test('the longest card texts fit their box without scrolling', async ({ page }) => {
-  await longTextsFit(page);
+test('a game left unfinished is kept: after a reload it goes on from the very same position', async ({ page }) => {
+  await startGame(page, 101);
+  await page.locator('.hcard.grab').filter({ has: page.locator('img[alt$="Energy"]') }).first().click();
+  await page.locator('.side.mine .slot.target .card').first().click();
+  await expect.poll(() => energyOnActive(page)).toBe(1);
+  const before = await state(page);
+  await page.reload();
+  const kept = page.getByRole('region', { name: 'เกมที่ค้างไว้' });
+  await expect(kept).toContainText(`เทิร์น ${before.turn}`);
+  await kept.getByRole('button', { name: 'เล่นต่อเกมที่ค้างไว้' }).click();
+  await expect(page.locator('.board')).toBeVisible();
+  const after = await state(page);
+  expect(JSON.stringify(after.players)).toBe(JSON.stringify(before.players));
+  expect(after.steps).toBe(before.steps);
+  // Leaving it forgets it.
+  await newGame(page);
+  await page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' }).getByRole('button', { name: 'ทิ้งเกม' }).click();
+  await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
+  await expect(kept).toHaveCount(0);
+});
+
+test('the longest card texts fit the card text panel without scrolling', async ({ page }) => {
+  await longTextsFit(page, false);
 });
 
 test('at the end, "เล่นอีกครั้ง" plays the same two decks again', async ({ page }) => {
@@ -611,7 +659,7 @@ test.describe('on a phone', () => {
   });
 
   test('the longest card texts fit their box without scrolling', async ({ page }) => {
-    await longTextsFit(page);
+    await longTextsFit(page, true);
   });
 
   test('everything pressed with a finger is at least 44px (cards and log lines aside)', async ({ page }) => {

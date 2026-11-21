@@ -11,6 +11,7 @@
   import { deleteGame, getGame, getReview, listGames, persistent, restoreGame, saveGame, saveReview, type Deleted } from '../../review/store';
   import ReplayViewer, { type LineKind } from './ReplayViewer.svelte';
   import WinChart from './WinChart.svelte';
+  import Toast from '../ui/Toast.svelte';
 
   const params = new URLSearchParams(location.search);
   const id = params.has('id') ? Number(params.get('id')) : null;
@@ -256,10 +257,7 @@
   </p>
   {#if !persistent}<p class="muted">เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า</p>{/if}
   {#if undo}
-    <div class="toast" role="status">
-      <span>ลบเกม {yours(undo.game)} vs {undo.game.opponentName} แล้ว</span>
-      <button type="button" onclick={putBack}>เลิกทำ</button>
-    </div>
+    <Toast message={`ลบเกม ${yours(undo.game)} vs ${undo.game.opponentName} แล้ว`} action="เลิกทำ" onaction={putBack} />
   {/if}
 {:else if game}
   <section class="head">
@@ -781,40 +779,7 @@
     font-size: 12px;
     line-height: 20px;
   }
-  /* "ลบเกม … แล้ว · เลิกทำ": at the bottom of the screen for a few seconds. */
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: calc(24px + env(safe-area-inset-bottom));
-    z-index: 30;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    width: max-content;
-    max-width: calc(100vw - 32px);
-    padding: 8px 8px 8px 16px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--raised);
-    box-shadow: var(--shadow-lg);
-    font-size: 14px;
-    line-height: 20px;
-    transform: translateX(-50%);
-  }
-  .toast button {
-    flex: none;
-    min-height: 36px;
-    padding: 4px 12px;
-    border: 1px solid var(--primary);
-    border-radius: var(--radius);
-    background: var(--primary);
-    color: var(--primary-ink);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-  }
   @media (pointer: coarse) {
-    .toast button,
     .buttons button,
     .button,
     .act .link {

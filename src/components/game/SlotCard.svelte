@@ -85,6 +85,7 @@
     type="button"
     class="card"
     data-card={slot.stack[slot.stack.length - 1]}
+    data-inspect={key}
     aria-label={`${def(key).name} HP ${left}/${hp}`}
     onclick={onclick}
     onpointerdown={onpress}
@@ -232,7 +233,7 @@
     color: #fff;
     isolation: isolate;
     overflow: hidden;
-    font-size: 0.66rem;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1;
     text-shadow: 0 1px 1px #000c;
@@ -267,8 +268,8 @@
     background: #c3352b;
     color: #fff;
     font-weight: 700;
-    font-size: 0.82rem;
-    line-height: 1.2;
+    font-size: 13px;
+    line-height: 16px;
     text-align: center;
     box-shadow: 0 2px 5px #000a;
   }
@@ -282,9 +283,9 @@
     border-radius: 4px 4px 2px 2px;
     background: #e4ddcc;
     color: #2a261e;
-    font-size: 0.6rem;
+    font-size: 11px;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 14px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -298,7 +299,8 @@
     background: var(--stamp);
     color: #fff;
     border-radius: 4px;
-    font-size: 0.8rem;
+    font-size: 12px;
+    line-height: 16px;
   }
   .cond {
     position: absolute;
@@ -307,7 +309,8 @@
     padding: 1px 5px;
     background: #6b2f8a;
     color: #fff;
-    font-size: 0.68rem;
+    font-size: 11px;
+    line-height: 14px;
     border-radius: 3px;
     box-shadow: 0 1px 2px #0008;
   }
@@ -323,14 +326,15 @@
     gap: 2px;
     pointer-events: none;
   }
+  /* More than four: they overlap, so a row of them stays as wide as the card. */
   .energy.many .pip + .pip {
-    margin-left: -6px;
+    margin-left: -8px;
   }
   /* The Energy symbol as printed (src/ui/symbols.ts). */
   .pip {
     display: block;
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
     border-radius: 50%;
     background: #555 center / cover no-repeat;
@@ -352,18 +356,19 @@
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 53%, transparent);
     }
   }
+  /* An Ability to use: a tab at the top right corner, clear of the picture. */
   .ability-badge {
     position: absolute;
-    left: 50%;
-    top: 46%;
+    right: -6px;
+    top: -9px;
     z-index: 3;
-    transform: translate(-50%, -50%);
-    padding: 2px 8px;
+    padding: 1px 6px;
     border: 1px solid #0006;
-    border-radius: 3px;
+    border-radius: 4px;
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 0.62rem;
+    font-size: 11px;
+    line-height: 14px;
     font-weight: 600;
     white-space: nowrap;
     pointer-events: none;
@@ -420,7 +425,8 @@
     border-radius: 3px;
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 0.7rem;
+    font-size: 11px;
+    line-height: 16px;
     font-weight: 700;
     box-shadow: 0 2px 6px #000a;
     pointer-events: none;
@@ -433,26 +439,23 @@
     font-family: var(--font-mono);
   }
   @media (max-width: 700px) {
-    .hp {
-      font-size: 0.56rem;
-    }
     .dmg {
       min-width: 22px;
       padding: 1px 4px;
-      font-size: 0.7rem;
+      font-size: 11px;
+      line-height: 14px;
     }
     .pip {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
     }
     .tool {
-      top: -7px;
-      font-size: 0.5rem;
+      top: -8px;
       padding: 0 4px;
     }
     .ability-badge {
-      padding: 1px 5px;
-      font-size: 0.52rem;
+      right: -4px;
+      padding: 0 4px;
     }
   }
 </style>
