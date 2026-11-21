@@ -1,5 +1,6 @@
 // The shared bot: score "development" actions with cheap heuristics, and let the finisher (attack
 // planner) decide gusts, boosts, switching and the attack. Deck plans tune both through hooks.
+import { tx } from '../i18n';
 import { actor, legalActions } from '../engine/actions';
 import { def, hasRuleBox, isBasicEnergy, isPokemon, isTrainerType } from '../engine/db';
 import { hpLeft, provides, retreatCost } from '../engine/rules';
@@ -72,7 +73,7 @@ export function decide(s: GameState, me: PlayerId, plan: DeckPlan, rand: Rand): 
 
 export function finishStep(s: GameState, fin: Finish): Scored {
   const first = fin.steps[0];
-  if (!first || fin.value <= 0) return { action: { t: 'end' }, score: 0, reason: 'ไม่มีอะไรคุ้มทำต่อ จบเทิร์น' };
+  if (!first || fin.value <= 0) return { action: { t: 'end' }, score: 0, reason: tx('ไม่มีอะไรคุ้มทำต่อ จบเทิร์น', 'Nothing more worth doing: end the turn') };
   return { action: first.action, picks: first.picks, score: fin.value, reason: finishReason(s, fin) };
 }
 
@@ -82,15 +83,16 @@ function finishReason(s: GameState, fin: Finish): string {
   const first = fin.steps[0]!.action;
   const what =
     first.t === 'attack'
-      ? `โจมตีด้วย ${first.name}`
+      ? tx(`โจมตีด้วย ${first.name}`, `Attack with ${first.name}`)
       : first.t === 'trainer'
-        ? `ใช้ ${def(keyOf(s, first.card)).name}`
+        ? tx(`ใช้ ${def(keyOf(s, first.card)).name}`, `Play ${def(keyOf(s, first.card)).name}`)
         : first.t === 'retreat'
-          ? 'ถอยเพื่อเปลี่ยนตัวตี'
+          ? tx('ถอยเพื่อเปลี่ยนตัวตี', 'Retreat for another attacker')
           : first.t === 'energy'
-            ? `ติด ${def(keyOf(s, first.card)).name} ให้ตัวหลัก`
-            : 'เตรียมโจมตี';
-  return `${what}${name && first.t !== 'attack' ? ` แล้วตีด้วย ${name}` : ''} (คะแนนคาดหวัง ${Math.round(fin.value)})`;
+            ? tx(`ติด ${def(keyOf(s, first.card)).name} ให้ตัวหลัก`, `Attach ${def(keyOf(s, first.card)).name} to the Active Pokémon`)
+            : tx('เตรียมโจมตี', 'Set up the attack');
+  const then = name && first.t !== 'attack' ? tx(` แล้วตีด้วย ${name}`, `, then attack with ${name}`) : '';
+  return tx(`${what}${then} (คะแนนคาดหวัง ${Math.round(fin.value)})`, `${what}${then} (expected score ${Math.round(fin.value)})`);
 }
 
 const isSupporter = (s: GameState, a: Action) => a.t === 'trainer' && isTrainerType(keyOf(s, a.card), 'Supporter');
@@ -117,14 +119,14 @@ function devScore(s: GameState, me: PlayerId, a: Action, plan: DeckPlan): { scor
       const target = plan.benchTarget?.(s, me) ?? 4;
       const room = ps.bench.length < target;
       score = room ? P.benchBase + cardValue(s, me, k, plan) / P.benchCardDiv : 4;
-      reason = `ลง ${def(k).name} บน Bench`;
+      reason = tx(`ลง ${def(k).name} บน Bench`, `${def(k).name} onto the Bench`);
       if (k === 'meowth-ex') {
         const canCatch = !ps.supporterPlayed && !ps.namedUsed.includes('Last-Ditch') && !supporterInHand;
         score = canCatch ? P.meowth : 0;
-        reason = 'ลง Meowth ex เพื่อค้น Supporter';
+        reason = tx('ลง Meowth ex เพื่อค้น Supporter', 'Meowth ex to search for a Supporter');
       } else if (k === 'chien-pao') {
         score = s.stadium && s.stadium.owner !== me ? 48 : room ? 18 : 0;
-        reason = 'ลง Chien-Pao ทิ้ง Stadium ของอีกฝั่ง';
+        reason = tx('ลง Chien-Pao ทิ้ง Stadium ของอีกฝั่ง', "Chien-Pao to discard the opponent's Stadium");
       } else if (hasRuleBox(k) && !plan.attackers.includes(k)) {
         score -= P.ruleBoxBenchPenalty;
       }
@@ -133,7 +135,7 @@ function devScore(s: GameState, me: PlayerId, a: Action, plan: DeckPlan): { scor
     case 'evolve': {
       const k = keyOf(s, a.card);
       score = P.evolve;
-      reason = `วิวัฒนาการเป็น ${def(k).name}`;
+      reason = tx(`วิวัฒนาการเป็น ${def(k).name}`, `Evolve into ${def(k).name}`);
       // Support Pokémon (Thwackey, Drakloak…) belong on the Bench; evolve a Benched copy instead.
       if (ps.active?.uid === a.target && !plan.attackers.slice(0, 2).includes(k)) score -= P.evolveActivePenalty;
       break;
@@ -146,7 +148,7 @@ function devScore(s: GameState, me: PlayerId, a: Action, plan: DeckPlan): { scor
       const cheap = retreatCost(s, me, act) <= 1;
       if (cheap && gain > P.pivotGain && !plan.attackers.slice(0, 2).includes(topKey(s, act))) {
         score = P.pivotRetreat;
-        reason = `ถอย ${topDef(s, act).name} ให้ ${topDef(s, to).name} ขึ้นมาเป็นตัวตี`;
+        reason = tx(`ถอย ${topDef(s, act).name} ให้ ${topDef(s, to).name} ขึ้นมาเป็นตัวตี`, `Retreat ${topDef(s, act).name} so ${topDef(s, to).name} can attack`);
       }
       break;
     }
@@ -156,11 +158,11 @@ function devScore(s: GameState, me: PlayerId, a: Action, plan: DeckPlan): { scor
       const tgt = energyTarget(s, me, t, plan);
       if (tgt?.uid === a.target) {
         score = P.energy;
-        reason = `ติด ${def(k).name} ให้ ${topDef(s, tgt).name} (ตัวตีที่ต้องการพลังงาน)`;
+        reason = tx(`ติด ${def(k).name} ให้ ${topDef(s, tgt).name} (ตัวตีที่ต้องการพลังงาน)`, `Attach ${def(k).name} to ${topDef(s, tgt).name} (the attacker that needs Energy)`);
       }
       if (k === 'enriching-energy' && score === 0 && slotsOf(ps).length > 0) {
         score = 30;
-        reason = 'ติด Enriching Energy จั่ว 4 ใบ';
+        reason = tx('ติด Enriching Energy จั่ว 4 ใบ', 'Attach Enriching Energy to draw 4');
       }
       break;
     }
@@ -176,7 +178,7 @@ function devScore(s: GameState, me: PlayerId, a: Action, plan: DeckPlan): { scor
       else if (k === 'lucky-helmet' || k === 'handheld-fan') score = isAct ? 25 : 3;
       else if (k === 'lillies-pearl') score = topDef(s, sl).name.startsWith("Lillie's ") ? 30 : 0;
       else if (k === 'binding-mochi') score = topDef(s, sl).types.includes('Darkness') && attacker ? 25 : 2;
-      reason = `ติด ${def(k).name} ให้ ${topDef(s, sl).name}`;
+      reason = tx(`ติด ${def(k).name} ให้ ${topDef(s, sl).name}`, `Attach ${def(k).name} to ${topDef(s, sl).name}`);
       break;
     }
     case 'trainer': {
@@ -211,7 +213,7 @@ function trainerScore(s: GameState, me: PlayerId, k: string, plan: DeckPlan, han
   const o = s.players[opp(me)];
   const name = def(k).name;
   const hand = handKeys.length;
-  const r = (score: number, reason = `ใช้ ${name}`) => ({ score, reason });
+  const r = (score: number, reason = tx(`ใช้ ${name}`, `Play ${name}`)) => ({ score, reason });
   const lowestHand = (n: number, except: string) =>
     handKeys
       .filter((x, i) => !(x === except && handKeys.indexOf(except) === i))
@@ -229,13 +231,13 @@ function trainerScore(s: GameState, me: PlayerId, k: string, plan: DeckPlan, han
   }
   switch (k) {
     case 'poke-pad':
-      return r(P.searchItem * (15 + bestInDeck(s, me, plan, (x) => isPokemon(x) && !hasRuleBox(x)) / 1.5), 'ค้น Pokémon ด้วย Poké Pad');
+      return r(P.searchItem * (15 + bestInDeck(s, me, plan, (x) => isPokemon(x) && !hasRuleBox(x)) / 1.5), tx('ค้น Pokémon ด้วย Poké Pad', 'Poké Pad for a Pokémon'));
     case 'ultra-ball': {
       const best = bestInDeck(s, me, plan, isPokemon);
-      return r(P.searchItem * (best / 1.3) - lowestHand(2, k) / 2.5, 'ใช้ Ultra Ball ค้น Pokémon');
+      return r(P.searchItem * (best / 1.3) - lowestHand(2, k) / 2.5, tx('ใช้ Ultra Ball ค้น Pokémon', 'Ultra Ball for a Pokémon'));
     }
     case 'buddy-buddy-poffin':
-      return r(P.searchItem * (ps.bench.length < (plan.benchTarget?.(s, me) ?? 4) ? 45 : 5), 'Poffin ลง Basic 2 ตัว');
+      return r(P.searchItem * (ps.bench.length < (plan.benchTarget?.(s, me) ?? 4) ? 45 : 5), tx('Poffin ลง Basic 2 ตัว', 'Poffin for 2 Basics'));
     case 'secret-box':
       return r(hand >= 6 ? 35 : 5);
     case 'bug-catching-set':
@@ -243,16 +245,16 @@ function trainerScore(s: GameState, me: PlayerId, k: string, plan: DeckPlan, han
     case 'lillies-determination':
       return r(
         P.drawSupporter * (hand <= 2 ? 58 : hand <= 4 ? 38 : hand <= 6 ? 24 : 8),
-        `ใช้ Lillie's Determination สับมือแล้วจั่ว ${ps.prizes.length === 6 ? 8 : 6}`,
+        tx(`ใช้ Lillie's Determination สับมือแล้วจั่ว ${ps.prizes.length === 6 ? 8 : 6}`, `Lillie's Determination: shuffle the hand and draw ${ps.prizes.length === 6 ? 8 : 6}`),
       );
     case 'judge':
-      return r(P.drawSupporter * (o.hand.length >= 6 && hand <= 4 ? 42 : hand <= 2 ? 30 : 6), `ใช้ Judge (มืออีกฝั่ง ${o.hand.length} ใบ)`);
+      return r(P.drawSupporter * (o.hand.length >= 6 && hand <= 4 ? 42 : hand <= 2 ? 30 : 6), tx(`ใช้ Judge (มืออีกฝั่ง ${o.hand.length} ใบ)`, `Judge (opponent's hand: ${o.hand.length})`));
     case 'surfer':
       return r(P.drawSupporter * (hand <= 3 && ps.bench.length > 0 ? 34 : 6));
     case 'crispin':
-      return r(slotsOf(ps).some((sl) => plan.attackers.includes(topKey(s, sl))) ? 40 : 15, 'Crispin ค้นพลังงานติด');
+      return r(slotsOf(ps).some((sl) => plan.attackers.includes(topKey(s, sl))) ? 40 : 15, tx('Crispin ค้นพลังงานติด', 'Crispin for Energy to attach'));
     case 'cyrano':
-      return r(14 + bestInDeck(s, me, plan, hasRuleBox) / 1.5, 'Cyrano ค้น Pokémon ex');
+      return r(14 + bestInDeck(s, me, plan, hasRuleBox) / 1.5, tx('Cyrano ค้น Pokémon ex', 'Cyrano for Pokémon ex'));
     case 'dawn':
     case 'hilda':
       return r(20 + bestInDeck(s, me, plan, (x) => isPokemon(x) && topStage(x) !== 'Basic') / 1.4);
@@ -271,10 +273,10 @@ function trainerScore(s: GameState, me: PlayerId, k: string, plan: DeckPlan, han
         const x = keyOf(s, c);
         if (isPokemon(x) || isBasicEnergy(x)) best = Math.max(best, cardValue(s, me, x, plan));
       }
-      return r(best / 1.4, 'Night Stretcher เก็บของจากกองทิ้ง');
+      return r(best / 1.4, tx('Night Stretcher เก็บของจากกองทิ้ง', 'Night Stretcher to get a card back'));
     }
     case 'rare-candy':
-      return r(75, 'Rare Candy ข้ามไป Stage 2');
+      return r(75, tx('Rare Candy ข้ามไป Stage 2', 'Rare Candy straight to Stage 2'));
     case 'tool-scrapper': {
       const tools = slotsOf(o).filter((sl) => sl.tool !== null).length;
       return r(tools > 0 ? 30 : 0);
@@ -284,19 +286,19 @@ function trainerScore(s: GameState, me: PlayerId, k: string, plan: DeckPlan, han
     case 'hand-trimmer':
       return r(o.hand.length >= 7 && hand <= 6 ? 30 : 0);
     case 'unfair-stamp':
-      return r(o.hand.length >= 4 ? 55 : 0, 'Unfair Stamp ตัดมืออีกฝั่งเหลือ 2');
+      return r(o.hand.length >= 4 ? 55 : 0, tx('Unfair Stamp ตัดมืออีกฝั่งเหลือ 2', "Unfair Stamp: the opponent's hand down to 2"));
     case 'special-red-card':
-      return r(o.hand.length >= 4 ? 45 : 0, 'Special Red Card ตัดมืออีกฝั่งเหลือ 3');
+      return r(o.hand.length >= 4 ? 45 : 0, tx('Special Red Card ตัดมืออีกฝั่งเหลือ 3', "Special Red Card: the opponent's hand down to 3"));
     case 'wondrous-patch':
     case 'ns-pp-up':
     case 'glass-trumpet':
-      return r(38, `${name} เร่งพลังงาน`);
+      return r(38, tx(`${name} เร่งพลังงาน`, `${name} for extra Energy`));
     case 'crushing-hammer':
       return r(o.active && o.active.energy.length > 0 ? 24 : 2);
   }
   if (isTrainerType(k, 'Stadium')) {
     const theirs = s.stadium && s.stadium.owner !== me;
-    return r(s.stadium ? (theirs ? 30 : 0) : 20, `วาง ${name}`);
+    return r(s.stadium ? (theirs ? 30 : 0) : 20, tx(`วาง ${name}`, `Play ${name}`));
   }
   return r(10);
 }
@@ -308,18 +310,18 @@ function topStage(k: string) {
 
 function abilityScore(s: GameState, me: PlayerId, name: string, plan: DeckPlan, handKeys: string[]): { score: number; reason: string } {
   const ps = s.players[me];
-  const r = (score: number, reason = `ใช้ Ability ${name}`) => ({ score, reason });
+  const r = (score: number, reason = tx(`ใช้ Ability ${name}`, `Use Ability ${name}`)) => ({ score, reason });
   switch (name) {
     case 'Run Errand':
-      return r(50, 'Run Errand จั่ว 2');
+      return r(50, tx('Run Errand จั่ว 2', 'Run Errand: draw 2'));
     case 'Flip the Script':
-      return r(52, 'Flip the Script จั่ว 3');
+      return r(52, tx('Flip the Script จั่ว 3', 'Flip the Script: draw 3'));
     case 'Trade': {
       const low = Math.min(...handKeys.map((k) => cardValue(s, me, k, plan)));
-      return r(low < 16 ? 40 : 18, 'Trade ทิ้ง 1 จั่ว 2');
+      return r(low < 16 ? 40 : 18, tx('Trade ทิ้ง 1 จั่ว 2', 'Trade: discard 1, draw 2'));
     }
     case 'Run Away Draw':
-      return r(handKeysCount(handKeys) <= 4 ? 36 : 12, 'Run Away Draw จั่ว 3');
+      return r(handKeysCount(handKeys) <= 4 ? 36 : 12, tx('Run Away Draw จั่ว 3', 'Run Away Draw: draw 3'));
     case 'Recon Directive':
       return r(42);
     case 'Attract Customers':
@@ -327,15 +329,15 @@ function abilityScore(s: GameState, me: PlayerId, name: string, plan: DeckPlan, 
     case 'Boom Boom Groove': {
       // Only search when something worth having is left, and not when the deck is running out.
       const want = bestInDeck(s, me, plan, () => true);
-      return r(ps.deck.length < 10 ? 0 : want >= 40 ? 56 : want >= 28 ? 30 : 0, 'Boom Boom Groove ค้นการ์ดที่ขาด');
+      return r(ps.deck.length < 10 ? 0 : want >= 40 ? 56 : want >= 28 ? 30 : 0, tx('Boom Boom Groove ค้นการ์ดที่ขาด', 'Boom Boom Groove for a missing card'));
     }
     case 'Teal Dance':
-      return r(46, 'Teal Dance ติด Grass Energy แล้วจั่ว');
+      return r(46, tx('Teal Dance ติด Grass Energy แล้วจั่ว', 'Teal Dance: attach a Grass Energy and draw'));
     case 'Adrena-Brain': {
       const damaged = slotsOf(ps).some((sl) => sl.damage >= 30);
       const o = s.players[opp(me)];
       const near = slotsOf(o).some((sl) => hpLeft(s, sl) <= 30);
-      return r(damaged ? (near ? 50 : 32) : 0, 'Adrena-Brain ย้ายตัวนับดาเมจไปฝั่งตรงข้าม');
+      return r(damaged ? (near ? 50 : 32) : 0, tx('Adrena-Brain ย้ายตัวนับดาเมจไปฝั่งตรงข้าม', 'Adrena-Brain: move damage counters to the opponent'));
     }
   }
   return r(0);

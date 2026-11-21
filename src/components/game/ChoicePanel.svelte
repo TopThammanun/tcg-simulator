@@ -4,6 +4,7 @@
   // the whole deck, "look at the top N" those cards), all of it is laid out as at a real table: the cards you may
   // take lit, the rest dimmed, and any copy of a card you may take works (a search offers one card per name). Cards are
   // as big as the box allows, named underneath; confirming is done in the command bar under the table.
+  import { tx } from '../../i18n';
   import { fly } from 'svelte/transition';
   import { motion } from '../../ui/anim/motion';
   import { CARDS, def } from '../../engine/db';
@@ -28,7 +29,11 @@
   const kind = $derived(req.options[0]?.slot !== undefined ? 'slot' : req.options[0]?.card !== undefined || req.view?.length ? 'card' : 'label');
   const counts = $derived(picks.reduce((m, v) => m.set(v, (m.get(v) ?? 0) + 1), new Map<number, number>()));
   const needs = $derived(
-    req.min === req.max ? `เลือก ${req.max}` : req.min === 0 ? `เลือกได้ไม่เกิน ${req.max}` : `เลือก ${req.min}–${req.max}`,
+    req.min === req.max
+      ? tx(`เลือก ${req.max}`, `Choose ${req.max}`)
+      : req.min === 0
+        ? tx(`เลือกได้ไม่เกิน ${req.max}`, `Choose up to ${req.max}`)
+        : tx(`เลือก ${req.min}–${req.max}`, `Choose ${req.min}–${req.max}`),
   );
 
   // The pile looked at; a whole-deck search is sorted (Pokémon, Trainers, Energy, then by name), the top of the
@@ -73,7 +78,7 @@
 <div class="choice" class:zone={!!pile} role="dialog" aria-label={req.prompt} in:fly={{ y: 14, duration: motion(240) }}>
   <div class="head">
     {#if source}
-      <button type="button" class="source" title="การ์ดที่กำลังใช้" onclick={() => onzoom(source)}>
+      <button type="button" class="source" title={tx('การ์ดที่กำลังใช้', 'The card being played')} onclick={() => onzoom(source)}>
         <CardFace cardKey={source} />
       </button>
     {/if}
@@ -81,11 +86,11 @@
       <strong>{req.prompt}</strong>
       {#if pile}
         <span class="pile">
-          {req.purpose === 'search' ? `เด็คของคุณ ${pile.length} ใบ` : `การ์ดบนสุดของเด็ค ${pile.length} ใบ`} · เลือกได้ {takeable} ใบ
+          {req.purpose === 'search' ? tx(`เด็คของคุณ ${pile.length} ใบ`, `Your deck: ${pile.length} cards`) : tx(`การ์ดบนสุดของเด็ค ${pile.length} ใบ`, `Top ${pile.length} cards of your deck`)} · {tx(`เลือกได้ ${takeable} ใบ`, `${takeable} can be taken`)}
         </span>
       {/if}
-      {#if kind !== 'label'}<span class="need">{needs} · เลือกแล้ว {picks.length}</span>{/if}
-      {#if kind === 'card'}<span class="tip">กดค้าง / คลิกขวาที่การ์ดเพื่อดูใบใหญ่ · ยืนยันที่แถบด้านล่าง</span>{/if}
+      {#if kind !== 'label'}<span class="need">{needs} · {tx('เลือกแล้ว', 'chosen')} {picks.length}</span>{/if}
+      {#if kind === 'card'}<span class="tip">{tx('กดค้าง / คลิกขวาที่การ์ดเพื่อดูใบใหญ่ · ยืนยันที่แถบด้านล่าง', 'Press and hold / right-click a card to see it large · confirm in the bar below')}</span>{/if}
     </div>
   </div>
 
@@ -140,7 +145,7 @@
       {/each}
     </div>
   {:else if kind === 'slot'}
-    <p class="hint">กดเลือก Pokémon ที่ไฮไลต์บนสนาม{req.repeat ? ' (กดซ้ำได้)' : ''}</p>
+    <p class="hint">{tx('กดเลือก Pokémon ที่ไฮไลต์บนสนาม', 'Choose a lit Pokémon on the table')}{req.repeat ? tx(' (กดซ้ำได้)', ' (again for more)') : ''}</p>
     <div class="labels">
       {#each req.options as o (o.value)}
         <button type="button" class="lbl" class:on={counts.has(o.value)} onclick={() => onpick(o.value)}>

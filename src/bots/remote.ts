@@ -1,5 +1,6 @@
 // The play screen's side of src/bots/worker.ts: ask the bot for its move without blocking the page.
 // Without Worker support it runs the bot in the page instead.
+import { lang } from '../i18n';
 import { planFor } from './plans';
 import type { Action, GameState } from '../engine/types';
 import type { BotSetup, FromBot, ToBot } from './worker';
@@ -15,7 +16,7 @@ export function remoteBot(setup: BotSetup): RemoteBot {
     const made = import('./index').then(({ createBot }) => createBot(planFor(setup.slug), setup.seed, planFor(setup.oppSlug, setup.policy), { fast: setup.fast }));
     return { act: async (s) => (await made).act(s), dispose() {} };
   }
-  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: lang() });
   worker.postMessage({ type: 'init', setup } satisfies ToBot);
   let next = 0;
   const waiting = new Map<number, { resolve: (a: Action) => void; reject: (e: Error) => void }>();

@@ -1,8 +1,12 @@
 // Web Worker: the play screen's bot thinks here, so its search never freezes the page.
+import { asLang, setLang } from '../i18n';
 import { createBot } from './index';
 import { planFor, type PlayerPolicy } from './plans';
 import type { Bot } from './types';
 import type { Action, GameState } from '../engine/types';
+
+// The page's language, passed as the worker's name (remote.ts): its text (logs, the review's words) follows it.
+setLang(asLang((self as unknown as { name?: string }).name));
 
 export interface BotSetup {
   slug: string;

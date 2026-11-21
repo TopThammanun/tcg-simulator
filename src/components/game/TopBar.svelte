@@ -1,6 +1,7 @@
 <script lang="ts">
   // The game's top line: the menu (new game, how to play, settings, back to the site), whose turn it is, the two decks,
   // and on a phone the log. At the end: the result and the links to the review and the bot's list.
+  import { tx } from '../../i18n';
   import IconButton from '../ui/IconButton.svelte';
 
   let {
@@ -32,13 +33,13 @@
 </script>
 
 <div class="status">
-  <IconButton icon="menu" label="เมนูเกม" aria-expanded={menuOpen} onclick={onmenu} />
+  <IconButton icon="menu" label={tx('เมนูเกม', 'Game menu')} aria-expanded={menuOpen} onclick={onmenu} />
   <strong class:result>{title}</strong>
   {#each sub as s}<span class="opp">{s}</span>{/each}
-  {#if back}<button type="button" class="link" onclick={back}>กลับไปเกมปัจจุบัน</button>{/if}
+  {#if back}<button type="button" class="link" onclick={back}>{tx('กลับไปเกมปัจจุบัน', 'Back to the game')}</button>{/if}
   {#each links as l}<a href={l.href}>{l.label} →</a>{/each}
   {#if narrow}
-    <span class="right"><IconButton icon="log" label="บันทึกเกม" aria-expanded={logOpen} onclick={onlog} /></span>
+    <span class="right"><IconButton icon="log" label={tx('บันทึกเกม', 'Game log')} aria-expanded={logOpen} onclick={onlog} /></span>
   {/if}
 </div>
 

@@ -3,6 +3,7 @@
   // mistake's line, and where your turn and the bot's part: the moves you both made alike folded into one line, then
   // the two ways from there as cards, and why the bot plays its way. A turn with nothing to see is one line.
   import { BETTER_BY, type TurnReview, type Verdict } from '../../analysis/review';
+  import { href, tx } from '../../i18n';
   import type { Line, Move } from '../../review/summary';
   import CardFace from '../game/CardFace.svelte';
 
@@ -22,10 +23,10 @@
   } = $props();
 
   const VERDICT: Record<Verdict, { label: string; cls: string }> = {
-    'missed-win': { label: '✗ พลาดชัด: มีทางชนะ', cls: 'bad' },
-    'missed-ko': { label: '✗ พลาดชัด: มีทาง KO มากกว่า', cls: 'bad' },
-    better: { label: '▲ น่าจะมีทางที่ดีกว่า', cls: 'warn' },
-    ok: { label: '● ไม่พบจุดพลาด', cls: 'ok' },
+    'missed-win': { label: tx('✗ พลาดชัด: มีทางชนะ', '✗ Clear slip: a win was there'), cls: 'bad' },
+    'missed-ko': { label: tx('✗ พลาดชัด: มีทาง KO มากกว่า', '✗ Clear slip: a bigger Knock Out was there'), cls: 'bad' },
+    better: { label: tx('▲ น่าจะมีทางที่ดีกว่า', '▲ Likely a better way'), cls: 'warn' },
+    ok: { label: tx('● ไม่พบจุดพลาด', '● No slip found'), cls: 'ok' },
   };
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   /** Moves shown before "อีก N ขั้น". */
@@ -51,13 +52,13 @@
 
 <!-- A long turn shows its first moves; the rest open on a tap. -->
 {#snippet moves(list: Move[])}
-  {@const all = list.length ? list : [{ label: 'จบเทิร์นโดยไม่ทำอะไร', key: null }]}
+  {@const all = list.length ? list : [{ label: tx('จบเทิร์นโดยไม่ทำอะไร', 'Ended the turn without a move'), key: null }]}
   <ol class="moves">
     {#each all.slice(0, FIRST) as m, i (i)}{@render move(m)}{/each}
   </ol>
   {#if all.length > FIRST}
     <details class="rest">
-      <summary>อีก {all.length - FIRST} ขั้น</summary>
+      <summary>{tx(`อีก ${all.length - FIRST} ขั้น`, `${all.length - FIRST} more`)}</summary>
       <ol class="moves" start={FIRST + 1}>
         {#each all.slice(FIRST) as m, i (i)}{@render move(m)}{/each}
       </ol>
@@ -65,65 +66,77 @@
   {/if}
 {/snippet}
 
-<section class="turn-detail" aria-label={`เทิร์น ${t.turn}`}>
+<section class="turn-detail" aria-label={tx(`เทิร์น ${t.turn}`, `Turn ${t.turn}`)}>
   <header>
-    <h2>เทิร์น {t.turn}</h2>
+    <h2>{tx('เทิร์น', 'Turn')} {t.turn}</h2>
     <span class={`badge ${VERDICT[t.verdict].cls}`}>{VERDICT[t.verdict].label}</span>
   </header>
   <p class="nums">
-    <span>ก่อนเทิร์น <strong class="mono">{pct(t.before)}</strong></span>
+    <span>{tx('ก่อนเทิร์น', 'Before')} <strong class="mono">{pct(t.before)}</strong></span>
     <span aria-hidden="true">→</span>
-    <span>หลังเทิร์น <strong class="mono">{pct(t.win.p)}</strong></span>
+    <span>{tx('หลังเทิร์น', 'After')} <strong class="mono">{pct(t.win.p)}</strong></span>
   </p>
   <details class="what">
-    <summary>win% คืออะไร</summary>
+    <summary>{tx('win% คืออะไร', 'What is win%?')}</summary>
     <p>
-      โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน
-      เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่ 16 แบบ · พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มใหม่
-      · น่าจะมีทางที่ดีกว่า = ถ้าเล่นเทิร์นนั้นแบบบอท win% สูงกว่าอย่างน้อย 10 จุด · เป็นค่าประมาณ ใช้เป็นจุดที่ควรลองดูซ้ำ
+      {tx(
+        'โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่ 16 แบบ · พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มใหม่ · น่าจะมีทางที่ดีกว่า = ถ้าเล่นเทิร์นนั้นแบบบอท win% สูงกว่าอย่างน้อย 10 จุด · เป็นค่าประมาณ ใช้เป็นจุดที่ควรลองดูซ้ำ',
+        "The chance to win if both sides play on from there like the bot, as the bot's network (the one you played against) judges it, averaged over 16 re-deals of the cards you couldn't see · Clear slip = the attack planner found a line that wins or takes more Prize cards, and it works on every re-deal · Likely a better way = playing that turn the bot's way gives a win% at least 10 points higher · It's an estimate, for finding turns worth another look",
+      )}
     </p>
   </details>
 
   {#if t.missed}
     <p class="bad-text">
-      <strong>{t.missed.kind === 'win' ? 'มีทางชนะเกมในเทิร์นนี้' : `มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`}</strong>
-      {t.missed.at === t.span.start ? 'ตั้งแต่ต้นเทิร์น' : 'ตอนที่คุณเลือกจบเทิร์น'}: {t.missed.line.join(' → ')}
+      <strong
+        >{t.missed.kind === 'win'
+          ? tx('มีทางชนะเกมในเทิร์นนี้', 'There was a way to win the game this turn')
+          : tx(`มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`, `A Knock Out was there for ${t.missed.prizes} Prize cards (you took ${t.missed.took})`)}</strong
+      >
+      {t.missed.at === t.span.start ? tx('ตั้งแต่ต้นเทิร์น', 'from the start of the turn') : tx('ตอนที่คุณเลือกจบเทิร์น', 'when you ended the turn')}: {t.missed.line.join(' → ')}
     </p>
   {/if}
 
   {#if t.alt && !quiet}
-    {#if split > 0}<p class="alike">{split} ขั้นแรกเล่นเหมือนบอท</p>{/if}
+    {#if split > 0}<p class="alike">{tx(`${split} ขั้นแรกเล่นเหมือนบอท`, `The first ${split} played like the bot`)}</p>{/if}
     <div class="ways">
       <div class="way">
-        <span class="tag">คุณเล่น{split > 0 ? 'ต่อ' : ''}</span>
+        <span class="tag">{split > 0 ? tx('คุณเล่นต่อ', 'Then you played') : tx('คุณเล่น', 'You played')}</span>
         {@render moves(myMoves.slice(split))}
       </div>
       <div class="way bot">
-        <span class="tag">บอทจะเล่น{split > 0 ? 'ต่อ' : ''}</span>
+        <span class="tag">{split > 0 ? tx('บอทจะเล่นต่อ', 'Then the bot would play') : tx('บอทจะเล่น', 'The bot would play')}</span>
         {@render moves(botMoves.slice(split))}
       </div>
     </div>
-    {#if t.alt.why && botFirst}<p class="why">ตรงนี้บอทจะ{botFirst.label} เพราะ{t.alt.why}</p>{/if}
-    <p class="muted">ถ้าเล่นแบบบอท win% {pct(t.alt.win.p)} ({t.alt.diff >= 0 ? '+' : '−'}{pts(t.alt.diff)} จุด)</p>
+    {#if t.alt.why && botFirst}<p class="why">{tx(`ตรงนี้บอทจะ${botFirst.label} เพราะ${t.alt.why}`, `Here the bot would: ${botFirst.label}, because: ${t.alt.why}`)}</p>{/if}
+    <p class="muted">
+      {tx(`ถ้าเล่นแบบบอท win% ${pct(t.alt.win.p)}`, `The bot's way: win% ${pct(t.alt.win.p)}`)} ({t.alt.diff >= 0 ? '+' : '−'}{pts(t.alt.diff)}
+      {tx('จุด', 'points')})
+    </p>
   {:else}
     <p class="one">
-      {#if t.alt}บอทเล่นต่างออกไปเล็กน้อย (ถ้าเล่นแบบบอท win% {pct(t.alt.win.p)}, {t.alt.diff >= 0 ? '+' : '−'}{pts(t.alt.diff)} จุด){:else}บอทก็เล่นแบบเดียวกัน{/if}
+      {#if t.alt}{tx('บอทเล่นต่างออกไปเล็กน้อย', 'The bot plays it a little differently')} ({tx(`ถ้าเล่นแบบบอท win% ${pct(t.alt.win.p)}`, `its way: win% ${pct(t.alt.win.p)}`)}, {t.alt.diff >= 0
+          ? '+'
+          : '−'}{pts(t.alt.diff)} {tx('จุด', 'points')}){:else}{tx('บอทก็เล่นแบบเดียวกัน', 'The bot plays it the same way')}{/if}
     </p>
     {#if !t.missed}
       <details class="played">
-        <summary>ที่คุณเล่น ({myMoves.length} ขั้น)</summary>
+        <summary>{tx(`ที่คุณเล่น (${myMoves.length} ขั้น)`, `What you played (${myMoves.length})`)}</summary>
         {@render moves(myMoves)}
       </details>
     {/if}
   {/if}
-  {#if fell}<p class="muted">win% ลด {fell} จุดในเทิร์นนี้ แต่บอทเองก็ไม่มีทางที่ดีกว่าชัดเจนในเทิร์นนี้</p>{/if}
+  {#if fell}<p class="muted">
+      {tx(`win% ลด ${fell} จุดในเทิร์นนี้ แต่บอทเองก็ไม่มีทางที่ดีกว่าชัดเจนในเทิร์นนี้`, `Win% fell ${fell} points this turn, but the bot had no clearly better way either`)}
+    </p>{/if}
 
   <div class="buttons">
     {#if onwatch}
-      {#if t.alt?.actions}<button type="button" class="main" onclick={() => onwatch('bot')}>▶ ดูบอทเล่นเทิร์นนี้</button>{/if}
-      <button type="button" onclick={() => onwatch('mine')}>ดูรีเพลย์ที่คุณเล่น</button>
+      {#if t.alt?.actions}<button type="button" class="main" onclick={() => onwatch('bot')}>{tx('▶ ดูบอทเล่นเทิร์นนี้', '▶ Watch the bot play this turn')}</button>{/if}
+      <button type="button" onclick={() => onwatch('mine')}>{tx('ดูรีเพลย์ที่คุณเล่น', 'Replay your turn')}</button>
     {/if}
-    <a class="button" href={`/play/?resume=${gameId}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้</a>
+    <a class="button" href={href(`/play/?resume=${gameId}&at=${t.span.start}`)}>{tx('ลองเล่นใหม่จากตรงนี้', 'Play on from here')}</a>
   </div>
 </section>
 

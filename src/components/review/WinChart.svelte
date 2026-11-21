@@ -4,6 +4,7 @@
   // The end of each turn of yours is marked by its verdict (a cross for a clear mistake, a triangle for "probably
   // better", a dot otherwise) and is a button: click, tap or Enter picks that turn. The picked turn is shaded and
   // labelled; hovering shows any turn's numbers.
+  import { tx } from '../../i18n';
   import type { TurnReview } from '../../analysis/review';
   import { winPoints } from '../../review/summary';
 
@@ -25,10 +26,10 @@
   const ends = $derived(data.points.filter((p) => p.at === 'end'));
   let hover = $state<number | null>(null);
   const VERDICT: Record<string, string> = {
-    'missed-win': 'พลาดชัด: มีทางชนะ',
-    'missed-ko': 'พลาดชัด: มีทาง KO มากกว่า',
-    better: 'น่าจะมีทางที่ดีกว่า',
-    ok: 'ไม่พบจุดพลาด',
+    'missed-win': tx('พลาดชัด: มีทางชนะ', 'Clear slip: a win was there'),
+    'missed-ko': tx('พลาดชัด: มีทาง KO มากกว่า', 'Clear slip: a bigger Knock Out was there'),
+    better: tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way'),
+    ok: tx('ไม่พบจุดพลาด', 'No slip found'),
   };
   const pct = (p: number) => `${Math.round(p * 100)}%`;
 
@@ -47,8 +48,8 @@
 
 <figure class="chart">
   <figcaption>
-    <span>win% ทั้งเกม</span>
-    <span class="legend" aria-hidden="true"><i class="solid"></i>ตาคุณ <i class="dash"></i>ตาบอท</span>
+    <span>{tx('win% ทั้งเกม', 'Win% over the game')}</span>
+    <span class="legend" aria-hidden="true"><i class="solid"></i>{tx('ตาคุณ', 'your turns')} <i class="dash"></i>{tx('ตาบอท', "the bot's")}</span>
   </figcaption>
   <div class="plot" bind:clientWidth={W}>
     <svg
@@ -56,7 +57,7 @@
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       role="group"
-      aria-label="กราฟ win% ทั้งเกม (จุดท้ายแต่ละเทิร์นของคุณกดเพื่อไปที่เทิร์นนั้น)"
+      aria-label={tx('กราฟ win% ทั้งเกม (จุดท้ายแต่ละเทิร์นของคุณกดเพื่อไปที่เทิร์นนั้น)', 'Win% over the game (the point ending each of your turns opens that turn)')}
       onpointermove={move}
       onpointerleave={() => (hover = null)}
     >
@@ -86,7 +87,7 @@
           class:sel={selected === t.turn}
           role="button"
           tabindex="0"
-          aria-label={`เทิร์น ${t.turn}: ${VERDICT[t.verdict]}, win% ${pct(t.before)} → ${pct(t.win.p)}`}
+          aria-label={`${tx('เทิร์น', 'Turn')} ${t.turn}: ${VERDICT[t.verdict]}, win% ${pct(t.before)} → ${pct(t.win.p)}`}
           onclick={() => onpick?.(t.turn)}
           onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onpick?.(t.turn))}
         >
@@ -105,18 +106,18 @@
     {#if hovered}
       {@const t = byTurn.get(hovered.turn)!}
       <div class="tip" style:left={`${(x(hovered.x) / W) * 100}%`} style:top={`${(y(hovered.p) / H) * 100}%`}>
-        <strong>เทิร์น {t.turn}</strong> {pct(t.before)} → {pct(t.win.p)}
+        <strong>{tx('เทิร์น', 'Turn')} {t.turn}</strong> {pct(t.before)} → {pct(t.win.p)}
         <span>{VERDICT[t.verdict]}</span>
       </div>
     {:else if sel}
-      <p class="picked">เทิร์น {sel.turn} · ก่อนเทิร์น {pct(sel.before)} → หลังเทิร์น {pct(sel.win.p)}</p>
+      <p class="picked">{tx('เทิร์น', 'Turn')} {sel.turn} · {tx('ก่อนเทิร์น', 'before')} {pct(sel.before)} → {tx('หลังเทิร์น', 'after')} {pct(sel.win.p)}</p>
     {/if}
   </div>
   <p class="key">
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="x" d="M2,2L10,10M10,2L2,10" /></svg>พลาดชัด</span>
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="tri" d="M6,1L11,10H1Z" /></svg>น่าจะมีทางที่ดีกว่า</span>
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="dot" cx="6" cy="6" r="4" /></svg>ไม่พบจุดพลาด</span>
-    {#if onpick}<span class="k how">แตะจุดเพื่อดูเทิร์นนั้น</span>{/if}
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="x" d="M2,2L10,10M10,2L2,10" /></svg>{tx('พลาดชัด', 'Clear slip')}</span>
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="tri" d="M6,1L11,10H1Z" /></svg>{tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way')}</span>
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="dot" cx="6" cy="6" r="4" /></svg>{tx('ไม่พบจุดพลาด', 'No slip found')}</span>
+    {#if onpick}<span class="k how">{tx('แตะจุดเพื่อดูเทิร์นนั้น', 'Tap a point to see that turn')}</span>{/if}
   </p>
 </figure>
 

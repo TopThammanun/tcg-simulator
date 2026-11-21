@@ -2,6 +2,7 @@
 // has already changed; this only moves pictures: flying copies of cards on an overlay (pointer-events
 // none), and short animations on the real elements that start from where they were before.
 // Nothing here blocks input: finish() jumps every running animation to its end.
+import { tx } from '../../i18n';
 import { def, imageFor } from '../../engine/db';
 import { topKey } from '../../engine/state';
 import type { CardId, GameState, PlayerId, SlotId } from '../../engine/types';
@@ -333,8 +334,8 @@ export class Fx {
         { transform: at(mid, 0, 1.02), offset: 0.72 },
         { transform: at(to), offset: 1 },
       ];
-      const who = e.from.player === 0 ? 'คุณ' : 'บอท';
-      const label = this.node('fx-stage-label', undefined, `${who} ใช้ ${e.key ? def(e.key).name : ''}`);
+      const who = e.from.player === 0 ? tx('คุณ', 'You') : tx('บอท', 'Bot');
+      const label = this.node('fx-stage-label', undefined, tx(`${who} ใช้ ${e.key ? def(e.key).name : ''}`, `${who} ${e.from.player === 0 ? 'play' : 'plays'} ${e.key ? def(e.key).name : ''}`));
       this.at(label, c.board.left + c.board.width / 2, mid.bottom + 8);
       this.drop(
         label,
@@ -452,7 +453,7 @@ export class Fx {
       return n;
     };
     spin.append(face('heads'), face('tails'));
-    const label = el('span', 'fx-coin-label', heads ? 'หัว' : 'ก้อย');
+    const label = el('span', 'fx-coin-label', heads ? tx('หัว', 'Heads') : tx('ก้อย', 'Tails'));
     coin.append(spin, label);
     const turns = 5 * 360 + (heads ? 0 : 180);
     const dur = 900 * k;
@@ -552,7 +553,7 @@ export class Fx {
     if (badge) this.anim(badge, [{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'scale(1.3)', offset: 0.6 }, { opacity: 1, transform: 'none' }], { duration: 380 * k, delay: t });
     const r = c.after.slots.get(e.uid)?.rect;
     if (r) {
-      const tag = this.node('fx-tag cond', undefined, e.condition === 'poisoned' ? 'ติดพิษ' : 'สับสน');
+      const tag = this.node('fx-tag cond', undefined, e.condition === 'poisoned' ? tx('ติดพิษ', 'Poisoned') : tx('สับสน', 'Confused'));
       this.at(tag, r.left + r.width / 2, r.top + r.height * 0.6);
       this.drop(tag, this.anim(tag, [{ opacity: 0, transform: 'translate(-50%, 0)' }, { opacity: 1, transform: 'translate(-50%, -50%)', offset: 0.3 }, { opacity: 0, transform: 'translate(-50%, -120%)' }], { duration: 900 * k, delay: t }));
     }
@@ -605,8 +606,8 @@ export class Fx {
   private turn(turn: number, p: PlayerId, t: number, c: Ctx): number {
     const k = this.k;
     const n = this.node(`fx-turn ${p === 0 ? 'mine' : 'theirs'}`);
-    const text = el('strong', '', p === 0 ? 'ตาคุณ' : 'ตาบอท');
-    n.append(el('small', '', `เทิร์น ${turn}`), text);
+    const text = el('strong', '', p === 0 ? tx('ตาคุณ', 'Your turn') : tx('ตาบอท', "Bot's turn"));
+    n.append(el('small', '', tx(`เทิร์น ${turn}`, `Turn ${turn}`)), text);
     Object.assign(n.style, { left: `${c.board.left}px`, width: `${c.board.width}px`, top: `${c.board.top + c.board.height / 2}px` });
     const pose = (sy: number, o: number, offset?: number) => ({ opacity: o, transform: `translateY(-50%) scaleY(${sy})`, ...(offset !== undefined && { offset }) });
     this.drop(n, this.anim(n, [pose(0.2, 0), pose(1, 1, 0.18), pose(1, 1, 0.78), pose(0.2, 0)], { duration: 1000 * k, delay: t }));

@@ -1,6 +1,7 @@
 <script lang="ts">
   // Card detail: high-res image plus the English card text (PLAN.md: ดูการ์ด). A Pokémon in play also shows its
   // state (ui/slot-info.ts): HP left, Energy and Tool, conditions and what they do, effects on it, the cards under it.
+  import { tx } from '../../i18n';
   import { fade, scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
   import { def } from '../../engine/db';
@@ -24,7 +25,7 @@
   onkeydown={(e) => e.key === 'Escape' && onclose()}
 >
   <div class="info" role="dialog" aria-label={d.name} in:scale={{ start: 0.85, duration: motion(220), easing: backOut }}>
-    <button type="button" class="close" onclick={onclose} aria-label="ปิด">×</button>
+    <button type="button" class="close" onclick={onclose} aria-label={tx('ปิด', 'Close')}>×</button>
     <div class="img"><CardFace {cardKey} size="high" /></div>
     <div class="text">
       {#if info}<SlotState {info} />{/if}

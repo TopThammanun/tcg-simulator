@@ -3,11 +3,12 @@
   // below it, the Tool peeking out above it, conditions on top. Tapping it opens its pop-up
   // (PokemonMenu); `ready` makes it glow when it has an attack or Ability to use.
   // The container sets the width (Active Spot or a Bench cell).
+  import { tx } from '../../i18n';
   import { maxHp, provides, toolKey } from '../../engine/rules';
   import { keyOf, topKey } from '../../engine/state';
   import type { CardId, GameState, Slot } from '../../engine/types';
   import { def } from '../../engine/db';
-  import { CONDITION } from '../../ui/slot-info';
+  import { condition } from '../../ui/slot-info';
   import { energyIcon } from '../../ui/symbols';
   import CardFace from './CardFace.svelte';
 
@@ -98,8 +99,8 @@
     {#if tool}<span class="tool" data-card={slot.tool} title={def(tool).name}>{def(tool).name}</span>{/if}
     {#if slot.damage > 0}<span class="dmg mono" aria-hidden="true"></span>{/if}
     {#if picked > 0}<span class="pick mono">{picked > 1 ? `×${picked}` : '✓'}</span>{/if}
-    {#if slot.conditions.length}<span class="cond" title={slot.conditions.map((c) => `${CONDITION[c].name}: ${CONDITION[c].does}`).join('\n')}
-        >{slot.conditions.map((c) => (c === 'poisoned' ? 'พิษ' : 'สับสน')).join(' ')}</span
+    {#if slot.conditions.length}<span class="cond" title={slot.conditions.map((c) => `${condition(c).name}: ${condition(c).does}`).join('\n')}
+        >{slot.conditions.map((c) => (c === 'poisoned' ? tx('พิษ', 'PSN') : tx('สับสน', 'CNF'))).join(' ')}</span
       >{/if}
     <span class={`hp ${health}`} aria-hidden="true"><span class="mono"></span></span>
   </button>
@@ -114,7 +115,7 @@
             data-card={e.id}
             style:background-image={`url(${energyIcon(e.type)})`}
             title={def(e.key).name}
-            aria-label={`เลือก ${def(e.key).name}`}
+            aria-label={tx(`เลือก ${def(e.key).name}`, `Choose ${def(e.key).name}`)}
             onclick={() => onpickcard?.(pickable.get(e.id)!)}></button
           >
         {:else}

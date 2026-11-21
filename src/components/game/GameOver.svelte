@@ -1,5 +1,6 @@
 <script lang="ts">
   // The end of the game: "ชนะ", "แพ้" or a draw, on a plain sheet over the table.
+  import { tx } from '../../i18n';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { motion } from '../../ui/anim/motion';
@@ -28,23 +29,23 @@
   } = $props();
 
   const won = $derived(winner === 0);
-  const title = $derived(winner === 'draw' ? 'เสมอ' : won ? 'ชนะ' : 'แพ้');
+  const title = $derived(winner === 'draw' ? tx('เสมอ', 'Draw') : won ? tx('ชนะ', 'You win') : tx('แพ้', 'You lose'));
 </script>
 
 <div class="over" class:won class:lost={winner === 1} transition:fade={{ duration: motion(250) }}>
-  <div class="panel" role="dialog" aria-label="จบเกม" in:scale={{ duration: motion(260), start: 0.96, easing: cubicOut }}>
+  <div class="panel" role="dialog" aria-label={tx('จบเกม', 'Game over')} in:scale={{ duration: motion(260), start: 0.96, easing: cubicOut }}>
     <p class="title">{title}</p>
     <p class="reason">{reason}</p>
     <div class="buttons">
-      {#if onagain}<button type="button" class="primary" onclick={onagain}>เล่นอีกครั้ง (เด็คเดิม)</button>{/if}
-      <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? 'เลือกเด็คใหม่' : 'เกมใหม่'}</button>
-      <button type="button" onclick={onclose}>ดูสนาม</button>
+      {#if onagain}<button type="button" class="primary" onclick={onagain}>{tx('เล่นอีกครั้ง (เด็คเดิม)', 'Play again (same decks)')}</button>{/if}
+      <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? tx('เลือกเด็คใหม่', 'Pick new decks') : tx('เกมใหม่', 'New game')}</button>
+      <button type="button" onclick={onclose}>{tx('ดูสนาม', 'See the table')}</button>
     </div>
     {#if reviewHref}
-      <a class="review" href={reviewHref}>ทบทวนเกมนี้</a>
-      <span class="what">เทิร์นไหนพลาด · win% ทั้งเกม · บอทจะเล่นต่างตรงไหน</span>
+      <a class="review" href={reviewHref}>{tx('ทบทวนเกมนี้', 'Review this game')}</a>
+      <span class="what">{tx('เทิร์นไหนพลาด · win% ทั้งเกม · บอทจะเล่นต่างตรงไหน', "Your slips · win% over the game · where the bot would differ")}</span>
     {/if}
-    <a class="list" href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
+    <a class="list" href={botHref}>{tx(`ดู list ที่บอทใช้ (${botDeck}) →`, `The bot's list (${botDeck}) →`)}</a>
   </div>
 </div>
 

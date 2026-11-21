@@ -1,6 +1,7 @@
 // The review page's reading of a reviewed game (pure, tested in tests/ui/review-summary.test.ts): the turns worth a
 // look and the one sentence that sums the game up, the points of the win% chart (where it moved on your turns and
 // where on the bot's), and a turn's moves as lines with the card each one plays, to be shown as cards.
+import { tx } from '../i18n';
 import type { TurnReview, Verdict } from '../analysis/review';
 import { actor, apply } from '../engine/actions';
 import { stadiumKey } from '../engine/rules';
@@ -35,10 +36,18 @@ export function reviewSummary(turns: readonly TurnReview[]): ReviewSummary {
   const gain = turns.filter((t) => t.alt && t.alt.diff > 0).sort((a, b) => b.alt!.diff - a.alt!.diff)[0];
   const widest = gain ? { turn: gain.turn, points: Math.round(gain.alt!.diff * 100) } : null;
   const top = key[0];
-  let sentence = turns.length ? 'ไม่พบจุดที่เสียเปรียบชัด ๆ ในเกมนี้ ทุกเทิร์นใกล้เคียงกับที่บอทจะเล่น' : '';
-  if (top?.missed?.kind === 'win') sentence = `เทิร์น ${top.turn}: มีทางชนะเกมในเทิร์นนั้น`;
-  else if (top?.missed) sentence = `เทิร์น ${top.turn}: มีทาง KO ได้ ${top.missed.prizes} Prize (คุณได้ ${top.missed.took})`;
-  else if (top?.alt) sentence = `เทิร์น ${top.turn}: เล่นแบบบอทจะได้ win% ${pct(top.alt.win.p)} แทน ${pct(top.win.p)}`;
+  let sentence = turns.length
+    ? tx('ไม่พบจุดที่เสียเปรียบชัด ๆ ในเกมนี้ ทุกเทิร์นใกล้เคียงกับที่บอทจะเล่น', 'No clear slip in this game: every turn is close to what the bot would play')
+    : '';
+  if (top?.missed?.kind === 'win') sentence = tx(`เทิร์น ${top.turn}: มีทางชนะเกมในเทิร์นนั้น`, `Turn ${top.turn}: there was a way to win the game that turn`);
+  else if (top?.missed) sentence = tx(
+      `เทิร์น ${top.turn}: มีทาง KO ได้ ${top.missed.prizes} Prize (คุณได้ ${top.missed.took})`,
+      `Turn ${top.turn}: a Knock Out was there for ${top.missed.prizes} Prize cards (you took ${top.missed.took})`,
+    );
+  else if (top?.alt) sentence = tx(
+      `เทิร์น ${top.turn}: เล่นแบบบอทจะได้ win% ${pct(top.alt.win.p)} แทน ${pct(top.win.p)}`,
+      `Turn ${top.turn}: the bot's way gives a win% of ${pct(top.alt.win.p)} instead of ${pct(top.win.p)}`,
+    );
   return { sentence, missed, better, widest };
 }
 

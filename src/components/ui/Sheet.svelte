@@ -1,6 +1,7 @@
 <script lang="ts">
   // A panel for a short task over the page: a sheet from the bottom edge on phones, a panel by the top left on wider
   // screens. A scrim behind it, a visible close button, Esc / a tap outside closes; never two at once (NN/g).
+  import { tx } from '../../i18n';
   import type { Snippet } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { motion } from '../../ui/anim/motion';
@@ -20,7 +21,7 @@
 <div class={['ui-sheet', side]} role="dialog" aria-modal="true" aria-label={title} transition:fly={{ y: 24, duration: motion(220) }}>
   <header>
     <strong>{title}</strong>
-    <IconButton icon="close" label="ปิด" onclick={onclose} />
+    <IconButton icon="close" label={tx('ปิด', 'Close')} onclick={onclose} />
   </header>
   <div class="body">{@render children()}</div>
 </div>

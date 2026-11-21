@@ -3,8 +3,9 @@
   // the saved games (each with what its review found, or that it hasn't been reviewed), filtered by your deck, the
   // opponent and the result; a file of them all to keep, and such files imported. A deleted game can be put back for
   // a few seconds.
+  import { href, lang, tx } from '../../i18n';
   import type { SavedGame } from '../../review/record';
-  import { gamesFile, readGamesFile } from '../../review/record';
+  import { gamesFile, readGamesFile, reasonText } from '../../review/record';
   import {
     deleteGame,
     listGames,
@@ -23,9 +24,9 @@
   let error = $state('');
 
   const pct = (p: number) => `${Math.round(p * 100)}%`;
-  const result = (g: SavedGame) => (g.winner === 0 ? 'ชนะ' : g.winner === 1 ? 'แพ้' : 'เสมอ');
-  const date = (ms: number) => new Date(ms).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
-  const yours = (g: SavedGame) => g.mineName ?? 'list ของคุณ';
+  const result = (g: SavedGame) => (g.winner === 0 ? tx('ชนะ', 'Won') : g.winner === 1 ? tx('แพ้', 'Lost') : tx('เสมอ', 'Draw'));
+  const date = (ms: number) => new Date(ms).toLocaleString(lang() === 'en' ? 'en-GB' : 'th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const yours = (g: SavedGame) => g.mineName ?? tx('list ของคุณ', 'Your list');
   /** The opponent's archetype: list variants ("Festival Lead (Dipplin)") count together. */
   const archetype = (g: SavedGame) => g.opponentName.replace(/ \(.*\)$/, '');
 
@@ -36,7 +37,7 @@
     // Newest first, so a row links to the decks of its latest game.
     for (const g of done) {
       const name = archetype(g);
-      const r = by.get(name) ?? { name, won: 0, lost: 0, href: `/play/?opp=${g.opponent}${g.mine && g.mine !== 'player' ? `&me=${g.mine}` : ''}` };
+      const r = by.get(name) ?? { name, won: 0, lost: 0, href: href(`/play/?opp=${g.opponent}${g.mine && g.mine !== 'player' ? `&me=${g.mine}` : ''}`) };
       if (g.winner === 0) r.won++;
       else if (g.winner === 1) r.lost++;
       by.set(name, r);
@@ -52,9 +53,9 @@
   let oppFilter = $state('');
   let resultFilter = $state<'all' | 'won' | 'lost'>('all');
   const RESULTS = [
-    { value: 'all' as const, label: 'ทั้งหมด' },
-    { value: 'won' as const, label: 'ชนะ' },
-    { value: 'lost' as const, label: 'แพ้' },
+    { value: 'all' as const, label: tx('ทั้งหมด', 'All') },
+    { value: 'won' as const, label: tx('ชนะ', 'Won') },
+    { value: 'lost' as const, label: tx('แพ้', 'Lost') },
   ];
   const mineNames = $derived([...new Set((games ?? []).map(yours))].sort());
   const oppNames = $derived([...new Set((games ?? []).map(archetype))].sort());
@@ -107,7 +108,7 @@
       const fresh = readGamesFile(await file.text()).filter((g) => !have.has(`${g.seed}:${g.savedAt}`));
       for (const g of fresh) await saveGame(g);
       games = await listGames();
-      note = `นำเข้า ${fresh.length} เกม`;
+      note = tx(`นำเข้า ${fresh.length} เกม`, `${fresh.length} games imported`);
     } catch (err) {
       note = (err as Error).message;
     }
@@ -139,18 +140,23 @@
 {#if error}<p class="error">{error}</p>{/if}
 
 {#if games === null}
-  <p class="muted">กำลังโหลด…</p>
+  <p class="muted">{tx('กำลังโหลด…', 'Loading…')}</p>
 {:else if games.length === 0}
   <div class="empty">
-    <p>ยังไม่มีเกม เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเทิร์นไหนที่เกมพลิก</p>
-    <a class="cta" href="/play/">เล่นกับบอท</a>
+    <p>
+      {tx(
+        'ยังไม่มีเกม เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเทิร์นไหนที่เกมพลิก',
+        'No games yet. Play the bot to the end and the game is kept here (in this browser), with the turn the game turned on.',
+      )}
+    </p>
+    <a class="cta" href={href('/play/')}>{tx('เล่นกับบอท', 'Play the bot')}</a>
   </div>
 {:else}
   {#if record.played}
-    <section class="record" aria-label="สถิติของคุณ">
+    <section class="record" aria-label={tx('สถิติของคุณ', 'Your record')}>
       <div class="totals">
-        <div><span class="num">{record.played}</span>เกม</div>
-        <div><span class="num">{pct(record.won / record.played)}</span>ชนะ</div>
+        <div><span class="num">{record.played}</span>{tx('เกม', 'games')}</div>
+        <div><span class="num">{pct(record.won / record.played)}</span>{tx('ชนะ', 'won')}</div>
       </div>
       <ol class="vs">
         {#each record.rows as r (r.name)}
@@ -158,30 +164,30 @@
             <span class="name">vs {r.name}</span>
             <span class="bar" style:--w={`${(r.won / Math.max(1, r.won + r.lost)) * 100}%`}></span>
             <span class="mono wl">{r.won}–{r.lost}</span>
-            {#if r.name === record.worst}<a class="practice" href={r.href}>ซ้อม matchup นี้ →</a>{/if}
+            {#if r.name === record.worst}<a class="practice" href={r.href}>{tx('ซ้อม matchup นี้ →', 'Practise this matchup →')}</a>{/if}
           </li>
         {/each}
       </ol>
     </section>
   {/if}
 
-  <div class="filters" role="search" aria-label="กรองเกม">
+  <div class="filters" role="search" aria-label={tx('กรองเกม', 'Filter the games')}>
     <label>
-      เด็คของคุณ
+      {tx('เด็คของคุณ', 'Your deck')}
       <select bind:value={mineFilter}>
-        <option value="">ทุกเด็ค</option>
+        <option value="">{tx('ทุกเด็ค', 'Every deck')}</option>
         {#each mineNames as n}<option value={n}>{n}</option>{/each}
       </select>
     </label>
     <label>
-      คู่แข่ง
+      {tx('คู่แข่ง', 'Opponent')}
       <select bind:value={oppFilter}>
-        <option value="">ทุกเด็ค</option>
+        <option value="">{tx('ทุกเด็ค', 'Every deck')}</option>
         {#each oppNames as n}<option value={n}>{n}</option>{/each}
       </select>
     </label>
-    <Segmented label="ผล" options={RESULTS} bind:value={resultFilter} />
-    <span class="count">{shownGames.length} จาก {games.length} เกม</span>
+    <Segmented label={tx('ผล', 'Result')} options={RESULTS} bind:value={resultFilter} />
+    <span class="count">{tx(`${shownGames.length} จาก ${games.length} เกม`, `${shownGames.length} of ${games.length} games`)}</span>
   </div>
 
   <ul class="games">
@@ -192,33 +198,35 @@
         <span class="match">
           <strong>{yours(g)} <span class="vs-word">vs</span> {g.opponentName}</strong>
           <span class="muted">
-            {g.mode === 'practice' ? 'โหมดฝึก · ' : ''}{g.turns} เทิร์น · {g.reason} · {date(g.savedAt)}
+            {g.mode === 'practice' ? tx('โหมดฝึก · ', 'Practice · ') : ''}{tx(`${g.turns} เทิร์น`, `${g.turns} turns`)} · {reasonText(g.reason)} · {date(g.savedAt)}
           </span>
         </span>
         <span class="found" class:none={!f}>
-          {#if !f}ยังไม่ได้ทบทวน{:else if f.missed || f.better}
-            {#if f.missed}<span class="bad" title="พลาดชัด">✗{f.missed}</span>{/if}
-            {#if f.better}<span class="warn" title="น่าจะมีทางที่ดีกว่า">▲{f.better}</span>{/if}
-          {:else}ไม่พบจุดพลาด{/if}
+          {#if !f}{tx('ยังไม่ได้ทบทวน', 'Not reviewed yet')}{:else if f.missed || f.better}
+            {#if f.missed}<span class="bad" title={tx('พลาดชัด', 'Clear slip')}>✗{f.missed}</span>{/if}
+            {#if f.better}<span class="warn" title={tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way')}>▲{f.better}</span>{/if}
+          {:else}{tx('ไม่พบจุดพลาด', 'No slip found')}{/if}
         </span>
         <span class="act">
-          <a class="button" href={`/review/?id=${g.id}`}>ทบทวน</a>
-          <button type="button" class="link" onclick={() => remove(g)}>ลบ</button>
+          <a class="button" href={href(`/review/?id=${g.id}`)}>{tx('ทบทวน', 'Review')}</a>
+          <button type="button" class="link" onclick={() => remove(g)}>{tx('ลบ', 'Delete')}</button>
         </span>
       </li>
     {:else}
-      <li class="nothing">ไม่มีเกมที่ตรงกับตัวกรอง</li>
+      <li class="nothing">{tx('ไม่มีเกมที่ตรงกับตัวกรอง', 'No game matches the filters')}</li>
     {/each}
   </ul>
 {/if}
 <p class="files">
-  {#if games?.length}<button type="button" class="link" onclick={exportGames}>สำรองทุกเกมเป็นไฟล์</button>{/if}
-  <label class="import">นำเข้าไฟล์สำรอง<input type="file" accept=".json,application/json" onchange={importGames} /></label>
+  {#if games?.length}<button type="button" class="link" onclick={exportGames}>{tx('สำรองทุกเกมเป็นไฟล์', 'Back up every game to a file')}</button>{/if}
+  <label class="import">{tx('นำเข้าไฟล์สำรอง', 'Import a backup')}<input type="file" accept=".json,application/json" onchange={importGames} /></label>
   {#if note}<span class="muted">{note}</span>{/if}
 </p>
-{#if !persistent}<p class="muted">เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า</p>{/if}
+{#if !persistent}<p class="muted">{tx('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า', "This browser can't store data: the games are lost when the page closes")}</p>{/if}
 {#if undo}
-  <Toast message={`ลบเกม ${yours(undo.game)} vs ${undo.game.opponentName} แล้ว`} action="เลิกทำ" onaction={putBack} />
+  <Toast
+    message={tx(`ลบเกม ${yours(undo.game)} vs ${undo.game.opponentName} แล้ว`, `Deleted ${yours(undo.game)} vs ${undo.game.opponentName}`)}
+    action={tx('เลิกทำ', 'Undo')} onaction={putBack} />
 {/if}
 
 <style>

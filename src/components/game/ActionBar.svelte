@@ -1,6 +1,7 @@
 <script lang="ts">
   // The command bar under the table: one height whatever it says (the table above never moves), what is going on at
   // the left in two lines at most, its buttons at the right. What to show comes from ui/action-bar.ts.
+  import { tx } from '../../i18n';
   import type { Bar, BarAction } from '../../ui/action-bar';
   import Button from '../ui/Button.svelte';
 
@@ -18,7 +19,7 @@
 >
   <div class="say">
     {#if bar.chips}
-      <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
+      <span class="uses" aria-label={tx('ใช้ไปแล้วเทิร์นนี้', 'Used this turn')}>
         {#each bar.chips as u (u.label)}
           <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
         {/each}
@@ -95,6 +96,9 @@
     content: 'เคล็ดลับ · ';
     color: var(--accent);
     font-weight: 600;
+  }
+  :global(html[lang='en']) .sub.tip::before {
+    content: 'Tip · ';
   }
   .wait .say {
     display: -webkit-box;

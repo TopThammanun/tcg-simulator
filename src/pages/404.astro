@@ -1,8 +1,9 @@
 ---
+// One page for every missing address, in both languages (a static host serves it for /… and /en/… alike).
 import Base from '../layouts/Base.astro';
 ---
 
-<Base title="ไม่พบหน้านี้">
+<Base title="ไม่พบหน้านี้ · Page not found">
   <section class="missing">
     <p class="mono caption-4 code">404</p>
     <h1 class="heading-3">ไม่พบหน้านี้</h1>
@@ -11,6 +12,14 @@ import Base from '../layouts/Base.astro';
       <a class="btn primary" href="/play/">เริ่มเล่นกับบอท</a>
       <a class="btn" href="/">กลับหน้าแรก</a>
     </p>
+    <div class="en" lang="en">
+      <h2 class="heading-5">Page not found</h2>
+      <p class="body-3 muted">The link may be old or mistyped.</p>
+      <p class="actions">
+        <a class="btn" href="/en/play/">Play the bot</a>
+        <a class="btn" href="/en/">Home</a>
+      </p>
+    </div>
   </section>
 </Base>
 
@@ -37,6 +46,14 @@ import Base from '../layouts/Base.astro';
   .muted {
     margin: 0 0 32px;
     color: var(--ink-soft);
+  }
+  .en {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+  }
+  .en h2 {
+    margin: 0 0 8px;
   }
   .actions {
     display: flex;

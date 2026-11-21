@@ -2,6 +2,7 @@
   // Your hand, held like in the game: every card shows, overlapping in a slight fan when there are many
   // (no scrolling). On your turn, cards that can't be played right now are dimmed (PLAN.md: ตาม legalActions).
   // Tap a card to select it, or drag it onto the board.
+  import { tx } from '../../i18n';
   import { def } from '../../engine/db';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState } from '../../engine/types';
@@ -46,7 +47,7 @@
   };
 </script>
 
-<div class="hand" data-zone="hand-0" aria-label="การ์ดในมือ">
+<div class="hand" data-zone="hand-0" aria-label={tx('การ์ดในมือ', 'Your hand')}>
   {#each hand as c, i (c)}
     {@const k = keyOf(s, c)}
     {@const f = fan(i, hand.length)}
@@ -61,7 +62,7 @@
       class:marked={marked.has(c)}
       class:lifted={lifted === c}
       class:grab={playable.has(c)}
-      aria-label={playable.has(c) ? def(k).name : `${def(k).name} (ใช้ตอนนี้ไม่ได้)`}
+      aria-label={playable.has(c) ? def(k).name : tx(`${def(k).name} (ใช้ตอนนี้ไม่ได้)`, `${def(k).name} (can't be played now)`)}
       onclick={() => onpick(c)}
       onpointerdown={(e) => onpress?.(c, e)}
       oncontextmenu={(e) => {
@@ -72,7 +73,7 @@
       <span class="cardbox"><CardFace cardKey={k} dim={dimUnplayable && !playable.has(c)} /></span>
     </button>
   {/each}
-  {#if hand.length === 0}<span class="none">ไม่มีการ์ดในมือ</span>{/if}
+  {#if hand.length === 0}<span class="none">{tx('ไม่มีการ์ดในมือ', 'No cards in hand')}</span>{/if}
 </div>
 
 <style>

@@ -5,6 +5,7 @@
   // Every change of state is animated (src/ui/anim): the state changes at once, the animations only
   // show it, the bot waits for them, and anything you do skips them.
   import { untrack } from 'svelte';
+  import { botName, href, langOfPath, setLang, tx, youName } from '../../i18n';
   import { fade, scale } from 'svelte/transition';
   import { actor, apply, createGame, legalActions, whyNotPlayable } from '../../engine/actions';
   import { benchLimit, maxHp } from '../../engine/rules';
@@ -30,11 +31,11 @@
   import { animEvents, type AnimEvent } from '../../ui/anim/events';
   import { Fx, snapshot, type AnimLevel, type Snapshot } from '../../ui/anim/fx';
   import { motion, setAnimLevel } from '../../ui/anim/motion';
-  import { replay, type Redeal, type SavedGame } from '../../review/record';
+  import { reasonText, replay, type Redeal, type SavedGame } from '../../review/record';
   import { getGame, saveGame } from '../../review/store';
   import { clearCurrent, loadCurrent, saveCurrent, type CurrentGame } from '../../review/current';
   import { actionBar, type BarAction } from '../../ui/action-bar';
-  import { loadSeenTips, nextTip, saveSeenTips, TIPS, type TipId } from '../../ui/tips';
+  import { loadSeenTips, nextTip, saveSeenTips, tipText, type TipId } from '../../ui/tips';
   import ActionBar from './ActionBar.svelte';
   import Inspector from './Inspector.svelte';
   import TopBar from './TopBar.svelte';
@@ -57,6 +58,9 @@
   import FxLayer from './FxLayer.svelte';
   import GameOver from './GameOver.svelte';
   import HowTo from './HowTo.svelte';
+
+  // The page's language (/en/play/ is English): the engine's log and every label below read it.
+  setLang(langOfPath(location.pathname));
 
   /** The meta decks: yours to play, and the bots'. */
   let { decks }: { decks: MetaDeck[] } = $props();
@@ -86,14 +90,14 @@
   let opponent = $state(meta.some((d) => d.slug === wantOpp) ? wantOpp : 'random');
   const SPEEDS = [150, 500, 1100];
   const SPEED_OPTIONS = [
-    { value: 150, label: 'เร็ว' },
-    { value: 500, label: 'ปกติ' },
-    { value: 1100, label: 'ช้า' },
+    { value: 150, label: tx('เร็ว', 'Fast') },
+    { value: 500, label: tx('ปกติ', 'Normal') },
+    { value: 1100, label: tx('ช้า', 'Slow') },
   ];
   const ANIM_OPTIONS: { value: AnimLevel; label: string }[] = [
-    { value: 'full', label: 'เต็ม' },
-    { value: 'fast', label: 'เร็ว' },
-    { value: 'off', label: 'ปิด' },
+    { value: 'full', label: tx('เต็ม', 'Full') },
+    { value: 'fast', label: tx('เร็ว', 'Fast') },
+    { value: 'off', label: tx('ปิด', 'Off') },
   ];
   let speed = $state(params.has('speed') ? Number(params.get('speed')) : SPEEDS.includes(saved.speed as number) ? (saved.speed as number) : 500);
   const fixedSeed = params.has('seed') ? Number(params.get('seed')) : null;
@@ -266,7 +270,7 @@
   const earlier = $derived(chain && cur?.pending && cur.pending.base === chain.base ? chain.steps : []);
   const earlierWords = $derived(
     earlier.flatMap((st) =>
-      st.req.options.filter((o) => st.picks.includes(o.value)).map((o) => (st.req.hint === 'from' ? `จาก ${o.label}` : o.label)),
+      st.req.options.filter((o) => st.picks.includes(o.value)).map((o) => (st.req.hint === 'from' ? tx(`จาก ${o.label}`, `from ${o.label}`) : o.label)),
     ),
   );
   const chosenSlots = $derived(
@@ -274,7 +278,7 @@
       earlier.flatMap((st) =>
         st.req.options
           .filter((o) => o.slot !== undefined && st.picks.includes(o.value))
-          .map((o) => [o.slot!, st.req.hint === 'from' ? 'จาก' : 'เลือกแล้ว'] as [SlotId, string]),
+          .map((o) => [o.slot!, st.req.hint === 'from' ? tx('จาก', 'from') : tx('เลือกแล้ว', 'chosen')] as [SlotId, string]),
       ),
     ),
   );
@@ -407,23 +411,23 @@
     !cur
       ? ''
       : cur.winner !== null
-        ? `${cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · ${cur.winReason}`
+        ? `${cur.winner === 0 ? tx('คุณชนะ', 'You win') : cur.winner === 1 ? tx('บอทชนะ', 'Bot wins') : tx('เสมอ', 'Draw')} · ${cur.winReason}`
         : viewing !== null
-          ? 'กำลังดูสนามย้อนหลัง'
+          ? tx('กำลังดูสนามย้อนหลัง', 'Viewing an earlier position')
           : watch
-            ? `ดูบอทเล่น · เทิร์น ${cur.turn}`
-            : `เทิร์น ${cur.turn} · ${actor(cur) === 0 ? 'ตาคุณ' : 'บอทกำลังคิด…'}`,
+            ? tx(`ดูบอทเล่น · เทิร์น ${cur.turn}`, `Watching the bot · turn ${cur.turn}`)
+            : `${tx('เทิร์น', 'Turn')} ${cur.turn} · ${actor(cur) === 0 ? tx('ตาคุณ', 'your turn') : tx('บอทกำลังคิด…', 'the bot is thinking…')}`,
   );
   const topSub = $derived(
     cur && cur.winner === null && viewing === null && !watch
-      ? [`${mineName} vs ${botDeck?.name ?? ''}`, ...(resumedFrom ? [`เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น ${resumedFrom.turn})`] : [])]
+      ? [`${mineName} vs ${botDeck?.name ?? ''}`, ...(resumedFrom ? [tx(`เล่นต่อจากเกมที่บันทึกไว้ (เทิร์น ${resumedFrom.turn})`, `Played on from a saved game (turn ${resumedFrom.turn})`)] : [])]
       : [],
   );
   const topLinks = $derived(
     cur && cur.winner !== null
       ? [
-          ...(savedId !== null ? [{ href: `/review/?id=${savedId}`, label: 'ทบทวนเกมนี้' }] : []),
-          { href: `/decks/${botSlug}/`, label: `ดู list ที่บอทใช้ (${botDeck?.name ?? ''})` },
+          ...(savedId !== null ? [{ href: href(`/review/?id=${savedId}`), label: tx('ทบทวนเกมนี้', 'Review this game') }] : []),
+          { href: href(`/decks/${botSlug}/`), label: tx(`ดู list ที่บอทใช้ (${botDeck?.name ?? ''})`, `The bot's list (${botDeck?.name ?? ''})`) },
         ]
       : [],
   );
@@ -467,7 +471,7 @@
             : undefined,
           box: boxReq ? { req: boxReq, picks, cards: choiceKind === 'card' || !!boxReq.view?.length } : undefined,
           recap: narrow ? recap.length : 0,
-          tip: tip ? TIPS[tip] : null,
+          tip: tip ? tipText(tip) : null,
           prompt: req?.prompt,
         })
       : null,
@@ -552,10 +556,10 @@
       createGame({
         seed,
         decks: [
-          { name: 'คุณ', cards: myCards },
-          { name: 'บอท', cards: pick.cards },
+          { name: youName(), cards: myCards },
+          { name: botName(), cards: pick.cards },
         ],
-        names: ['คุณ', 'บอท'],
+        names: [youName(), botName()],
         rules: { twinShotelsPiercesBenchShields: pierce, pickPrizes: true },
       }),
     ];
@@ -591,7 +595,7 @@
     seed = g.seed;
     botSlug = g.opponent;
     minePlan = g.mine ?? 'player';
-    mineName = g.mineName ?? 'list ของคุณ';
+    mineName = g.mineName ?? tx('list ของคุณ', 'Your list');
     gameDecks = g.decks;
     preloadDecks(...g.decks);
     redeals = (g.redeals ?? []).slice();
@@ -612,7 +616,7 @@
   async function resume(id: number, at: number) {
     const g = await getGame(id);
     if (!g) {
-      error = 'ไม่พบเกมที่บันทึกไว้';
+      error = tx('ไม่พบเกมที่บันทึกไว้', 'Saved game not found');
       return;
     }
     const all = replay(g);
@@ -620,7 +624,7 @@
     seed = g.seed;
     botSlug = g.opponent;
     minePlan = g.mine ?? 'player';
-    mineName = g.mineName ?? 'list ของคุณ';
+    mineName = g.mineName ?? tx('list ของคุณ', 'Your list');
     gameDecks = g.decks;
     preloadDecks(...g.decks);
     savedId = null;
@@ -682,7 +686,7 @@
     saving = true;
     saveGame(record(s))
       .then((id) => (savedId = id))
-      .catch(() => (error = 'บันทึกเกมไม่ได้'))
+      .catch(() => (error = tx('บันทึกเกมไม่ได้', "The game couldn't be saved")))
       .finally(() => (saving = false));
   });
 
@@ -818,7 +822,7 @@
         // Ignore an answer for a position that is gone (a new game).
         if (!stale && cur === s) step(a);
       } catch (e) {
-        if (!stale) error = `บอทผิดพลาด: ${(e as Error).message}`;
+        if (!stale) error = tx(`บอทผิดพลาด: ${(e as Error).message}`, `Bot error: ${(e as Error).message}`);
       }
     }, delay);
     return () => {
@@ -937,7 +941,7 @@
       for (const [zone, v] of setupDrops(setupReq, c)) {
         const active = setupReq.purpose === 'setup-active';
         drops.set(zone, {
-          label: active ? 'วางเป็นตัวหลัก' : 'ลง Bench',
+          label: active ? tx('วางเป็นตัวหลัก', 'Make Active') : tx('ลง Bench', 'Bench'),
           run: () => (active ? step({ t: 'choose', picks: [v] }) : !picks.includes(v) && pick(v)),
         });
       }
@@ -1019,56 +1023,56 @@
   <section class="setup" aria-labelledby="setup-title">
     <header class="sheet-head">
       <div>
-        <p class="eyebrow">ตั้งค่าเกม</p>
-        <h1 id="setup-title">เลือกเด็ค แล้วลงสนาม</h1>
+        <p class="eyebrow">{tx('ตั้งค่าเกม', 'Game setup')}</p>
+        <h1 id="setup-title">{tx('เลือกเด็ค แล้วลงสนาม', 'Pick the decks and play')}</h1>
       </div>
-      <button type="button" class="link" onclick={() => (howto = true)}>วิธีเล่น</button>
+      <button type="button" class="link" onclick={() => (howto = true)}>{tx('วิธีเล่น', 'How to play')}</button>
     </header>
 
     {#if unfinished}
       {@const g = unfinished.game}
-      <div class="unfinished" role="region" aria-label="เกมที่ค้างไว้">
+      <div class="unfinished" role="region" aria-label={tx('เกมที่ค้างไว้', 'Unfinished game')}>
         <div>
-          <strong>มีเกมที่ค้างไว้</strong>
-          <span>เทิร์น {unfinished.turn} · {g.mineName ?? 'list ของคุณ'} vs {g.opponentName}</span>
+          <strong>{tx('มีเกมที่ค้างไว้', 'You have an unfinished game')}</strong>
+          <span>{tx('เทิร์น', 'Turn')} {unfinished.turn} · {g.mineName ?? tx('list ของคุณ', 'Your list')} vs {g.opponentName}</span>
         </div>
         <span class="acts">
-          <Button onclick={() => (clearCurrent(), (unfinished = null))}>ทิ้ง</Button>
-          <Button variant="primary" onclick={() => goOn(unfinished!)}>เล่นต่อเกมที่ค้างไว้</Button>
+          <Button onclick={() => (clearCurrent(), (unfinished = null))}>{tx('ทิ้ง', 'Discard')}</Button>
+          <Button variant="primary" onclick={() => goOn(unfinished!)}>{tx('เล่นต่อเกมที่ค้างไว้', 'Play it on')}</Button>
         </span>
       </div>
     {/if}
 
     <div class="match">
       <div class="corner you">
-        <span class="who">คุณ</span>
+        <span class="who">{tx('คุณ', 'You')}</span>
         <div class="fan" aria-hidden="true">
           {#each mineChoice.cards ? headline(mineChoice.cards, mineChoice.name) : [] as k, j (k)}
             <span class="fc" style:--o={FAN[j]} style:z-index={3 - j}><CardFace cardKey={k} /></span>
           {/each}
         </div>
         <label>
-          เด็คของคุณ
+          {tx('เด็คของคุณ', 'Your deck')}
           <select bind:value={mineId}>
-            <optgroup label="เด็คใน meta">
+            <optgroup label={tx('เด็คใน meta', 'Meta decks')}>
               {#each decks as d}<option value={d.slug}>{d.name}</option>{/each}
             </optgroup>
             {#if myDecks.length}
-              <optgroup label="เด็คของฉัน">
+              <optgroup label={tx('เด็คของฉัน', 'My decks')}>
                 {#each choices.filter((c) => c.id.startsWith('my:')) as c}
-                  <option value={c.id} disabled={!c.cards}>{c.name}{c.cards ? '' : ' (list ใช้ไม่ได้)'}</option>
+                  <option value={c.id} disabled={!c.cards}>{c.name}{c.cards ? '' : tx(' (list ใช้ไม่ได้)', ' (list not playable)')}</option>
                 {/each}
               </optgroup>
             {/if}
           </select>
         </label>
-        <a class="more" href="/decks/#mine">+ ใช้ list ของคุณเอง</a>
+        <a class="more" href={href('/decks/#mine')}>{tx('+ ใช้ list ของคุณเอง', '+ Use your own list')}</a>
       </div>
 
       <div class="vs" aria-hidden="true"><span>VS</span></div>
 
       <div class="corner them">
-        <span class="who">บอท</span>
+        <span class="who">{tx('บอท', 'Bot')}</span>
         <div class="fan" aria-hidden="true">
           {#if oppChoice}
             {#each headline(oppChoice.cards, oppChoice.name) as k, j (k)}
@@ -1080,22 +1084,22 @@
           {/if}
         </div>
         <label>
-          คู่แข่ง
+          {tx('คู่แข่ง', 'Opponent')}
           <select bind:value={opponent}>
-            <option value="random">สุ่มตามสัดส่วนใน meta</option>
+            <option value="random">{tx('สุ่มตามสัดส่วนใน meta', 'Random, by meta share')}</option>
             {#each decks as d}
               <option value={d.slug}>{d.rank}. {d.name} · {d.metaShare?.toFixed(1)}%</option>
             {/each}
           </select>
         </label>
-        <a class="more" href={oppChoice ? `/decks/${oppChoice.slug}/` : '/decks/'}>ดู list ของบอท</a>
+        <a class="more" href={href(oppChoice ? `/decks/${oppChoice.slug}/` : '/decks/')}>{tx('ดู list ของบอท', "The bot's list")}</a>
       </div>
     </div>
 
     <div class="prefs">
-      <Segmented label="ความเร็วบอท" options={SPEED_OPTIONS} bind:value={speed} />
+      <Segmented label={tx('ความเร็วบอท', 'Bot speed')} options={SPEED_OPTIONS} bind:value={speed} />
       <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} />
-      <Button variant="primary" class="start" onclick={() => start()}>เริ่มเกม</Button>
+      <Button variant="primary" class="start" onclick={() => start()}>{tx('เริ่มเกม', 'Start')}</Button>
     </div>
   </section>
 {:else if shown}
@@ -1106,8 +1110,8 @@
   <div class="game" class:dragging onpointerover={onPointerOver}>
     <div class="rotate" role="status">
       <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="6" width="20" height="36" rx="3" /><path d="M40 20a14 14 0 0 1-6 14M38 34h-4v-4" /></svg>
-      <strong>หมุนจอเป็นแนวตั้งเพื่อเล่น</strong>
-      <span>จอนี้เตี้ยเกินกว่าจะวางสนามได้ครบ (ถ้าเป็นคอมพิวเตอร์ ขยายหน้าต่างให้สูงขึ้น)</span>
+      <strong>{tx('หมุนจอเป็นแนวตั้งเพื่อเล่น', 'Turn your screen upright to play')}</strong>
+      <span>{tx('จอนี้เตี้ยเกินกว่าจะวางสนามได้ครบ (ถ้าเป็นคอมพิวเตอร์ ขยายหน้าต่างให้สูงขึ้น)', 'This screen is too short for the whole table (on a computer, make the window taller)')}</span>
     </div>
     <div class="main">
       <TopBar
@@ -1198,11 +1202,11 @@
       <div class="side-backdrop" role="presentation" onclick={() => (sideOpen = false)}></div>
     {/if}
     <!-- Computers: the card text panel and the log. Phones: the log in a drawer. -->
-    <aside class="side" class:open={sideOpen} aria-label={narrow ? 'บันทึกเกม' : undefined}>
+    <aside class="side" class:open={sideOpen} aria-label={narrow ? tx('บันทึกเกม', 'Game log') : undefined}>
       {#if narrow}
         <div class="side-head">
-          <strong>บันทึกเกม</strong>
-          <IconButton icon="close" label="ปิด" onclick={() => (sideOpen = false)} />
+          <strong>{tx('บันทึกเกม', 'Game log')}</strong>
+          <IconButton icon="close" label={tx('ปิด', 'Close')} onclick={() => (sideOpen = false)} />
         </div>
       {:else}
         <Inspector
@@ -1218,31 +1222,31 @@
 {/if}
 
 {#if menuOpen && cur}
-  <Sheet title="เมนูเกม" onclose={() => (menuOpen = false)}>
+  <Sheet title={tx('เมนูเกม', 'Game menu')} onclose={() => (menuOpen = false)}>
     <div class="menu">
       <div class="menu-acts">
-        <Button wide onclick={() => newGame()}>เกมใหม่</Button>
-        <Button wide onclick={() => ((howto = true), (menuOpen = false))}>วิธีเล่น</Button>
+        <Button wide onclick={() => newGame()}>{tx('เกมใหม่', 'New game')}</Button>
+        <Button wide onclick={() => ((howto = true), (menuOpen = false))}>{tx('วิธีเล่น', 'How to play')}</Button>
       </div>
-      <Segmented label="ความเร็วบอท" options={SPEED_OPTIONS} bind:value={speed} onchange={saveSettings} />
+      <Segmented label={tx('ความเร็วบอท', 'Bot speed')} options={SPEED_OPTIONS} bind:value={speed} onchange={saveSettings} />
       <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} onchange={saveSettings} />
       <div class="switches">
-        <Switch label="เสียง" bind:checked={soundOn} onchange={saveSettings} />
-        <Switch label="เรียงการ์ดในมือ" bind:checked={sortHand} onchange={saveSettings} />
+        <Switch label={tx('เสียง', 'Sound')} bind:checked={soundOn} onchange={saveSettings} />
+        <Switch label={tx('เรียงการ์ดในมือ', 'Sort your hand')} bind:checked={sortHand} onchange={saveSettings} />
       </div>
-      <nav class="menu-links" aria-label="ไปหน้าอื่น">
-        <a href={`/decks/${botSlug}/`}>ดู list ที่บอทใช้ ({botDeck?.name ?? ''})</a>
-        <a href="/review/">ประวัติเกม</a>
-        <a href="/">กลับหน้าแรก</a>
+      <nav class="menu-links" aria-label={tx('ไปหน้าอื่น', 'Other pages')}>
+        <a href={href(`/decks/${botSlug}/`)}>{tx('ดู list ที่บอทใช้', "The bot's list")} ({botDeck?.name ?? ''})</a>
+        <a href={href('/review/')}>{tx('ประวัติเกม', 'Game history')}</a>
+        <a href={href('/')}>{tx('กลับหน้าแรก', 'Home')}</a>
       </nav>
-      {#if cur.winner === null && !watch}<p class="menu-note">เกมที่ยังไม่จบเก็บไว้ในเบราว์เซอร์นี้ ปิดหน้าแล้วกลับมาเล่นต่อได้</p>{/if}
+      {#if cur.winner === null && !watch}<p class="menu-note">{tx('เกมที่ยังไม่จบเก็บไว้ในเบราว์เซอร์นี้ ปิดหน้าแล้วกลับมาเล่นต่อได้', 'An unfinished game is kept in this browser: close the page and come back to it later')}</p>{/if}
     </div>
   </Sheet>
 {/if}
 
 {#if recapOpen && recap.length}
-  <Sheet title="บอทเล่นไปเมื่อเทิร์นที่แล้ว" onclose={() => (recapOpen = false)}>
-    <ul class="recap-list" aria-label="เทิร์นที่แล้วของบอท">
+  <Sheet title={tx('บอทเล่นไปเมื่อเทิร์นที่แล้ว', "The bot's last turn")} onclose={() => (recapOpen = false)}>
+    <ul class="recap-list" aria-label={tx('เทิร์นที่แล้วของบอท', "The bot's last turn")}>
       {#each recap as line}<li>{line}</li>{/each}
     </ul>
   </Sheet>
@@ -1267,10 +1271,10 @@
 {#if showOver && cur && cur.winner !== null && viewing === null}
   <GameOver
     winner={cur.winner}
-    reason={cur.winReason}
+    reason={reasonText(cur.winReason)}
     botDeck={botDeck?.name ?? ''}
-    botHref={`/decks/${botSlug}/`}
-    reviewHref={savedId !== null ? `/review/?id=${savedId}` : null}
+    botHref={href(`/decks/${botSlug}/`)}
+    reviewHref={savedId !== null ? href(`/review/?id=${savedId}`) : null}
     onagain={resumedFrom === null ? () => start(true) : undefined}
     onnew={() => newGame(true)}
     onclose={() => (showOver = false)}
@@ -1308,7 +1312,7 @@
     style:--tilt={`${drag.tilt.toFixed(1)}deg`}
   >
     <div class="ghost-face"><CardFace cardKey={drag.key} /></div>
-    <span class="ghost-label">{drag.over ? drag.drops.get(drag.over)!.label : 'ลากไปที่ช่องที่ไฮไลต์'}</span>
+    <span class="ghost-label">{drag.over ? drag.drops.get(drag.over)!.label : tx('ลากไปที่ช่องที่ไฮไลต์', 'Drag to a lit spot')}</span>
   </div>
 {/if}
 
@@ -1320,8 +1324,8 @@
     onclick={() => (discardOf = null)}
     onkeydown={(e) => e.key === 'Escape' && (discardOf = null)}
   >
-    <div class="discard" role="dialog" aria-label="กองทิ้ง">
-      <h3>กองทิ้ง{discardOf === 0 ? 'ของคุณ' : 'ของบอท'} ({shown.players[discardOf].discard.length})</h3>
+    <div class="discard" role="dialog" aria-label={tx('กองทิ้ง', 'Discard pile')}>
+      <h3>{discardOf === 0 ? tx('กองทิ้งของคุณ', 'Your discard pile') : tx('กองทิ้งของบอท', "The bot's discard pile")} ({shown.players[discardOf].discard.length})</h3>
       <div class="grid">
         {#each shown.players[discardOf].discard as c, i (c)}
           <button

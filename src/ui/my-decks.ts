@@ -1,5 +1,6 @@
 // Your own decklists, kept in this browser only (localStorage). Each is checked again when it is used
 // (checkList), so a list that stops validating is shown as such instead of breaking the game.
+import { tx } from '../i18n';
 import { checkList } from './decklist';
 
 export interface MyDeck {
@@ -19,7 +20,7 @@ function read(): MyDeck[] {
     const old = localStorage.getItem(OLD_KEY);
     const decks = JSON.parse(localStorage.getItem(KEY) ?? '[]') as MyDeck[];
     if (old !== null) {
-      decks.push({ id: newId(), name: 'list ที่แก้ไว้', text: old, updated: Date.now() });
+      decks.push({ id: newId(), name: tx('list ที่แก้ไว้', 'Edited list'), text: old, updated: Date.now() });
       write(decks);
       localStorage.removeItem(OLD_KEY);
     }
@@ -46,7 +47,7 @@ export function loadMyDecks(): MyDeck[] {
 /** Add a deck (no id) or replace the one with that id; returns it. */
 export function saveMyDeck(d: { id?: string; name: string; text: string }): MyDeck {
   const decks = read();
-  const deck: MyDeck = { id: d.id ?? newId(), name: d.name.trim() || 'เด็คไม่มีชื่อ', text: d.text, updated: Date.now() };
+  const deck: MyDeck = { id: d.id ?? newId(), name: d.name.trim() || tx('เด็คไม่มีชื่อ', 'Untitled deck'), text: d.text, updated: Date.now() };
   const i = decks.findIndex((x) => x.id === deck.id);
   if (i >= 0) decks[i] = deck;
   else decks.push(deck);

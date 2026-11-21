@@ -281,16 +281,16 @@ function optionChoice(s: GameState, me: PlayerId, req: ChoiceRequest, plan: Deck
     let best = 0;
     let bestDmg = -1;
     labels.forEach((name, i) => {
-      if (name === 'ไม่โจมตีอีก') return;
       const atk = findAttack(name);
-      const dmg = atk && user ? roughDamage(s, user, atk) + (name === 'Trifrost' ? 150 : 0) : 0;
+      if (!atk) return; // "No more attacks", in either language
+      const dmg = user ? roughDamage(s, user, atk) + (name === 'Trifrost' ? 150 : 0) : 0;
       if (dmg > bestDmg) {
         bestDmg = dmg;
         best = i;
       }
     });
     // Festival Lead's second Rapid Draw also draws 2: skip it when the deck is thin and it won't Knock Out.
-    if (labels[best] === 'Rapid Draw' && labels[labels.length - 1] === 'ไม่โจมตีอีก') {
+    if (labels[best] === 'Rapid Draw' && !findAttack(labels[labels.length - 1]!)) {
       const d = s.players[opp(me)].active;
       const ko = d && user && hpLeft(s, d) <= roughDamage(s, user, findAttack('Rapid Draw')!) + 30;
       if (s.players[me].deck.length < 4 || (s.players[me].deck.length < 12 && !ko)) return req.options[labels.length - 1]!.value;

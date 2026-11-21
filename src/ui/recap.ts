@@ -2,8 +2,9 @@
 // drawer and the animations are quick). The turn's header and its opening draw are left out.
 import type { GameState } from '../engine/types';
 
-const HEADER = /^— เทิร์น \d+/;
-const DRAW_ONE = / จั่ว 1 ใบ$/;
+// The engine's lines, in either language (src/engine/rules.ts startTurn, ctx.ts draw).
+const HEADER = /^— (?:เทิร์น|Turn) \d+/;
+const DRAW_ONE = / (?:จั่ว 1 ใบ|draws? 1 card)$/;
 
 export function turnRecap(s: GameState, turn: number): string[] {
   const lines = s.log.filter((l) => l.turn === turn && !HEADER.test(l.text));

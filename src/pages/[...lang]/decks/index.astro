@@ -1,10 +1,18 @@
 ---
-import DeckCard from '../../components/DeckCard.astro';
-import MyDecks from '../../components/MyDecks.svelte';
-import { formatDecklist } from '../../data/decklist';
-import { deckKeys } from '../../engine/db';
-import Base from '../../layouts/Base.astro';
-import { headlines, loadDecks, metaDecks, sectionCount } from '../../lib/decks';
+import DeckCard from '../../../components/DeckCard.astro';
+import MyDecks from '../../../components/MyDecks.svelte';
+import { formatDecklist } from '../../../data/decklist';
+import { deckKeys } from '../../../engine/db';
+import { langPaths, localePath, tFor } from '../../../i18n';
+import Base from '../../../layouts/Base.astro';
+import { headlines, loadDecks, metaDecks, sectionCount } from '../../../lib/decks';
+
+export function getStaticPaths() {
+  return langPaths();
+}
+
+const t = tFor(Astro.props.lang);
+const lang = Astro.props.lang;
 
 const decks = metaDecks(await loadDecks());
 // For your own decks: the meta lists to start from, and their plans for lists near them.
@@ -20,13 +28,17 @@ const lists = decks.map((d) => ({
 const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
 ---
 
-<Base title="เด็คทั้งหมด">
+<Base title={t('เด็คทั้งหมด', 'All decks')}>
   <header class="page-head">
-    <p class="eyebrow">เด็คใน meta</p>
-    <h1 class="heading-3">เด็คทั้งหมด</h1>
+    <p class="eyebrow">{t('เด็คใน meta', 'Meta decks')}</p>
+    <h1 class="heading-3">{t('เด็คทั้งหมด', 'All decks')}</h1>
     <p class="body-7 lede">
-      เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด
-      เลือกเด็คเพื่อดูการ์ดทุกใบ หรือเพิ่ม list ของคุณเองด้านล่าง
+      {
+        t(
+          'เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด เลือกเด็คเพื่อดูการ์ดทุกใบ หรือเพิ่ม list ของคุณเองด้านล่าง',
+          "The top decks of the meta by their share on Limitless, each playing a real list from a recent tournament. Pick one to see every card, or add your own list below.",
+        )
+      }
     </p>
   </header>
 
@@ -34,7 +46,7 @@ const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
     {
       decks.map((d) => (
         <DeckCard
-          href={`/decks/${d.slug}/`}
+          href={localePath(lang, `/decks/${d.slug}/`)}
           name={d.meta.name}
           rank={d.meta.rank}
           share={d.meta.metaShare}

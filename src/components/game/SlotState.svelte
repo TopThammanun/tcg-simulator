@@ -2,28 +2,29 @@
   // A Pokémon in play, what the board draws small or not at all (ui/slot-info.ts): whose and where, HP left, Energy
   // and Tool by name, the cards under it, conditions and effects with what they do. In the zoomed card (CardInfo) and
   // the card text panel (Inspector).
+  import { tx } from '../../i18n';
   import type { SlotInfo } from '../../ui/slot-info';
 
   let { info }: { info: SlotInfo } = $props();
 </script>
 
-<section class="state" aria-label="สถานะในสนาม">
+<section class="state" aria-label={tx('สถานะในสนาม', 'In play')}>
   <div class="row">
-    <span class="where">{info.owner === 0 ? 'ของคุณ' : 'ของบอท'} · {info.active ? 'ตัวหลัก' : 'Bench'}</span>
+    <span class="where">{info.owner === 0 ? tx('ของคุณ', 'Yours') : tx('ของบอท', "Bot's")} · {info.active ? tx('ตัวหลัก', 'Active') : 'Bench'}</span>
     <span class="hp mono" class:low={info.hp.left * 3 <= info.hp.max}>HP {info.hp.left}/{info.hp.max}</span>
   </div>
   <div class="hpbar"><span style:width={`${(info.hp.left / info.hp.max) * 100}%`}></span></div>
   <dl>
-    <dt>พลังงาน</dt>
+    <dt>{tx('พลังงาน', 'Energy')}</dt>
     <dd>
       {#if info.energy.length}
         {#each info.energy as e}<span class="chip" style={`--c:var(--t-${e.type.toLowerCase()})`}>{e.name}</span>{/each}
-      {:else}ไม่มี{/if}
+      {:else}{tx('ไม่มี', 'None')}{/if}
     </dd>
     {#if info.tool}<dt>Tool</dt><dd><span class="chip tool">{info.tool}</span></dd>{/if}
-    {#if info.under.length}<dt>ใต้การ์ด</dt><dd>{info.under.join(' → ')}</dd>{/if}
+    {#if info.under.length}<dt>{tx('ใต้การ์ด', 'Under it')}</dt><dd>{info.under.join(' → ')}</dd>{/if}
     {#each info.conditions as c}<dt class="warn">{c.name}</dt><dd>{c.does}</dd>{/each}
-    {#each info.marks as m}<dt class="warn">ผลที่ติดอยู่</dt><dd>{m}</dd>{/each}
+    {#each info.marks as m}<dt class="warn">{tx('ผลที่ติดอยู่', 'Effect')}</dt><dd>{m}</dd>{/each}
   </dl>
 </section>
 

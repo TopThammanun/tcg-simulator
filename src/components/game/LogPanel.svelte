@@ -1,6 +1,7 @@
 <script lang="ts">
   // Game log in Thai. Click a line to see the board at that moment (PLAN.md: ย้อนดูสนามตอนนั้นได้). When your turn
   // starts, the bot's turn just played is marked (`recent`): what it did, without a box over the table.
+  import { tx } from '../../i18n';
   import { fly } from 'svelte/transition';
   import type { LogEntry } from '../../engine/types';
   import { motion } from '../../ui/anim/motion';
@@ -19,7 +20,7 @@
   });
 </script>
 
-<div class="log" bind:this={box} aria-label="บันทึกเกม">
+<div class="log" bind:this={box} aria-label={tx('บันทึกเกม', 'Game log')}>
   {#each log as e, i (i)}
     <button
       type="button"

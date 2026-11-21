@@ -8,6 +8,7 @@
   // computer): your turn as it went, or the bot's from the same start (TurnReview.alt.actions, replayed on the real
   // cards), stepped through on ReplayStage. Every card that was hidden then is shown below.
   import { untrack } from 'svelte';
+  import { botName, tx, youName } from '../../i18n';
   import type { TurnReview } from '../../analysis/review';
   import { keyOf } from '../../engine/state';
   import type { Action, GameState, PlayerId } from '../../engine/types';
@@ -42,10 +43,10 @@
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   const points = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(Math.round(d * 100))}`;
   const VERDICT = {
-    'missed-win': { label: '✗ พลาดชัด: มีทางชนะ', cls: 'bad' },
-    'missed-ko': { label: '✗ พลาดชัด: มีทาง KO มากกว่า', cls: 'bad' },
-    better: { label: '▲ น่าจะมีทางที่ดีกว่า', cls: 'warn' },
-    ok: { label: '● ไม่พบจุดพลาด', cls: 'ok' },
+    'missed-win': { label: tx('✗ พลาดชัด: มีทางชนะ', '✗ Clear slip: a win was there'), cls: 'bad' },
+    'missed-ko': { label: tx('✗ พลาดชัด: มีทาง KO มากกว่า', '✗ Clear slip: a bigger Knock Out was there'), cls: 'bad' },
+    better: { label: tx('▲ น่าจะมีทางที่ดีกว่า', '▲ Likely a better way'), cls: 'warn' },
+    ok: { label: tx('● ไม่พบจุดพลาด', '● No slip found'), cls: 'ok' },
   } as const;
 
   /** The turn shown, by number: the list still grows while the review runs. */
@@ -67,12 +68,16 @@
   const shown = $derived(L.states[L.stops[pos] ?? 0]!);
   const split = $derived(t.alt ? t.alt.split : -1);
   const endText = $derived(
-    shown.winner === me ? 'ชนะเกม' : shown.winner !== null ? 'จบเกม' : `หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`,
+    shown.winner === me
+      ? tx('ชนะเกม', 'Game won')
+      : shown.winner !== null
+        ? tx('จบเกม', 'Game over')
+        : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`),
   );
   const hidden = $derived([
-    ['มือบอท', shown.players[1].hand],
-    ['Prize ของบอท', shown.players[1].prizes],
-    ['Prize ของคุณ', shown.players[0].prizes],
+    [tx('มือบอท', "Bot's hand"), shown.players[1].hand],
+    [tx('Prize ของบอท', "Bot's Prize cards"), shown.players[1].prizes],
+    [tx('Prize ของคุณ', 'Your Prize cards'), shown.players[0].prizes],
   ] as const);
 
   let dialog: HTMLDialogElement | undefined = $state();
@@ -101,7 +106,7 @@
 <dialog
   bind:this={dialog}
   class="replay"
-  aria-label={`รีเพลย์เทิร์น ${t.turn}`}
+  aria-label={tx(`รีเพลย์เทิร์น ${t.turn}`, `Replay of turn ${t.turn}`)}
   oncancel={(e) => {
     e.preventDefault();
     if (zoom) zoom = null;
@@ -111,30 +116,34 @@
   <div class="rp">
     <div class="first">
       <header class="top">
-        <button type="button" class="icon close" aria-label="ปิด" title="ปิด (Esc)" onclick={onclose}>
+        <button type="button" class="icon close" aria-label={tx('ปิด', 'Close')} title={tx('ปิด (Esc)', 'Close (Esc)')} onclick={onclose}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        <strong class="title">เทิร์น {t.turn}</strong>
+        <strong class="title">{tx('เทิร์น', 'Turn')} {t.turn}</strong>
         <span class={`badge ${VERDICT[t.verdict].cls}`}>{VERDICT[t.verdict].label}</span>
-        <span class="mono win" title="win% ก่อนเทิร์น → หลังเทิร์นที่คุณเล่น">{pct(t.before)} → {pct(t.win.p)}</span>
+        <span class="mono win" title={tx('win% ก่อนเทิร์น → หลังเทิร์นที่คุณเล่น', 'Win% before the turn → after the turn you played')}>{pct(t.before)} → {pct(t.win.p)}</span>
         <span class="turn-nav">
-          <button type="button" class="ghost" disabled={index === 0} onclick={() => toTurn(index - 1)}>‹ <span class="lw">เทิร์น</span>ก่อน</button>
-          <button type="button" class="ghost" disabled={index === turns.length - 1} onclick={() => toTurn(index + 1)}><span class="lw">เทิร์น</span>ถัดไป ›</button>
+          <button type="button" class="ghost" disabled={index === 0} onclick={() => toTurn(index - 1)}
+            >‹ {tx('', 'Previous')}<span class="lw">{tx('เทิร์น', ' turn')}</span>{tx('ก่อน', '')}</button
+          >
+          <button type="button" class="ghost" disabled={index === turns.length - 1} onclick={() => toTurn(index + 1)}
+            >{tx('', 'Next')}<span class="lw">{tx('เทิร์น', ' turn')}</span>{tx('ถัดไป', '')} ›</button
+          >
         </span>
       </header>
 
       <div class="stage-box">
-        <div class="seg" role="tablist" aria-label="ดูเทิร์นนี้แบบ">
+        <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้แบบ', 'See this turn as')}>
           <button type="button" role="tab" aria-selected={kind === 'mine'} class:on={kind === 'mine'} onclick={() => pick('mine')}>
-            คุณเล่น <span class="mono">{pct(t.win.p)}</span>
+            {tx('คุณเล่น', 'You played')} <span class="mono">{pct(t.win.p)}</span>
           </button>
           {#if bot && t.alt}
             <button type="button" role="tab" aria-selected={kind === 'bot'} class:on={kind === 'bot'} onclick={() => pick('bot')}>
-              บอทจะเล่น <span class="mono">{pct(t.alt.win.p)}</span>
+              {tx('บอทจะเล่น', 'The bot would play')} <span class="mono">{pct(t.alt.win.p)}</span>
               <span class="mono diff" class:up={t.alt.diff > 0}>{points(t.alt.diff)}</span>
             </button>
           {:else}
-            <span class="same">บอทก็เล่นแบบเดียวกัน</span>
+            <span class="same">{tx('บอทก็เล่นแบบเดียวกัน', 'The bot plays it the same way')}</span>
           {/if}
         </div>
         {#key `${t.turn}:${kind}`}
@@ -142,7 +151,7 @@
             bind:this={stage}
             line={L}
             bind:pos
-            who={kind === 'bot' && bot ? 'บอท' : 'คุณ'}
+            who={kind === 'bot' && bot ? botName() : youName()}
             {endText}
             autoplay={autoplay && kind === startLine && t.turn === turn}
             ondiscard={(p) => (pile = pile === p ? null : p)}
@@ -151,11 +160,11 @@
       </div>
     </div>
 
-    <aside class="side" aria-label="รายละเอียดเทิร์น">
-      <h3>{kind === 'bot' && bot ? 'บอทจะเล่นแบบนี้' : 'ที่คุณเล่น'}</h3>
+    <aside class="side" aria-label={tx('รายละเอียดเทิร์น', 'The turn')}>
+      <h3>{kind === 'bot' && bot ? tx('บอทจะเล่นแบบนี้', 'The bot would play this') : tx('ที่คุณเล่น', 'What you played')}</h3>
       <ol class="steps">
         <li class:on={pos === 0}>
-          <button type="button" onclick={() => stage?.jump(0)}><span class="no mono">0</span>ต้นเทิร์น</button>
+          <button type="button" onclick={() => stage?.jump(0)}><span class="no mono">0</span>{tx('ต้นเทิร์น', 'Start of the turn')}</button>
         </li>
         {#each L.moves as m, k (k)}
           <li class:on={pos === k + 1} class:done={pos > k + 1} class:split={k === split}>
@@ -163,24 +172,27 @@
             {#if k === split}
               <p class="part">
                 {#if kind === 'bot' && bot}
-                  บอทเล่นต่างจากคุณตรงนี้{t.alt?.why ? `: ${t.alt.why}` : ''}
+                  {tx('บอทเล่นต่างจากคุณตรงนี้', 'Here the bot parts from you')}{t.alt?.why ? `: ${t.alt.why}` : ''}
                 {:else if bot}
-                  ตรงนี้บอทจะเล่นต่างออกไป
+                  {tx('ตรงนี้บอทจะเล่นต่างออกไป', 'Here the bot would play differently')}
                 {/if}
               </p>
             {/if}
           </li>
         {/each}
-        {#if !L.moves.length}<li class="muted">จบเทิร์นโดยไม่ทำอะไร</li>{/if}
+        {#if !L.moves.length}<li class="muted">{tx('จบเทิร์นโดยไม่ทำอะไร', 'Ended the turn without a move')}</li>{/if}
       </ol>
       {#if bot && t.alt}
         <p class="muted">
-          {kind === 'bot' ? 'ถ้าเล่นแบบบอท' : 'ถ้าเล่นแบบบอทแทน'} win% {pct(t.alt.win.p)} ({points(t.alt.diff)} จุดจากที่คุณเล่น)
+          {kind === 'bot' ? tx('ถ้าเล่นแบบบอท', "The bot's way:") : tx('ถ้าเล่นแบบบอทแทน', "Played the bot's way instead:")} win% {pct(t.alt.win.p)} ({points(t.alt.diff)}
+          {tx('จุดจากที่คุณเล่น', 'points from your way')})
         </p>
       {/if}
       {#if t.missed}
         <p class="bad-text">
-          {t.missed.kind === 'win' ? 'มีทางชนะเกมในเทิร์นนี้' : `มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`}:
+          {t.missed.kind === 'win'
+            ? tx('มีทางชนะเกมในเทิร์นนี้', 'There was a way to win the game this turn')
+            : tx(`มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`, `A Knock Out was there for ${t.missed.prizes} Prize cards (you took ${t.missed.took})`)}:
           {t.missed.line.join(' → ')}
         </p>
       {/if}
@@ -188,8 +200,8 @@
       {#if pile !== null}
         {@const ids = shown.players[pile].discard}
         <h4>
-          กองทิ้ง{pile === 0 ? 'ของคุณ' : 'ของบอท'} ({ids.length})
-          <button type="button" class="link" onclick={() => (pile = null)}>ซ่อน</button>
+          {pile === 0 ? tx('กองทิ้งของคุณ', 'Your discard pile') : tx('กองทิ้งของบอท', "Bot's discard pile")} ({ids.length})
+          <button type="button" class="link" onclick={() => (pile = null)}>{tx('ซ่อน', 'Hide')}</button>
         </h4>
         <div class="cards">
           {#each ids as c (c)}
@@ -197,7 +209,7 @@
           {/each}
         </div>
       {/if}
-      <p class="muted small">การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด</p>
+      <p class="muted small">{tx('การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด', 'The cards hidden at the time, all face up')}</p>
       {#each hidden as [label, ids] (label)}
         <h4>{label} ({ids.length})</h4>
         <div class="cards">
@@ -206,7 +218,7 @@
           {/each}
         </div>
       {/each}
-      <p class="keys muted small">← → ทีละขั้น · Space เล่น/หยุด · Esc ปิด</p>
+      <p class="keys muted small">{tx('← → ทีละขั้น · Space เล่น/หยุด · Esc ปิด', '← → step by step · Space play/pause · Esc close')}</p>
     </aside>
   </div>
 

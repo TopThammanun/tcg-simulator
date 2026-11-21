@@ -1,15 +1,18 @@
 // How to play, taught when it comes up rather than read before the first game (NN/g: tutorials read up front don't
 // help; help in context does). Each tip is shown in the command bar the first time its moment comes, once; the
 // ones seen are kept in this browser. The full "วิธีเล่น" stays in the game menu.
+import { tx } from '../i18n';
 
 export type TipId = 'hand' | 'attack' | 'read-desktop' | 'read-touch';
 
-export const TIPS: Record<TipId, string> = {
-  hand: 'แตะการ์ดในมือเพื่ออ่าน แตะอีกครั้งหรือกดปุ่มเพื่อใช้ ลากลงสนามก็ได้',
-  attack: 'แตะ Pokémon ตัวหลักของคุณเพื่อเลือกท่าโจมตี (คีย์ A)',
-  'read-desktop': 'ชี้เมาส์ที่การ์ดใบไหนก็ได้ ข้อความเต็มจะขึ้นในช่องด้านขวา',
-  'read-touch': 'กดค้างที่การ์ดใบไหนก็ได้ (บนสนามหรือในมือ) เพื่อดูใบใหญ่',
+export const TIPS: Record<TipId, [th: string, en: string]> = {
+  hand: ['แตะการ์ดในมือเพื่ออ่าน แตะอีกครั้งหรือกดปุ่มเพื่อใช้ ลากลงสนามก็ได้', 'Tap a card in your hand to read it, tap it again or press the button to play it, or drag it onto the table'],
+  attack: ['แตะ Pokémon ตัวหลักของคุณเพื่อเลือกท่าโจมตี (คีย์ A)', 'Tap your Active Pokémon to pick an attack (key A)'],
+  'read-desktop': ['ชี้เมาส์ที่การ์ดใบไหนก็ได้ ข้อความเต็มจะขึ้นในช่องด้านขวา', 'Point at any card and its full text shows in the panel on the right'],
+  'read-touch': ['กดค้างที่การ์ดใบไหนก็ได้ (บนสนามหรือในมือ) เพื่อดูใบใหญ่', 'Press and hold any card (on the table or in your hand) to see it large'],
 };
+
+export const tipText = (id: TipId): string => tx(...TIPS[id]);
 
 /** What is on screen now, for picking the tip. */
 export interface TipMoment {

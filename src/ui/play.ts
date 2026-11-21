@@ -1,4 +1,5 @@
 // Pure helpers for the play screen: what a click on a card or Pokémon can do, Thai labels.
+import { tx } from '../i18n';
 import { actor, legalActions } from '../engine/actions';
 import { def, isBasicEnergy } from '../engine/db';
 import { keyOf, topDef } from '../engine/state';
@@ -29,28 +30,28 @@ export function targetOf(a: Action): SlotId | undefined {
 export function actionLabel(s: GameState, a: Action): string {
   switch (a.t) {
     case 'bench':
-      return `ลง ${def(keyOf(s, a.card)).name} บน Bench`;
+      return tx(`ลง ${def(keyOf(s, a.card)).name} บน Bench`, `Bench ${def(keyOf(s, a.card)).name}`);
     case 'evolve':
-      return `วิวัฒนาการเป็น ${def(keyOf(s, a.card)).name}`;
+      return tx(`วิวัฒนาการเป็น ${def(keyOf(s, a.card)).name}`, `Evolve into ${def(keyOf(s, a.card)).name}`);
     case 'energy':
     case 'tool':
-      return `ติด ${def(keyOf(s, a.card)).name}`;
+      return tx(`ติด ${def(keyOf(s, a.card)).name}`, `Attach ${def(keyOf(s, a.card)).name}`);
     case 'trainer':
-      return `ใช้ ${def(keyOf(s, a.card)).name}`;
+      return tx(`ใช้ ${def(keyOf(s, a.card)).name}`, `Play ${def(keyOf(s, a.card)).name}`);
     case 'ability':
       return `Ability ${a.name}`;
     case 'stadium':
-      return 'ใช้ Academy at Night';
+      return tx('ใช้ Academy at Night', 'Use Academy at Night');
     case 'retreat':
-      return 'ถอย';
+      return tx('ถอย', 'Retreat');
     case 'attack':
-      return `โจมตี ${a.name}`;
+      return tx(`โจมตี ${a.name}`, `Attack: ${a.name}`);
     case 'end':
-      return 'จบเทิร์น';
+      return tx('จบเทิร์น', 'End turn');
     case 'choose':
-      return 'เลือก';
+      return tx('เลือก', 'Choose');
     case 'setup':
-      return 'เริ่มเกม';
+      return tx('เริ่มเกม', 'Start the game');
   }
 }
 
@@ -59,12 +60,12 @@ export function describeAction(s: GameState, a: Action): string {
   switch (a.t) {
     case 'energy':
     case 'tool':
-      return `ติด ${def(keyOf(s, a.card)).name} ให้ ${slotTitle(s, a.target)}`;
+      return tx(`ติด ${def(keyOf(s, a.card)).name} ให้ ${slotTitle(s, a.target)}`, `Attach ${def(keyOf(s, a.card)).name} to ${slotTitle(s, a.target)}`);
     case 'evolve':
-      return `วิวัฒนาการ ${slotTitle(s, a.target)} เป็น ${def(keyOf(s, a.card)).name}`;
+      return tx(`วิวัฒนาการ ${slotTitle(s, a.target)} เป็น ${def(keyOf(s, a.card)).name}`, `Evolve ${slotTitle(s, a.target)} into ${def(keyOf(s, a.card)).name}`);
     case 'retreat': {
       const act = s.players[s.current].active;
-      return `ถอย ${act ? topDef(s, act).name : ''} ให้ ${slotTitle(s, a.to)} ขึ้นมาแทน`;
+      return tx(`ถอย ${act ? topDef(s, act).name : ''} ให้ ${slotTitle(s, a.to)} ขึ้นมาแทน`, `Retreat ${act ? topDef(s, act).name : ''} for ${slotTitle(s, a.to)}`);
     }
     default:
       return actionLabel(s, a);
@@ -87,21 +88,21 @@ export interface TurnUse {
   title: string;
 }
 
-/** What the player whose turn it is has used of the once-a-turn plays (the chips beside "จบเทิร์น"). */
+/** What the player whose turn it is has used of the once-a-turn plays (the chips beside tx("จบเทิร์น", 'End turn')). */
 export function turnUses(s: GameState): TurnUse[] {
   const ps = s.players[s.current];
   return [
     ps.supporterPlayed
-      ? { label: 'Supporter', state: 'used', title: 'เล่น Supporter ไปแล้วเทิร์นนี้' }
+      ? { label: 'Supporter', state: 'used', title: tx('เล่น Supporter ไปแล้วเทิร์นนี้', 'Supporter played this turn') }
       : s.turn === 1
-        ? { label: 'Supporter', state: 'barred', title: 'คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก' }
-        : { label: 'Supporter', state: 'free', title: 'ยังเล่น Supporter ได้ 1 ใบ' },
+        ? { label: 'Supporter', state: 'barred', title: tx('คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก', "The player going first can't play a Supporter on their first turn") }
+        : { label: 'Supporter', state: 'free', title: tx('ยังเล่น Supporter ได้ 1 ใบ', 'You can still play 1 Supporter') },
     ps.energyAttached
-      ? { label: 'ติดพลังงาน', state: 'used', title: 'ติดพลังงานจากมือไปแล้วเทิร์นนี้' }
-      : { label: 'ติดพลังงาน', state: 'free', title: 'ยังติดพลังงานจากมือได้ 1 ใบ' },
+      ? { label: tx('ติดพลังงาน', 'Energy'), state: 'used', title: tx('ติดพลังงานจากมือไปแล้วเทิร์นนี้', 'Energy attached from your hand this turn') }
+      : { label: tx('ติดพลังงาน', 'Energy'), state: 'free', title: tx('ยังติดพลังงานจากมือได้ 1 ใบ', 'You can still attach 1 Energy from your hand') },
     ps.retreated
-      ? { label: 'ถอย', state: 'used', title: 'ถอยไปแล้วเทิร์นนี้' }
-      : { label: 'ถอย', state: 'free', title: 'ยังถอยได้ 1 ครั้ง' },
+      ? { label: tx('ถอย', 'Retreat'), state: 'used', title: tx('ถอยไปแล้วเทิร์นนี้', 'Retreated this turn') }
+      : { label: tx('ถอย', 'Retreat'), state: 'free', title: tx('ยังถอยได้ 1 ครั้ง', 'You can still retreat once') },
   ];
 }
 
@@ -110,11 +111,11 @@ export function turnUses(s: GameState): TurnUse[] {
  * bot's turn), the question a box over the table asks, the result, or that an earlier position is shown.
  */
 export function waitingText(s: GameState, o: { watch?: boolean; viewing?: boolean; prompt?: string }): string {
-  if (o.viewing) return 'กำลังดูสนามย้อนหลัง · กด "กลับไปเกมปัจจุบัน" ที่แถบบน';
-  if (s.winner !== null) return `${s.winner === 0 ? 'คุณชนะ' : s.winner === 1 ? 'บอทชนะ' : 'เสมอ'}${s.winReason ? ` · ${s.winReason}` : ''}`;
+  if (o.viewing) return tx('กำลังดูสนามย้อนหลัง · กด "กลับไปเกมปัจจุบัน" ที่แถบบน', 'Viewing an earlier position · press "Back to the game" at the top');
+  if (s.winner !== null) return `${s.winner === 0 ? tx('คุณชนะ', 'You win') : s.winner === 1 ? tx('บอทชนะ', 'Bot wins') : tx('เสมอ', 'Draw')}${s.winReason ? ` · ${s.winReason}` : ''}`;
   if (o.prompt) return o.prompt;
   const last = s.log[s.log.length - 1]?.text;
-  const who = o.watch ? 'ดูบอทเล่น' : actor(s) === 1 ? 'ตาบอท' : '';
+  const who = o.watch ? tx('ดูบอทเล่น', 'Watching the bot') : actor(s) === 1 ? tx('ตาบอท', "Bot's turn") : '';
   return [who, last].filter(Boolean).join(' · ');
 }
 
@@ -125,8 +126,8 @@ export function waitingText(s: GameState, o: { watch?: boolean; viewing?: boolea
 export function benchHint(req: ChoiceRequest, picked: number, room: number): string {
   const more = Math.min(room, req.options.length) - picked;
   const now =
-    picked >= room ? 'ลง Bench ครบแล้ว' : more <= 0 ? 'ไม่มี Basic ในมือแล้ว' : `ลาก Basic ลง Bench ได้อีก ${more} ตัว (หรือแตะการ์ด)`;
-  return [req.hint === 'mulligan' ? 'Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง' : '', now, picked ? 'แตะตัวบน Bench เพื่อเอาคืน' : '']
+    picked >= room ? tx('ลง Bench ครบแล้ว', 'Bench full') : more <= 0 ? tx('ไม่มี Basic ในมือแล้ว', 'No Basics left in your hand') : tx(`ลาก Basic ลง Bench ได้อีก ${more} ตัว (หรือแตะการ์ด)`, `Drag up to ${more} more Basics to the Bench (or tap the cards)`);
+  return [req.hint === 'mulligan' ? tx('Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง', "Basics drawn for the opponent's mulligan") : '', now, picked ? tx('แตะตัวบน Bench เพื่อเอาคืน', 'Tap a Benched one to take it back') : '']
     .filter(Boolean)
     .join(' · ');
 }

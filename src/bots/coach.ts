@@ -5,7 +5,8 @@ import { def } from '../engine/db';
 import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { finishStep, rankDevelopment } from './core';
-import { BEFORE_ATTACK, explainAction, explainEnd, explainPlan } from './explain';
+import { tx } from '../i18n';
+import { beforeAttack, explainAction, explainEnd, explainPlan } from './explain';
 import { planFinish } from './finisher';
 import { encode, type OptionRef } from './learn/encode';
 import { run, softmax, type Model } from './learn/model';
@@ -35,7 +36,7 @@ export function suggest(s: GameState, me: PlayerId, plan: DeckPlan, seed = 1, n 
   };
   for (const d of dev.slice(0, n)) {
     const e = explainAction(s, me, d, plan, d.reason);
-    if (attackPlanned) e.facts.push(BEFORE_ATTACK);
+    if (attackPlanned) e.facts.push(beforeAttack());
     add({ action: d.action, picks: d.picks, score: d.score, ...e });
   }
   const f = finishStep(s, fin);
@@ -58,6 +59,6 @@ export function suggestNet(s: GameState, me: PlayerId, model: Model, decks: read
     .map((i) => {
       const action = (enc.refs[i] as Extract<OptionRef, { t: 'action' }>).action;
       const e = action.t === 'end' ? explainEnd(s, me) : explainAction(s, me, { action }, plan);
-      return { action, score: p[i]!, ...e, facts: [`บอทเลือกทางนี้ ${Math.round(p[i]! * 100)}%`, ...e.facts] };
+      return { action, score: p[i]!, ...e, facts: [tx(`บอทเลือกทางนี้ ${Math.round(p[i]! * 100)}%`, `The bot picks this ${Math.round(p[i]! * 100)}% of the time`), ...e.facts] };
     });
 }

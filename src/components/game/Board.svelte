@@ -13,6 +13,7 @@
   // discard on the right, the Active Pokémon facing the other side and the Bench behind it. The bot sits
   // across the table (mirrored, its hand peeking in at the top); the Stadium sits between the Actives.
   // Drop zones for drag and drop: every Pokémon (`slot:<uid>`), your Active Spot and Bench, the board (`play`).
+  import { tx } from '../../i18n';
   import { benchLimit, stadiumKey } from '../../engine/rules';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState, PlayerId, Slot, SlotId } from '../../engine/types';
@@ -123,8 +124,8 @@
   {@const top = ps.discard[ps.discard.length - 1]}
   {@const ghosts = mine ? ghostBench : []}
   {@const open = Math.max(0, benchLimit(s, p) - ps.bench.length - ghosts.length)}
-  <section class="side" class:mine class:theirs={!mine} aria-label={mine ? 'สนามของคุณ' : 'สนามของบอท'}>
-    <div class="prizes" title="Prize ที่เหลือ">
+  <section class="side" class:mine class:theirs={!mine} aria-label={mine ? tx('สนามของคุณ', 'Your side') : tx('สนามของบอท', "The bot's side")}>
+    <div class="prizes" title={tx('Prize ที่เหลือ', 'Prize cards left')}>
       <div class="prize-grid" data-zone={`prizes-${p}`}>
         {#each { length: PRIZES } as _, i}
           {@const at = prizeGrid ? prizeGrid[p][i] : i < ps.prizes.length ? i : null}
@@ -138,26 +139,27 @@
       <div
         class="pile deck"
         class:low={ps.deck.length <= LOW_DECK}
-        title={`การ์ดในเด็ค ${ps.deck.length} ใบ${ps.deck.length <= LOW_DECK ? ' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที' : ''}`}
+        title={tx(`การ์ดในเด็ค ${ps.deck.length} ใบ`, `${ps.deck.length} cards in the deck`) +
+          (ps.deck.length <= LOW_DECK ? tx(' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที', ' · running out: no card to draw at the start of a turn loses the game') : '')}
       >
         <span class="spot" data-zone={`deck-${p}`}>
           {#if ps.deck.length}<span class="stack" style:box-shadow={stackShadow(ps.deck.length)}><CardBack /></span>{/if}
           <span class="n mono">{ps.deck.length}</span>
         </span>
-        <span class="lbl">เด็ค</span>
+        <span class="lbl">{tx('เด็ค', 'Deck')}</span>
       </div>
       <button
         type="button"
         class="pile discard"
         data-inspect={top !== undefined ? keyOf(s, top) : undefined}
         onclick={() => ondiscard(p)}
-        title={`ดูกองทิ้ง (${ps.discard.length} ใบ)`}
+        title={tx(`ดูกองทิ้ง (${ps.discard.length} ใบ)`, `Discard pile (${ps.discard.length})`)}
       >
         <span class="spot" data-zone={`discard-${p}`}>
           {#if top !== undefined}<CardFace cardKey={keyOf(s, top)} />{/if}
           <span class="n mono">{ps.discard.length}</span>
         </span>
-        <span class="lbl">กองทิ้ง</span>
+        <span class="lbl">{tx('กองทิ้ง', 'Discard')}</span>
       </button>
     </div>
 
@@ -173,7 +175,7 @@
       {:else if mine && ghostActive}
         <div class="ghost-card"><CardFace cardKey={ghostActive} /></div>
       {:else}
-        <div class="empty">{mine && accepts('active') ? 'วางตัวหลักที่นี่' : 'ตัวหลัก'}</div>
+        <div class="empty">{mine && accepts('active') ? tx('วางตัวหลักที่นี่', 'Active Pokémon here') : tx('ตัวหลัก', 'Active')}</div>
       {/if}
     </div>
 
@@ -182,7 +184,7 @@
         {@render slotCard(p, b, false)}
       {/each}
       {#each ghosts as k, i (i)}
-        <button type="button" class="ghost-card" title="แตะเพื่อเอาคืน" onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
+        <button type="button" class="ghost-card" title={tx('แตะเพื่อเอาคืน', 'Tap to take it back')} onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
       {/each}
       {#each { length: open } as _, i}
         {#if mine && i === 0 && accepts('bench')}
@@ -207,14 +209,14 @@
   <div class="their-half" aria-hidden="true"></div>
   <div class="midline" aria-hidden="true"><span class="emblem">◆</span></div>
 
-  <div class="their-hand" data-zone="hand-1" title={`มือบอท ${s.players[1].hand.length} ใบ`}>
+  <div class="their-hand" data-zone="hand-1" title={tx(`มือบอท ${s.players[1].hand.length} ใบ`, `Bot's hand: ${s.players[1].hand.length} cards`)}>
     <span class="fan">
       {#each { length: Math.min(12, s.players[1].hand.length) } as _, i}
         {@const n = Math.min(12, s.players[1].hand.length)}
         <span class="fan-card" style:--a={`${(i - (n - 1) / 2) * 5}deg`}><CardBack /></span>
       {/each}
     </span>
-    <span class="hand-count">มือ <span class="mono">{s.players[1].hand.length}</span></span>
+    <span class="hand-count">{tx('มือ', 'Hand')} <span class="mono">{s.players[1].hand.length}</span></span>
   </div>
 
   {@render side(1)}
@@ -233,11 +235,11 @@
           e.preventDefault();
           onzoom(stadium);
         }}
-        title={canUseStadium ? 'ใช้ Academy at Night' : def(stadium).name}
+        title={canUseStadium ? tx('ใช้ Academy at Night', 'Use Academy at Night') : def(stadium).name}
       >
         <span class="stadium-card"><CardFace cardKey={stadium} /></span>
         <span class="stadium-name">{def(stadium).name}</span>
-        <span class="owner">{s.stadium?.owner === 0 ? 'ของคุณ' : 'ของบอท'}</span>
+        <span class="owner">{s.stadium?.owner === 0 ? tx('ของคุณ', 'yours') : tx('ของบอท', "bot's")}</span>
       </button>
     {:else}
       <div class="stadium-empty">Stadium</div>
@@ -246,14 +248,14 @@
 
   <div class="turn" aria-hidden="true">
     {#if s.phase === 'main' && s.winner === null}
-      <span class="whose" class:you={s.current === 0}>{s.current === 0 ? 'ตาคุณ' : 'ตาบอท'}</span>
+      <span class="whose" class:you={s.current === 0}>{s.current === 0 ? tx('ตาคุณ', 'Your turn') : tx('ตาบอท', "Bot's turn")}</span>
     {/if}
   </div>
 
   {@render side(0)}
 
   {#if accepts('play')}
-    <div class="play-hint" aria-hidden="true">{isOver('play') ? `ปล่อยเพื่อ${drag?.label}` : 'ลากมาวางบนสนามเพื่อใช้'}</div>
+    <div class="play-hint" aria-hidden="true">{isOver('play') ? tx(`ปล่อยเพื่อ${drag?.label}`, `Drop to play: ${drag?.label}`) : tx('ลากมาวางบนสนามเพื่อใช้', 'Drag onto the table to play')}</div>
   {/if}
 </div>
 

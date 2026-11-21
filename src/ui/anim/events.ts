@@ -68,9 +68,10 @@ function slotMap(s: GameState): Map<SlotId, { player: PlayerId; slot: Slot }> {
   return m;
 }
 
-const COIN = /^โยนเหรียญ: (หัว|ก้อย)$/;
+// The engine's log lines it reads, in either language (src/engine/ctx.ts, effects/common.ts, combat.ts).
+const COIN = /^(?:โยนเหรียญ: (หัว|ก้อย)|Coin flip: (heads|tails))$/;
 /** A hand shuffled into the deck (engine/effects/common.ts shuffleHandIn), by the log entry's player. */
-const HAND_IN = / สับการ์ดในมือ \d+ ใบเข้าเด็ค$/;
+const HAND_IN = / (?:สับการ์ดในมือ \d+ ใบเข้าเด็ค|shuffles? \d+ cards? from hand into the deck)$/;
 
 /**
  * Events from `prev` to `next` for `viewer`. `action` is the action applied to `prev` (a `choose`
@@ -82,7 +83,7 @@ export function animEvents(prev: GameState | null, next: GameState, action?: Act
   const coins = (): AnimEvent[] =>
     lines.flatMap((text) => {
       const m = text.match(COIN);
-      return m ? [{ t: 'coin', heads: m[1] === 'หัว', phase: 'coin' } as const] : [];
+      return m ? [{ t: 'coin', heads: m[1] === 'หัว' || m[2] === 'heads', phase: 'coin' } as const] : [];
     });
   if (!prev) return coins();
 
@@ -115,15 +116,16 @@ export function animEvents(prev: GameState | null, next: GameState, action?: Act
     if (at.get(top)?.zone !== 'discard') continue;
     knocked.add(uid);
     const name = topDef(prev, slot).name;
-    const hitLine = lines.findLast((l) => l.startsWith(`${name} โดน `));
-    const dealt = hitLine ? Number(hitLine.slice(name.length + 5)) : NaN;
+    const hit = [`${name} โดน `, `${name} takes `];
+    const hitLine = lines.findLast((l) => hit.some((h) => l.startsWith(h)));
+    const dealt = hitLine ? Number(hitLine.slice(hit.find((h) => hitLine.startsWith(h))!.length)) : NaN;
     const amount = Number.isFinite(dealt) && dealt > 0 ? dealt : maxHp(prev, slot) - slot.damage;
     if (amount > 0) out.push({ t: 'damage', player, uid, amount, phase: 'hit' });
     out.push({ t: 'ko', player, uid, key: topKey(prev, slot), phase: 'ko' });
   }
 
   // The attack or Ability, when its line is written.
-  if (act?.t === 'attack' && lines.some((l) => l.endsWith(`ใช้ ${act.name}`) && l.includes(': '))) {
+  if (act?.t === 'attack' && lines.some((l) => (l.endsWith(`ใช้ ${act.name}`) || l.endsWith(` uses ${act.name}`)) && l.includes(': '))) {
     const player = prev.current;
     const user = act.from !== undefined ? before.get(act.from)?.slot : prev.players[player].active;
     if (user) {

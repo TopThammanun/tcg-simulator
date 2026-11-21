@@ -1,5 +1,6 @@
 // A finished game as the review page needs it: everything createGame() took plus the actions, so the
 // engine replays it exactly (src/engine is deterministic from the seed). Kept in IndexedDB by store.ts.
+import { botName, tx, youName } from '../i18n';
 import { actor, apply, createGame } from '../engine/actions';
 import type { PlayerPolicy } from '../bots/plans';
 import type { Action, GameState, PlayerId, Rules } from '../engine/types';
@@ -56,12 +57,26 @@ export const gamesFile = (games: SavedGame[]): GamesFile => ({
   games: games.map(({ id: _, ...g }) => g),
 });
 
+/** A saved game's end reason (kept in the words of the language it was played in) in the page's language. */
+export function reasonText(reason: string): string {
+  const pairs: [string, string][] = [
+    ['เก็บ Prize ครบ', 'took every Prize card'],
+    ['อีกฝั่งไม่มี Pokémon ในสนาม', 'the other side has no Pokémon in play'],
+    ['ทั้งสองฝั่งชนะพร้อมกัน', 'both sides won at once'],
+    ['คุณ ไม่มีการ์ดให้จั่ว', 'You had no card to draw'],
+    ['บอท ไม่มีการ์ดให้จั่ว', 'Bot had no card to draw'],
+  ];
+  const pair = pairs.find((p) => p.includes(reason));
+  const text = pair ? tx(...pair) : reason;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** The games in a file made by gamesFile(); throws on anything else. */
 export function readGamesFile(text: string): SavedGame[] {
   const f = JSON.parse(text) as Partial<GamesFile>;
-  if (f.format !== 'tcg-sim-games' || f.version !== 1 || !Array.isArray(f.games)) throw new Error('ไม่ใช่ไฟล์เกมของโปรแกรมนี้');
+  if (f.format !== 'tcg-sim-games' || f.version !== 1 || !Array.isArray(f.games)) throw new Error(tx('ไม่ใช่ไฟล์เกมของโปรแกรมนี้', 'Not a game file from this site'));
   for (const g of f.games) {
-    if (typeof g.seed !== 'number' || !Array.isArray(g.actions) || !Array.isArray(g.decks)) throw new Error('ไฟล์เกมเสียหาย');
+    if (typeof g.seed !== 'number' || !Array.isArray(g.actions) || !Array.isArray(g.decks)) throw new Error(tx('ไฟล์เกมเสียหาย', 'The game file is damaged'));
   }
   return f.games;
 }
@@ -72,10 +87,10 @@ export function replay(g: SavedGame): GameState[] {
     createGame({
       seed: g.seed,
       decks: [
-        { name: 'คุณ', cards: g.decks[0] },
-        { name: 'บอท', cards: g.decks[1] },
+        { name: youName(), cards: g.decks[0] },
+        { name: botName(), cards: g.decks[1] },
       ],
-      names: ['คุณ', 'บอท'],
+      names: [youName(), botName()],
       // Games saved before rules had a version replay under version 1's (engine/types.ts Rules.version).
       rules: { version: 1, ...g.rules },
     }),

@@ -1,6 +1,7 @@
 ---
 // Card text in English as printed. Used for the detail view and as the image fallback frame.
 import type { CardDef, EnergyType } from '../data/cards';
+import { langOfPath, tFor } from '../i18n';
 import { energyIcon } from '../ui/symbols';
 import EnergyText from './EnergyText.astro';
 
@@ -12,6 +13,7 @@ const { card, compact = false } = Astro.props;
 
 const STAGE: Record<string, string> = { Basic: 'Basic', Stage1: 'Stage 1', Stage2: 'Stage 2' };
 const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
+const tr = tFor(langOfPath(Astro.url.pathname));
 ---
 
 <div class:list={['card-text', { compact }]}>
@@ -25,7 +27,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
       <>
         <div class="sub">
           <span>{STAGE[card.stage]}</span>
-          {card.evolvesFrom && <span>จาก {card.evolvesFrom}</span>}
+          {card.evolvesFrom && <span>{tr(`จาก ${card.evolvesFrom}`, `from ${card.evolvesFrom}`)}</span>}
           {card.types.map((t) => (
             <span class="pip" role="img" aria-label={t} title={t} style={icon(t)} />
           ))}

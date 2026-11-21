@@ -2,6 +2,7 @@
   // The card text panel at the top of the side column (computers): the card under the mouse (a moment's hover over any
   // face-up card: the table, your hand, a discard pile, a choice), or the card picked up from your hand, large enough
   // to read, with its state in play for a Pokémon on the table (ui/slot-info.ts). It keeps the last card shown.
+  import { tx } from '../../i18n';
   import type { SlotInfo } from '../../ui/slot-info';
   import CardFace from './CardFace.svelte';
   import CardText from './CardText.svelte';
@@ -21,16 +22,16 @@
   } = $props();
 </script>
 
-<section class="inspector" aria-label="อ่านการ์ด">
+<section class="inspector" aria-label={tx('อ่านการ์ด', 'Card text')}>
   {#if cardKey}
-    {#if held}<p class="tag">การ์ดที่หยิบจากมือ</p>{/if}
+    {#if held}<p class="tag">{tx('การ์ดที่หยิบจากมือ', 'Picked up from your hand')}</p>{/if}
     {#if info}<SlotState {info} />{/if}
     <div class="body">
-      <button type="button" class="img" onclick={() => onzoom(cardKey)} title="ดูใบใหญ่"><CardFace {cardKey} /></button>
+      <button type="button" class="img" onclick={() => onzoom(cardKey)} title={tx('ดูใบใหญ่', 'See it large')}><CardFace {cardKey} /></button>
       <CardText {cardKey} compact />
     </div>
   {:else}
-    <p class="empty">ชี้เมาส์ที่การ์ดใบไหนก็ได้เพื่ออ่านข้อความเต็มตรงนี้</p>
+    <p class="empty">{tx('ชี้เมาส์ที่การ์ดใบไหนก็ได้เพื่ออ่านข้อความเต็มตรงนี้', 'Point at any card to read its full text here')}</p>
   {/if}
 </section>
 

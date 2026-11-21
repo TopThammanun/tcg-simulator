@@ -4,7 +4,11 @@ Pokémon TCG matchup simulator: the player's deck vs bots playing the top meta d
 phases and gates are in `PLAN.md` (Thai). Work one phase at a time; each phase starts only after
 the previous phase's gate passes and the user has checked it.
 
-UI text is Thai; card names and card text stay in English.
+The site is in two languages: Thai at `/`, English at `/en/` (`src/i18n/`). Every text a player sees is written in
+place, Thai first: `tx('จบเทิร์น', 'End turn')` in the engine, bots, `src/ui` and Svelte, `t(…)` = `tFor(lang)` in Astro
+pages. Never call `tx` at module top level (the language is set at start: `setLang` in each island and worker). Card
+names and card text stay in English in both. The bot must not read its text (labels, prompts): it plays the same in
+both languages (`tests/i18n/english.test.ts`).
 
 ## Commands
 
@@ -52,6 +56,13 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   scripts' own list (simulator, gates, training) and is not shown on the site.
 - `data/meta/` — real tournament results (`scripts/meta/limitless.ts`) and how far the bots' matchups are from them
   (`scripts/meta/compare.ts`, `compare.md`)
+- `src/i18n/` — the two languages: `tx(th, en)` (the current language, `setLang`), `tFor(lang)` for Astro, `localePath`
+  / `href` for links that keep the language, `langPaths()` for pages under `src/pages/[...lang]/` (built at `/…` and
+  `/en/…`; `Base.astro` writes `<html lang>`, the canonical and hreflang links once `site` is set, and the switch to the
+  other language). Islands read the language from `location.pathname`; Web Workers from their `name` (`remote.ts`).
+  English log verbs agree with the player's name (`verb`, `possessive`: "You draw", "Bot draws"); the play screen
+  reads log lines in either language (`ui/anim/events.ts`, `ui/recap.ts`). A stored review keeps its language
+  (`review/store.ts`); a saved game's end reason is shown in the page's (`reasonText`). `404.astro` has both.
 - `src/data/` — plain TypeScript shared by scripts, pages and (later) the engine; no Astro imports
   except `astro/zod`
 - `scripts/` — Node build scripts run with `tsx`
@@ -134,7 +145,7 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   changes at once; animations only show it, the bot waits for them, any input of yours skips them.
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
 - `src/sim/` — bot-vs-bot runner and stats (Wilson CI, meta-weighted and paired-difference) for the scripts.
-- Pages: `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
+- Pages (each also at `/en/…` in English; the files are in `src/pages/[...lang]/`): `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
   opponent — then the game, played as at a real table; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
   Twin Shotels ruling; `HowTo.svelte` from the match sheet and the game menu), `/review/` (ประวัติเกม: your record, saved games, one

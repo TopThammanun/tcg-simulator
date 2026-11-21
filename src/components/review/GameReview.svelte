@@ -5,10 +5,11 @@
   // strip of the turns; then the turn picked, on the table (a computer: ReplayStage beside the turn's detail; a
   // phone: the detail, and the table full screen on demand, ReplayViewer).
   import type { TurnReview, Verdict } from '../../analysis/review';
+  import { botName, href, lang, tx, youName } from '../../i18n';
   import { reviewGame, type ReviewRun } from '../../analysis/review-remote';
   import type { CardId, GameState, PlayerId } from '../../engine/types';
   import { keyOf } from '../../engine/state';
-  import { replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
+  import { reasonText, replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
   import { getGame, getReview, saveReview } from '../../review/store';
   import { keyTurns, reviewSummary, turnLines } from '../../review/summary';
   import CardFace from '../game/CardFace.svelte';
@@ -48,8 +49,8 @@
 
   const VERDICT: Record<Verdict, string> = { 'missed-win': '✗', 'missed-ko': '✗', better: '▲', ok: '●' };
   const pct = (p: number) => `${Math.round(p * 100)}%`;
-  const result = (g: SavedGame) => (g.winner === 0 ? 'ชนะ' : g.winner === 1 ? 'แพ้' : 'เสมอ');
-  const date = (ms: number) => new Date(ms).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const result = (g: SavedGame) => (g.winner === 0 ? tx('ชนะ', 'Won') : g.winner === 1 ? tx('แพ้', 'Lost') : tx('เสมอ', 'Draw'));
+  const date = (ms: number) => new Date(ms).toLocaleString(lang() === 'en' ? 'en-GB' : 'th-TH', { dateStyle: 'medium', timeStyle: 'short' });
   const sorted = $derived([...turns].sort((a, b) => a.turn - b.turn));
   const key = $derived(keyTurns(turns));
   const summary = $derived(reviewSummary(turns));
@@ -63,10 +64,10 @@
   const endText = $derived(
     t && shown && lines
       ? shown.winner === lines.me
-        ? 'ชนะเกม'
+        ? tx('ชนะเกม', 'Game won')
         : shown.winner !== null
-          ? 'จบเกม'
-          : `หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`
+          ? tx('จบเกม', 'Game over')
+          : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`)
       : '',
   );
 
@@ -74,10 +75,12 @@
   const hiddenPiles = $derived<[string, CardId[]][]>(
     shown
       ? [
-          ['มือบอท', shown.players[1].hand],
-          ['Prize ของบอท', shown.players[1].prizes],
-          ['Prize ของคุณ', shown.players[0].prizes],
-          ...(pile !== null ? ([[`กองทิ้ง${pile === 0 ? 'ของคุณ' : 'ของบอท'}`, shown.players[pile].discard]] as [string, CardId[]][]) : []),
+          [tx('มือบอท', "Bot's hand"), shown.players[1].hand],
+          [tx('Prize ของบอท', "Bot's Prize cards"), shown.players[1].prizes],
+          [tx('Prize ของคุณ', 'Your Prize cards'), shown.players[0].prizes],
+          ...(pile !== null
+            ? ([[pile === 0 ? tx('กองทิ้งของคุณ', 'Your discard pile') : tx('กองทิ้งของบอท', "Bot's discard pile"), shown.players[pile].discard]] as [string, CardId[]][])
+            : []),
         ]
       : [],
   );
@@ -86,7 +89,7 @@
     try {
       const g = await getGame(id);
       if (!g) {
-        error = 'ไม่พบเกมนี้ในเบราว์เซอร์นี้';
+        error = tx('ไม่พบเกมนี้ในเบราว์เซอร์นี้', 'This game is not in this browser');
         return;
       }
       game = g;
@@ -105,7 +108,7 @@
         (r) => (turns = [...turns, r]),
         (errors) => {
           finish();
-          if (errors.length) error = `วิเคราะห์ไม่สำเร็จ ${errors.length} เทิร์น: ${errors[0]}`;
+          if (errors.length) error = tx(`วิเคราะห์ไม่สำเร็จ ${errors.length} เทิร์น: ${errors[0]}`, `${errors.length} turns could not be analysed: ${errors[0]}`);
           else void saveReview(id, turns);
         },
       );
@@ -152,28 +155,30 @@
 
 {#if game}
   <section class="head">
-    <a class="back" href="/review/">← ประวัติเกม</a>
+    <a class="back" href={href('/review/')}>← {tx('ประวัติเกม', 'Game history')}</a>
     <div class="title-row">
       <h1>
         <span class="res" class:won={game.winner === 0} class:lost={game.winner === 1}>{result(game)}</span>
-        {game.mineName ?? 'list ของคุณ'} <span class="vs-word">vs</span> {game.opponentName}
+        {game.mineName ?? tx('list ของคุณ', 'Your list')} <span class="vs-word">vs</span> {game.opponentName}
       </h1>
       {#if done && key.length}
         <button type="button" class="primary" onclick={nextKey}>
-          ดูจุดที่ควรดู ({keyAt >= 0 ? keyAt + 1 : 1}/{key.length})
+          {tx('ดูจุดที่ควรดู', 'Turns worth a look')} ({keyAt >= 0 ? keyAt + 1 : 1}/{key.length})
         </button>
       {/if}
     </div>
     {#if done && summary.sentence}<p class="sentence">{summary.sentence}</p>{/if}
     <p class="summary">
-      {game.reason} · {game.turns} เทิร์น<span class="extra"> · {date(game.savedAt)}</span> ·
+      {reasonText(game.reason)} · {tx(`${game.turns} เทิร์น`, `${game.turns} turns`)}<span class="extra"> · {date(game.savedAt)}</span> ·
       {#if !done}
-        กำลังวิเคราะห์ {turns.length}/{spans.length} เทิร์น…
+        {tx(`กำลังวิเคราะห์ ${turns.length}/${spans.length} เทิร์น…`, `Analysing turn ${turns.length}/${spans.length}…`)}
         <progress max={spans.length} value={turns.length}></progress>
       {:else}
-        พลาดชัด <strong class="bad">{summary.missed}</strong> · น่าจะมีทางที่ดีกว่า <strong class="warn">{summary.better}</strong>
-        {#if summary.widest}<span class="extra">· ห่างจากบอทมากสุด เทิร์น {summary.widest.turn} ({summary.widest.points} จุด)</span>{/if}
-        · จาก {turns.length} เทิร์นของคุณ
+        {tx('พลาดชัด', 'Clear slips')} <strong class="bad">{summary.missed}</strong> · {tx('น่าจะมีทางที่ดีกว่า', 'likely a better way')} <strong class="warn">{summary.better}</strong>
+        {#if summary.widest}<span class="extra"
+            >· {tx(`ห่างจากบอทมากสุด เทิร์น ${summary.widest.turn} (${summary.widest.points} จุด)`, `furthest from the bot: turn ${summary.widest.turn} (${summary.widest.points} points)`)}</span
+          >{/if}
+        · {tx(`จาก ${turns.length} เทิร์นของคุณ`, `of your ${turns.length} turns`)}
       {/if}
     </p>
   </section>
@@ -181,14 +186,14 @@
   {#if sorted.length}
     {#snippet chartAndStrip()}
       <WinChart turns={sorted} selected={t?.turn ?? null} onpick={select} />
-      <nav class="strip" aria-label="เทิร์นของคุณ">
+      <nav class="strip" aria-label={tx('เทิร์นของคุณ', 'Your turns')}>
         {#each sorted as x (x.turn)}
           {@const lost = x.alt && x.alt.diff >= 0.005 ? Math.round(x.alt.diff * 100) : 0}
           <button
             type="button"
             class={`turn-chip ${x.verdict}`}
             aria-pressed={x.turn === t?.turn}
-            aria-label={`เทิร์น ${x.turn}${lost ? `: ห่างจากที่บอทจะเล่น ${lost} จุด` : ''}`}
+            aria-label={tx(`เทิร์น ${x.turn}`, `Turn ${x.turn}`) + (lost ? tx(`: ห่างจากที่บอทจะเล่น ${lost} จุด`, `: ${lost} points from the bot's way`) : '')}
             onclick={() => select(x.turn)}
           >
             <span class="n">{x.turn}</span><span class="v" aria-hidden="true">{VERDICT[x.verdict]}</span>{#if lost}<span class="d mono">−{lost}</span>{/if}
@@ -201,26 +206,26 @@
          detail at the right. A phone: the chart, the turns and the detail, the table full screen on demand. -->
     <div class="review" class:wide>
       {#if wide && t && lines && line}
-        <section class="stage-card" aria-label={`เทิร์น ${t.turn} บนสนาม`}>
-          <div class="seg" role="tablist" aria-label="ดูเทิร์นนี้แบบ">
-            <span class="on-table">เทิร์น {t.turn}</span>
+        <section class="stage-card" aria-label={tx(`เทิร์น ${t.turn} บนสนาม`, `Turn ${t.turn} on the table`)}>
+          <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้แบบ', 'See this turn as')}>
+            <span class="on-table">{tx('เทิร์น', 'Turn')} {t.turn}</span>
             <button type="button" role="tab" aria-selected={kind === 'mine'} class:on={kind === 'mine'} onclick={() => pickLine('mine')}>
-              คุณเล่น <span class="mono">{pct(t.win.p)}</span>
+              {tx('คุณเล่น', 'You played')} <span class="mono">{pct(t.win.p)}</span>
             </button>
             {#if lines.bot && t.alt}
               <button type="button" role="tab" aria-selected={kind === 'bot'} class:on={kind === 'bot'} onclick={() => pickLine('bot')}>
-                บอทจะเล่น <span class="mono">{pct(t.alt.win.p)}</span>
+                {tx('บอทจะเล่น', 'The bot would play')} <span class="mono">{pct(t.alt.win.p)}</span>
               </button>
             {:else}
-              <span class="same">บอทก็เล่นแบบเดียวกัน</span>
+              <span class="same">{tx('บอทก็เล่นแบบเดียวกัน', 'The bot plays it the same way')}</span>
             {/if}
-            <span class="keys">← → ทีละขั้น · Space เล่น/หยุด (คลิกที่สนามก่อน)</span>
+            <span class="keys">{tx('← → ทีละขั้น · Space เล่น/หยุด (คลิกที่สนามก่อน)', '← → step by step · Space play/pause (click the table first)')}</span>
           </div>
           {#key `${t.turn}:${kind}`}
             <ReplayStage
               {line}
               bind:pos
-              who={kind === 'bot' && lines.bot ? 'บอท' : 'คุณ'}
+              who={kind === 'bot' && lines.bot ? botName() : youName()}
               {endText}
               keys="focus"
               ondiscard={(p) => (pile = pile === p ? null : p)}
@@ -242,7 +247,7 @@
         {/if}
         {#if wide && shown}
           <details class="hidden-cards">
-            <summary>การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด</summary>
+            <summary>{tx('การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด', 'The cards hidden at the time, all face up')}</summary>
             {#each hiddenPiles as [label, ids] (label)}
               <h4>{label} ({ids.length})</h4>
               <div class="cards">

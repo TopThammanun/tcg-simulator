@@ -3,6 +3,7 @@
   // of the player's moves with the choices it asked for), stepping forward playing the move with the play screen's
   // animations (ui/anim), or playing on its own. Embedded in the review page on a computer, inside ReplayViewer (full
   // screen) on a phone. Which line (yours, the bot's) and the turn are the parent's: it passes the Line and binds `pos`.
+  import { tx } from '../../i18n';
   import { tick, untrack } from 'svelte';
   import { keyOf } from '../../engine/state';
   import type { CardId, PlayerId, SlotId } from '../../engine/types';
@@ -49,7 +50,7 @@
   const last = $derived(line.stops.length - 1);
   const shown = $derived(line.states[line.stops[pos] ?? 0]!);
   const ended = $derived(pos === last);
-  const caption = $derived(pos === 0 ? 'ต้นเทิร์น' : `${who}: ${line.moves[pos - 1]?.label ?? ''}`);
+  const caption = $derived(pos === 0 ? tx('ต้นเทิร์น', 'Start of the turn') : `${who}: ${line.moves[pos - 1]?.label ?? ''}`);
   /** Your hand isn't dimmed here: nothing is played from it. */
   const handAll = $derived(new Set<CardId>(shown.players[0].hand));
 
@@ -166,7 +167,7 @@
 <svelte:window onkeydowncapture={onkey} />
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div class="stage" bind:this={root} tabindex={keys === 'focus' ? 0 : undefined} aria-label="สนามของเทิร์นนี้">
+<div class="stage" bind:this={root} tabindex={keys === 'focus' ? 0 : undefined} aria-label={tx('สนามของเทิร์นนี้', 'The table this turn')}>
   <div class="table">
     <Board
       s={shown}
@@ -184,19 +185,19 @@
   </div>
 
   <div class="controls">
-    <div class="buttons" role="group" aria-label="เล่นซ้ำ">
-      <button type="button" class="icon" aria-label="ต้นเทิร์น" title="ต้นเทิร์น (Home)" disabled={pos === 0} onclick={() => jump(0)}>
+    <div class="buttons" role="group" aria-label={tx('เล่นซ้ำ', 'Replay')}>
+      <button type="button" class="icon" aria-label={tx('ต้นเทิร์น', 'Start of the turn')} title={tx('ต้นเทิร์น (Home)', 'Start of the turn (Home)')} disabled={pos === 0} onclick={() => jump(0)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-8 6 8 6z" /></svg>
       </button>
-      <button type="button" class="icon" aria-label="ย้อนหนึ่งขั้น" title="ย้อน (←)" disabled={pos === 0} onclick={() => jump(pos - 1)}>
+      <button type="button" class="icon" aria-label={tx('ย้อนหนึ่งขั้น', 'One step back')} title={tx('ย้อน (←)', 'Back (←)')} disabled={pos === 0} onclick={() => jump(pos - 1)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
       </button>
       <button
         type="button"
         class="icon primary"
         bind:this={playButton}
-        aria-label={playing ? 'หยุด' : 'เล่น'}
-        title={playing ? 'หยุด (Space)' : 'เล่น (Space)'}
+        aria-label={playing ? tx('หยุด', 'Pause') : tx('เล่น', 'Play')}
+        title={playing ? tx('หยุด (Space)', 'Pause (Space)') : tx('เล่น (Space)', 'Play (Space)')}
         onclick={toggle}
       >
         {#if playing}
@@ -205,13 +206,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M8 5l11 7-11 7z" /></svg>
         {/if}
       </button>
-      <button type="button" class="icon" aria-label="ถัดไปหนึ่งขั้น" title="ถัดไป (→)" disabled={ended} onclick={() => jump(pos + 1, true)}>
+      <button type="button" class="icon" aria-label={tx('ถัดไปหนึ่งขั้น', 'One step on')} title={tx('ถัดไป (→)', 'Next (→)')} disabled={ended} onclick={() => jump(pos + 1, true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
       </button>
-      <button type="button" class="icon" aria-label="จบเทิร์น" title="จบเทิร์น (End)" disabled={ended} onclick={() => jump(last)}>
+      <button type="button" class="icon" aria-label={tx('จบเทิร์น', 'End of the turn')} title={tx('จบเทิร์น (End)', 'End of the turn (End)')} disabled={ended} onclick={() => jump(last)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l8 6-8 6z" /></svg>
       </button>
-      <button type="button" class="speed" aria-label={`ความเร็ว ×${speed}`} title="ความเร็ว" onclick={() => (speed = speed === 1 ? 2 : 1)}>×{speed}</button>
+      <button type="button" class="speed" aria-label={tx(`ความเร็ว ×${speed}`, `Speed ×${speed}`)} title={tx('ความเร็ว', 'Speed')} onclick={() => (speed = speed === 1 ? 2 : 1)}>×{speed}</button>
     </div>
     <p class="caption" aria-live="polite">
       <span class="mono step">{pos}/{last}</span>

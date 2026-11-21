@@ -1,5 +1,6 @@
 // The command bar under the table (ActionBar.svelte): what is going on now, and the buttons for it, worked out from
 // the game and the screen. One place decides which button is the main one (white); red is kept for leaving a game.
+import { tx } from '../i18n';
 import type { Action, ChoiceRequest, GameState } from '../engine/types';
 import { turnUses, waitingText, type CardActions, type TurnUse } from './play';
 
@@ -71,58 +72,58 @@ export interface BarInput {
 
 /** How many to pick, and how many are picked. */
 export function pickNeed(req: ChoiceRequest, picked: number): string {
-  const need = req.min === req.max ? `เลือก ${req.max}` : req.min === 0 ? `เลือกได้ไม่เกิน ${req.max}` : `เลือก ${req.min}–${req.max}`;
-  return `${need} · เลือกแล้ว ${picked}`;
+  const need = req.min === req.max ? tx(`เลือก ${req.max}`, `Choose ${req.max}`) : req.min === 0 ? tx(`เลือกได้ไม่เกิน ${req.max}`, `Choose up to ${req.max}`) : tx(`เลือก ${req.min}–${req.max}`, `Choose ${req.min}–${req.max}`);
+  return tx(`${need} · เลือกแล้ว ${picked}`, `${need} · ${picked} chosen`);
 }
 
 export function actionBar(i: BarInput): Bar {
   if (i.confirmNew)
     return {
       kind: 'warn',
-      title: 'ทิ้งเกมนี้?',
-      text: 'เกมที่ยังไม่จบจะไม่ถูกบันทึก',
+      title: tx('ทิ้งเกมนี้?', 'Leave this game?'),
+      text: tx('เกมที่ยังไม่จบจะไม่ถูกบันทึก', 'An unfinished game is not saved'),
       buttons: [
-        { id: 'stay', label: 'เล่นต่อ', kind: 'default' },
-        { id: 'leave', label: 'ทิ้งเกม', kind: 'danger' },
+        { id: 'stay', label: tx('เล่นต่อ', 'Keep playing'), kind: 'default' },
+        { id: 'leave', label: tx('ทิ้งเกม', 'Leave'), kind: 'danger' },
       ],
     };
   if (i.myTurn && i.box) {
     const { req, picks, cards } = i.box;
     const single = req.min === 1 && req.max === 1;
-    if (!cards && single) return { kind: 'box', title: req.prompt, text: 'เลือกในกล่องบนสนาม', buttons: [] };
+    if (!cards && single) return { kind: 'box', title: req.prompt, text: tx('เลือกในกล่องบนสนาม', 'Choose in the box on the table'), buttons: [] };
     const ready = picks.length >= req.min && picks.length <= req.max;
     return {
       kind: 'box',
       title: req.prompt,
       text: pickNeed(req, picks.length),
       buttons: [
-        { id: 'box-clear', label: 'ล้าง', kind: 'default', disabled: picks.length === 0 },
-        { id: 'box-confirm', label: picks.length === 0 && req.min === 0 && cards ? 'ไม่เอาการ์ด' : 'ยืนยัน', kind: 'primary', disabled: !ready, key: 'Enter' },
+        { id: 'box-clear', label: tx('ล้าง', 'Clear'), kind: 'default', disabled: picks.length === 0 },
+        { id: 'box-confirm', label: picks.length === 0 && req.min === 0 && cards ? tx('ไม่เอาการ์ด', 'Take none') : tx('ยืนยัน', 'Confirm'), kind: 'primary', disabled: !ready, key: 'Enter' },
       ],
     };
   }
   if (i.myTurn && i.setup) {
-    if (i.setup.step === 'active') return { kind: 'setup', step: 'active', title: 'เลือกตัวหลัก', text: 'ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด', buttons: [] };
+    if (i.setup.step === 'active') return { kind: 'setup', step: 'active', title: tx('เลือกตัวหลัก', 'Choose your Active Pokémon'), text: tx('ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด', 'Drag a Basic from your hand to the Active Spot, or tap the card'), buttons: [] };
     const n = i.setup.picked;
     return {
       kind: 'setup',
       step: 'bench',
-      title: 'ลง Bench',
+      title: tx('ลง Bench', 'Bench'),
       text: i.setup.hint,
       buttons: [
-        ...(n ? [{ id: 'setup-clear', label: 'ล้าง', kind: 'default' } as const] : []),
-        { id: 'setup-confirm', label: `ยืนยัน${n ? ` (ลง Bench ${n} ตัว)` : ' (ไม่ลง Bench)'}`, kind: 'primary' },
+        ...(n ? [{ id: 'setup-clear', label: tx('ล้าง', 'Clear'), kind: 'default' } as const] : []),
+        { id: 'setup-confirm', label: n ? tx(`ยืนยัน (ลง Bench ${n} ตัว)`, `Confirm (${n} on the Bench)`) : tx('ยืนยัน (ไม่ลง Bench)', 'Confirm (empty Bench)'), kind: 'primary' },
       ],
     };
   }
   if (i.myTurn && i.confirmEnd)
     return {
       kind: 'warn',
-      title: 'ยังโจมตีได้',
-      text: `(${(i.attacksLeft ?? []).join(', ')}) · จบเทิร์นโดยไม่โจมตี?`,
+      title: tx('ยังโจมตีได้', 'You can still attack'),
+      text: tx(`(${(i.attacksLeft ?? []).join(', ')}) · จบเทิร์นโดยไม่โจมตี?`, `(${(i.attacksLeft ?? []).join(', ')}) · End the turn without attacking?`),
       buttons: [
-        { id: 'back-to-attack', label: 'กลับไปโจมตี', kind: 'primary' },
-        { id: 'end-anyway', label: 'จบเทิร์นเลย', kind: 'default', key: 'E' },
+        { id: 'back-to-attack', label: tx('กลับไปโจมตี', 'Back to attack'), kind: 'primary' },
+        { id: 'end-anyway', label: tx('จบเทิร์นเลย', 'End turn anyway'), kind: 'default', key: 'E' },
       ],
     };
   if (i.myTurn && i.held) {
@@ -132,14 +133,14 @@ export function actionBar(i: BarInput): Bar {
       kind: 'held',
       title: name,
       text: play
-        ? 'แตะการ์ดอีกครั้ง หรือกดปุ่มเพื่อใช้ · ลากลงสนามก็ได้'
+        ? tx('แตะการ์ดอีกครั้ง หรือกดปุ่มเพื่อใช้ · ลากลงสนามก็ได้', 'Tap the card again or press the button to play it · or drag it onto the table')
         : actions?.kind === 'target'
-          ? 'แตะ Pokémon ที่สว่าง หรือลากการ์ดไปวาง'
-          : `ใช้ตอนนี้ไม่ได้${why ? `: ${why}` : ''}`,
+          ? tx('แตะ Pokémon ที่สว่าง หรือลากการ์ดไปวาง', 'Tap a lit Pokémon, or drag the card onto it')
+          : tx(`ใช้ตอนนี้ไม่ได้${why ? `: ${why}` : ''}`, `Can't be played now${why ? `: ${why}` : ''}`),
       why: !actions,
       buttons: [
-        { id: 'cancel', label: 'ยกเลิก', kind: 'default' },
-        ...(play ? [{ id: 'play', label: playLabel ?? 'ใช้', kind: 'primary', key: 'Enter' } as const] : []),
+        { id: 'cancel', label: tx('ยกเลิก', 'Cancel'), kind: 'default' },
+        ...(play ? [{ id: 'play', label: playLabel ?? tx('ใช้', 'Play'), kind: 'primary', key: 'Enter' } as const] : []),
       ],
     };
   }
@@ -152,8 +153,8 @@ export function actionBar(i: BarInput): Bar {
       text: i.tip ?? undefined,
       tip: !!i.tip,
       buttons: [
-        ...(i.recap ? [{ id: 'recap', label: `บอทเล่นอะไรไป (${i.recap})`, kind: 'default', narrowOnly: true } as const] : []),
-        { id: 'end', label: 'จบเทิร์น', kind: onlyEnd ? 'primary' : 'default', key: 'E' },
+        ...(i.recap ? [{ id: 'recap', label: tx(`บอทเล่นอะไรไป (${i.recap})`, `Bot's turn (${i.recap})`), kind: 'default', narrowOnly: true } as const] : []),
+        { id: 'end', label: tx('จบเทิร์น', 'End turn'), kind: onlyEnd ? 'primary' : 'default', key: 'E' },
       ],
     };
   }

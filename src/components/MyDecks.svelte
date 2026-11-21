@@ -2,11 +2,14 @@
   // เด็คของฉัน: your own lists, kept in this browser (ui/my-decks.ts). Paste a Limitless export; the check
   // names every card the engine can't play yet. A list plays with the plan of the meta deck nearest to it.
   import { slide } from 'svelte/transition';
+  import { href, langOfPath, setLang, tx } from '../i18n';
   import { checkList, SUPPORTED } from '../ui/decklist';
   import { headline, nearestDeck, type MetaDeck } from '../ui/decks';
   import { deleteMyDeck, loadMyDecks, saveMyDeck, type MyDeck } from '../ui/my-decks';
   import { motion } from '../ui/anim/motion';
   import CardFace from './game/CardFace.svelte';
+
+  setLang(langOfPath(location.pathname));
 
   let { decks }: { decks: (MetaDeck & { text: string })[] } = $props();
 
@@ -23,7 +26,7 @@
   }));
 
   function start(from?: MetaDeck & { text: string }) {
-    editing = { name: from ? `${from.name} (ของฉัน)` : '', text: from?.text ?? '' };
+    editing = { name: from ? tx(`${from.name} (ของฉัน)`, `${from.name} (mine)`) : '', text: from?.text ?? '' };
   }
 
   function save() {
@@ -42,45 +45,48 @@
 <section class="mine" id="mine" aria-labelledby="mine-title">
   <header>
     <div>
-      <p class="eyebrow">เก็บไว้ในเบราว์เซอร์นี้</p>
-      <h2 id="mine-title">เด็คของฉัน</h2>
+      <p class="eyebrow">{tx('เก็บไว้ในเบราว์เซอร์นี้', 'Kept in this browser')}</p>
+      <h2 id="mine-title">{tx('เด็คของฉัน', 'My decks')}</h2>
     </div>
     {#if !editing}
-      <button type="button" class="primary" onclick={() => start()}>+ วาง list ใหม่</button>
+      <button type="button" class="primary" onclick={() => start()}>{tx('+ วาง list ใหม่', '+ Paste a new list')}</button>
     {/if}
   </header>
 
   {#if editing}
     <div class="editor" transition:slide={{ duration: motion(220) }}>
       <label>
-        ชื่อเด็ค
-        <input type="text" bind:value={editing.name} placeholder="เช่น Dragapult ของฉัน" />
+        {tx('ชื่อเด็ค', 'Deck name')}
+        <input type="text" bind:value={editing.name} placeholder={tx('เช่น Dragapult ของฉัน', 'e.g. My Dragapult')} />
       </label>
       <label>
         decklist
-        <textarea bind:value={editing.text} rows="14" spellcheck="false" aria-label="decklist" placeholder="วาง list ที่ export จาก Limitless หรือ Pokémon TCG Live"></textarea>
+        <textarea bind:value={editing.text} rows="14" spellcheck="false" aria-label="decklist" placeholder={tx('วาง list ที่ export จาก Limitless หรือ Pokémon TCG Live', 'Paste a list exported from Limitless or Pokémon TCG Live')}></textarea>
       </label>
       <p class="starts">
-        หรือเริ่มจาก list ของ:
+        {tx('หรือเริ่มจาก list ของ:', 'Or start from the list of:')}
         {#each decks as d}<button type="button" class="link" onclick={() => (editing!.text = d.text)}>{d.name}</button>{/each}
       </p>
       {#if editing.text.trim() && result}
         {#if result.cards}
-          <p class="ok">ใช้ได้ · 60 ใบ · บอทจะเล่น list นี้แบบ {near(result.cards).name}</p>
+          <p class="ok">{tx(`ใช้ได้ · 60 ใบ · บอทจะเล่น list นี้แบบ ${near(result.cards).name}`, `Playable · 60 cards · the bot plays it like ${near(result.cards).name}`)}</p>
         {:else}
           <ul class="errors">
             {#each result.errors as e}<li>{e}</li>{/each}
           </ul>
           {#if result.unsupported.length}
             <p class="hint">
-              เว็บนี้เล่นได้เฉพาะการ์ดที่เขียนกฎไว้แล้ว ({SUPPORTED.length} ใบจากเด็คใน meta) ลองแทนการ์ดที่ยังไม่รองรับด้วยใบที่ใช้ได้ด้านล่าง
+              {tx(
+                `เว็บนี้เล่นได้เฉพาะการ์ดที่เขียนกฎไว้แล้ว (${SUPPORTED.length} ใบจากเด็คใน meta) ลองแทนการ์ดที่ยังไม่รองรับด้วยใบที่ใช้ได้ด้านล่าง`,
+                `The site plays only cards whose rules are written (${SUPPORTED.length} cards from the meta decks). Try swapping the unsupported ones for cards listed below.`,
+              )}
             </p>
           {/if}
         {/if}
       {/if}
       <div class="actions">
-        <button type="button" class="primary" onclick={save} disabled={!result?.cards}>บันทึก</button>
-        <button type="button" onclick={() => (editing = null)}>ยกเลิก</button>
+        <button type="button" class="primary" onclick={save} disabled={!result?.cards}>{tx('บันทึก', 'Save')}</button>
+        <button type="button" onclick={() => (editing = null)}>{tx('ยกเลิก', 'Cancel')}</button>
       </div>
     </div>
   {/if}
@@ -98,25 +104,32 @@
           <span class="info">
             <strong>{d.name}</strong>
             {#if r.cards}
-              <span class="muted">เล่นแบบ {near(r.cards).name}</span>
+              <span class="muted">{tx('เล่นแบบ', 'Plays like')} {near(r.cards).name}</span>
             {:else}
-              <span class="bad">ใช้ไม่ได้: {r.errors[0]}{r.errors.length > 1 ? ` และอีก ${r.errors.length - 1} ข้อ` : ''}</span>
+              <span class="bad"
+                >{tx('ใช้ไม่ได้', 'Not playable')}: {r.errors[0]}{r.errors.length > 1 ? tx(` และอีก ${r.errors.length - 1} ข้อ`, ` and ${r.errors.length - 1} more`) : ''}</span
+              >
             {/if}
           </span>
           <span class="acts">
-            {#if r.cards}<a class="button" href={`/play/?me=my:${d.id}`}>เล่น</a>{/if}
-            <button type="button" onclick={() => (editing = { id: d.id, name: d.name, text: d.text })}>แก้</button>
-            <button type="button" class="link" onclick={() => remove(d)}>ลบ</button>
+            {#if r.cards}<a class="button" href={href(`/play/?me=my:${d.id}`)}>{tx('เล่น', 'Play')}</a>{/if}
+            <button type="button" onclick={() => (editing = { id: d.id, name: d.name, text: d.text })}>{tx('แก้', 'Edit')}</button>
+            <button type="button" class="link" onclick={() => remove(d)}>{tx('ลบ', 'Delete')}</button>
           </span>
         </li>
       {/each}
     </ul>
   {:else if !editing}
-    <p class="empty">ยังไม่มี วาง list ของคุณเพื่อเล่นกับบอทด้วยเด็คที่คุณใช้จริง หรือเริ่มจาก list ของเด็คใน meta แล้วปรับการ์ด</p>
+    <p class="empty">
+      {tx(
+        'ยังไม่มี วาง list ของคุณเพื่อเล่นกับบอทด้วยเด็คที่คุณใช้จริง หรือเริ่มจาก list ของเด็คใน meta แล้วปรับการ์ด',
+        'None yet. Paste your list to play the bot with the deck you really play, or start from a meta list and change the cards.',
+      )}
+    </p>
   {/if}
 
   <details class="cards">
-    <summary>การ์ดที่ใช้ได้ ({SUPPORTED.length} ใบ)</summary>
+    <summary>{tx(`การ์ดที่ใช้ได้ (${SUPPORTED.length} ใบ)`, `Supported cards (${SUPPORTED.length})`)}</summary>
     {#each supported as g}
       <h3>{g.label}</h3>
       <p class="names">{g.names.join(' · ')}</p>
