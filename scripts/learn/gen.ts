@@ -6,9 +6,11 @@
 //     "pairs": [ { "a": "hard", "b": "hard", "share": 1 } ] }
 // Every pairing is played over all deck pairs (mirrors too) from both seats with the same deal.
 // Prints one JSON line: games, rows, and each player's score per pairing.
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+// A network's `weights` is a weights file or an expert set: a folder of <deck slug>.json files, default.json for
+// the other decks (expertWeights).
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { cpus } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { makeBot } from '../../src/bots/core';
@@ -18,6 +20,7 @@ import { loadModel, type Model, type ModelJson } from '../../src/bots/learn/mode
 import { makeNetBot, recordBot } from '../../src/bots/learn/netbot';
 import { makeSearchNetBot, type NetSearchOptions } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
+import { makeRand, randomAction } from '../../src/bots/random';
 import type { Bot } from '../../src/bots/types';
 import { actor, apply, createGame } from '../../src/engine/actions';
 import { derive, shuffleInPlace } from '../../src/engine/rng';
@@ -33,8 +36,10 @@ import { ShardWriter } from './shard';
 export type PlayerSpec =
   | { kind: 'hard'; record?: boolean }
   | { kind: 'normal'; record?: boolean }
+  /** Uniformly random legal moves (random.ts): an opponent unlike any trained player. */
+  | { kind: 'random'; record?: boolean }
   | { kind: 'net'; weights: string; temperature?: number; record?: boolean }
-  /** The game's bot (src/bots/index.ts createBot: bundled network and specialists); fast = without look-ahead. */
+  /** The game's bot (src/bots/index.ts createBot: bundled network and the deck's expert); fast = without look-ahead. */
   | { kind: 'bot'; fast?: boolean; record?: boolean }
   | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>);
 
@@ -48,8 +53,10 @@ export interface GenConfig {
   /**
    * Real lists (scripts/meta/variants.ts: { slug: card-key lists }): each side of a game plays one of its deck's
    * lists with chance `share`, otherwise the deck file's list. The swapped-seat game keeps the same lists.
+   * `shareA`: the chance for player a's side in pairings with decksA / decksB (an expert plays the site's list
+   * more often than its opponents do).
    */
-  variants?: { path: string; share: number };
+  variants?: { path: string; share: number; shareA?: number };
   /**
    * Positions from games people played against the bot (the review page's games file): this share of the games
    * starts from one of them (a turn's first free position, Prizes and deck orders dealt again) instead of
@@ -110,6 +117,8 @@ interface Job {
 export interface MatchResult {
   names: [string, string];
   decks: [string, string];
+  /** The deal (the swapped-seat game has the same one). */
+  seed: number;
   winner: 0 | 1 | 'draw' | null;
   maxThinkMs: [number, number];
   /** Batched games: the seat that resigned, or that would have resigned in a game played on to check. */
@@ -136,26 +145,59 @@ function model(path: string): Model {
   return m;
 }
 
+const BOT_WEIGHTS = fileURLToPath(new URL('../../src/bots/learn/weights.json', import.meta.url));
+/** The game's expert set (src/bots/experts.ts): the bundled network plays the decks without one. */
+const BOT_EXPERTS = fileURLToPath(new URL('../../src/bots/learn/experts', import.meta.url));
+
+const resolved = new Map<string, string>();
+/** The weights file a deck plays from: `path` itself, or in an expert set its <slug>.json, else default.json, else `fallback`. */
+export function expertWeights(path: string, slug: string, fallback?: string): string {
+  const key = `${path}|${slug}`;
+  let w = resolved.get(key);
+  if (w === undefined) {
+    if (existsSync(path) && statSync(path).isDirectory()) {
+      const own = join(path, `${slug}.json`);
+      const other = join(path, 'default.json');
+      w = existsSync(own) ? own : existsSync(other) ? other : fallback;
+      if (!w) throw new Error(`expert set ${path} has neither ${slug}.json nor default.json`);
+    } else w = path;
+    resolved.set(key, resolve(w));
+  }
+  return resolved.get(key)!;
+}
+
+/** The game's network for a deck: its expert when it has one, else the bundled network (null: none bundled). */
+function botModel(slug: string): Model | null {
+  const w = expertWeights(BOT_EXPERTS, slug, BOT_WEIGHTS);
+  return w === resolve(BOT_WEIGHTS) ? MODEL : model(w);
+}
+
 function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: number, out: Pick<ShardWriter, 'add'> | null): Bot {
   const plan = planFor(slug);
   const oppPlan = planFor(oppSlug);
   const decks = [plan.name, oppPlan.name] as const;
   const record = spec.record && out ? (d: Parameters<ShardWriter['add']>[0]) => out.add(d) : undefined;
-  if (spec.kind === 'net') return makeNetBot(model(spec.weights), { decks, seed, temperature: spec.temperature ?? 0, onDecision: record });
+  if (spec.kind === 'net') return makeNetBot(model(expertWeights(spec.weights, slug)), { decks, seed, temperature: spec.temperature ?? 0, onDecision: record });
+  const random = (): Bot => {
+    const rand = makeRand(seed);
+    return { act: (s) => randomAction(s, rand) };
+  };
   const bot =
     spec.kind === 'bot'
-      ? createBot(plan, seed, oppPlan, { fast: spec.fast ?? true })
+      ? createBot(plan, seed, oppPlan, { fast: spec.fast ?? true, model: botModel(slug) })
       : spec.kind === 'search'
-      ? makeSearchNetBot(model(spec.weights), {
+      ? makeSearchNetBot(model(expertWeights(spec.weights, slug)), {
           ...spec,
           decks,
           seed,
           plan: spec.tactics === false ? undefined : plan,
-          rollout: spec.rolloutWeights ? model(spec.rolloutWeights) : undefined,
+          rollout: spec.rolloutWeights ? model(expertWeights(spec.rolloutWeights, slug)) : undefined,
         })
       : spec.kind === 'hard'
         ? makeHardBot(plan, oppPlan, { seed })
-        : makeBot(plan, { seed });
+        : spec.kind === 'random'
+          ? random()
+          : makeBot(plan, { seed });
   return record ? recordBot(bot, decks, record) : bot;
 }
 
@@ -193,12 +235,10 @@ function newGame(m: Match, games: SavedGame[]): GameState {
       });
 }
 
-const BOT_WEIGHTS = fileURLToPath(new URL('../../src/bots/learn/weights.json', import.meta.url));
-
-/** The network a player spec plays from, when the inference server can play it (no look-ahead, not a recorded bot). */
-function served(spec: PlayerSpec): Served | null {
-  if (spec.kind === 'net') return { model: resolve(spec.weights), temperature: spec.temperature ?? 0, record: !!spec.record };
-  if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: BOT_WEIGHTS, temperature: 0, record: false };
+/** The network a player spec plays `slug` from, when the inference server can play it (no look-ahead, not a recorded bot). */
+function served(spec: PlayerSpec, slug: string): Served | null {
+  if (spec.kind === 'net') return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record };
+  if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: expertWeights(BOT_EXPERTS, slug, BOT_WEIGHTS), temperature: 0, record: false };
   return null;
 }
 
@@ -225,7 +265,7 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
     throw e;
   }
   out?.endGame(s.winner, [6 - s.players[0].prizes.length, 6 - s.players[1].prizes.length]);
-  return { names: m.names, decks: m.decks, winner: s.winner, maxThinkMs: think };
+  return { names: m.names, decks: m.decks, seed: m.seed, winner: s.winner, maxThinkMs: think };
 }
 
 /** The saved games of a config's `starts`, and each one's start positions (a turn's first free state, turn 2 on). */
@@ -251,12 +291,14 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
     return (h % 10_000) / 10_000 < c.starts.share ? pool[(h >>> 9) % pool.length]! : null;
   };
   const variants = c.variants ? (JSON.parse(readFileSync(c.variants.path, 'utf8')) as Record<string, string[][]>) : {};
-  // A list for one side of game k: a variant with chance `share` (decided by a hash of the game and side).
-  const listFor = (slug: string, k: number, side: number): string[] | null => {
+  // A list for one side of game k: a variant with chance `share` (decided by a hash of the game and side); side 0
+  // of a pairing with fixed decks is player a's, which may have its own chance (shareA).
+  const listFor = (slug: string, k: number, side: number, fixed: boolean): string[] | null => {
     const vs = variants[slug];
     if (!vs?.length || !c.variants) return null;
+    const share = fixed && side === 0 && c.variants.shareA !== undefined ? c.variants.shareA : c.variants.share;
     const h = (Math.imul(k + 1, 0x85ebca6b) ^ Math.imul(side + 1, 0xc2b2ae35)) >>> 0;
-    return (h % 10_000) / 10_000 < c.variants.share ? vs[(h >>> 7) % vs.length]! : null;
+    return (h % 10_000) / 10_000 < share ? vs[(h >>> 7) % vs.length]! : null;
   };
   const total = c.pairs.reduce((t, p) => t + p.share, 0);
   let k = 0;
@@ -283,8 +325,8 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
         if (!mirror) out.push({ id: out.length, seed, decks, names: [pair.b, pair.a], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
         continue;
       }
-      const lx = listFor(x, k, 0);
-      const ly = listFor(y, k, 1);
+      const lx = listFor(x, k, 0, fixed);
+      const ly = listFor(y, k, 1, fixed);
       const lists = (a: string[] | null, b: string[] | null): Match['lists'] => (a || b ? [a, b] : undefined);
       out.push({ id: out.length, seed, decks: [x, y], names: [pair.a, pair.b], lists: lists(lx, ly) });
       if (!mirror) out.push({ id: out.length, seed, decks: fixed ? [y, x] : [x, y], names: [pair.b, pair.a], lists: fixed ? lists(ly, lx) : lists(lx, ly) });
@@ -307,13 +349,13 @@ if (!isMainThread) {
       onError: broke,
     });
     client.close();
-    for (const r of played) results.push({ names: r.m.names, decks: r.m.decks, winner: r.winner, maxThinkMs: r.maxThinkMs, resigned: r.resigned, wouldResign: r.wouldResign });
+    for (const r of played) results.push({ names: r.m.names, decks: r.m.decks, seed: r.m.seed, winner: r.winner, maxThinkMs: r.maxThinkMs, resigned: r.resigned, wouldResign: r.wouldResign });
   } else {
     job.matches.forEach((m) => {
       try {
         results.push(playMatch(m, job.players, out, m.id, job.games));
       } catch (e) {
-        results.push({ names: m.names, decks: m.decks, winner: null, maxThinkMs: [0, 0] });
+        results.push({ names: m.names, decks: m.decks, seed: m.seed, winner: null, maxThinkMs: [0, 0] });
         broke(m, e as Error);
       }
     });
@@ -337,6 +379,11 @@ export async function generate(c: GenConfig): Promise<{
   maxThinkMs: Record<string, number>;
   /** Batched games with resigning: games resigned, games played on to check, and how many of those the would-be resigner won. */
   resign?: { resigned: number; checked: number; wrong: number };
+  /**
+   * Per pairing of two different players, the score counted by deal: each deal's two games (seats swapped) give one
+   * mean, so luck of the deal cancels; `se` is the standard error of their average (a 95% range is ±1.96·se).
+   */
+  paired: Record<string, { pairs: number; mean: number; se: number }>;
 }> {
   if (!existsSync(c.out)) mkdirSync(c.out, { recursive: true });
   const matches = matchesFor(c);
@@ -355,7 +402,8 @@ export async function generate(c: GenConfig): Promise<{
   const byDeck: Record<string, { score: number; n: number }> = {};
   const maxThinkMs: Record<string, number> = {};
   const resign = { resigned: 0, checked: 0, wrong: 0 };
-  for (const r of parts.flatMap((p) => p.results)) {
+  const all = parts.flatMap((p) => p.results);
+  for (const r of all) {
     if (r.resigned !== undefined) resign.resigned++;
     if (r.wouldResign !== undefined) {
       resign.checked++;
@@ -374,5 +422,36 @@ export async function generate(c: GenConfig): Promise<{
       maxThinkMs[r.names[i]] = Math.max(maxThinkMs[r.names[i]] ?? 0, r.maxThinkMs[i]);
     }
   }
-  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, byDeck, maxThinkMs, ...(c.server?.resign ? { resign } : {}) };
+  return { games: matches.length, rows: parts.reduce((t, p) => t + p.rows, 0), scores, byDeck, maxThinkMs, ...(c.server?.resign ? { resign } : {}), paired: pairedScores(all) };
+}
+
+/** Scores by deal (generate's `paired`): games of two different players on the same deal, one from each seat. */
+export function pairedScores(results: Pick<MatchResult, 'names' | 'seed' | 'winner'>[]): Record<string, { pairs: number; mean: number; se: number }> {
+  const points = (r: Pick<MatchResult, 'winner'>, seat: 0 | 1) => (r.winner === seat ? 1 : r.winner === 'draw' || r.winner === null ? 0.5 : 0);
+  const deals = new Map<string, { a: string; b: string; sum: number; n: number }>();
+  for (const r of results) {
+    if (r.names[0] === r.names[1]) continue;
+    const [a, b] = [...r.names].sort() as [string, string];
+    const key = `${a}|${b}|${r.seed}`;
+    const d = deals.get(key) ?? { a, b, sum: 0, n: 0 };
+    d.sum += points(r, r.names[0] === a ? 0 : 1);
+    d.n++;
+    deals.set(key, d);
+  }
+  const by = new Map<string, number[]>();
+  for (const d of deals.values()) {
+    if (d.n !== 2) continue;
+    const k = `${d.a} vs ${d.b}`;
+    by.set(k, [...(by.get(k) ?? []), d.sum / 2]);
+  }
+  const out: Record<string, { pairs: number; mean: number; se: number }> = {};
+  for (const [k, xs] of by) {
+    const mean = xs.reduce((t, x) => t + x, 0) / xs.length;
+    const v = xs.length > 1 ? xs.reduce((t, x) => t + (x - mean) ** 2, 0) / (xs.length - 1) : 0;
+    const se = Math.sqrt(v / xs.length);
+    out[k] = { pairs: xs.length, mean, se };
+    const [a, b] = k.split(' vs ') as [string, string];
+    out[`${b} vs ${a}`] = { pairs: xs.length, mean: 1 - mean, se };
+  }
+  return out;
 }

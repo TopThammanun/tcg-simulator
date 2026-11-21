@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import random
+import re
 import shutil
 import time
 
@@ -54,6 +55,36 @@ def gae(data: Data, lam: float) -> tuple[torch.Tensor, torch.Tensor]:
     out[order] = adv
     advt = torch.from_numpy(out).float().to(data.value.device)
     return advt, (advt + data.value).clamp(0, 1)
+
+
+def deck_files() -> dict[str, dict]:
+    """Every deck file's slug -> frontmatter fields this script reads (metaShare, limitless)."""
+    out = {}
+    folder = os.path.join(ROOT, "src", "content", "decks")
+    for f in sorted(os.listdir(folder)):
+        if not f.endswith(".md"):
+            continue
+        text = open(os.path.join(folder, f), encoding="utf-8").read().split("---")[1]
+        out[os.path.splitext(f)[0]] = dict(re.findall(r"^(\w+):\s*(.+?)\s*$", text, re.M))
+    return out
+
+
+def parse_decks(text: str) -> dict[str, float]:
+    """"slug=weight,slug" -> {slug: weight} (weight 1 when left out)."""
+    return {k: float(v) if v else 1.0 for k, _, v in (x.partition("=") for x in text.split(",") if x)}
+
+
+def opponent_decks(extra_text: str, meta_part: float) -> dict[str, float]:
+    """Opponent deck weights for a specialist: `extra` as given (e.g. player=0.1), `meta_part` by the decks' real
+    meta share (decks of one archetype split it), the rest spread evenly over every deck."""
+    decks = deck_files()
+    extra = parse_decks(extra_text)
+    share = {d: float(m["metaShare"]) for d, m in decks.items() if "metaShare" in m}
+    same = {d: sum(1 for e in share if decks[e].get("limitless") == decks[d].get("limitless")) for d in share}
+    share = {d: s / same[d] for d, s in share.items()}
+    total = sum(share.values()) or 1.0
+    even = (1 - meta_part - sum(extra.values())) / len(decks)
+    return {d: round(even + meta_part * share.get(d, 0) / total + extra.get(d, 0), 4) for d in decks}
 
 
 def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
@@ -133,6 +164,10 @@ def main():
     ap.add_argument("--starts-share", type=float, default=0.1, help="share of the games that start from --starts positions")
     ap.add_argument("--focus", help="the network always plays this deck (a specialist), e.g. dragapult-ex")
     ap.add_argument("--vs-weights", default="", help="with --focus: extra weight on some opponent decks, e.g. player=0.4 (the rest spread evenly)")
+    ap.add_argument("--vs-meta", type=float, default=0.0, help="with --focus: this share of the opponent decks follows the real meta share (deck frontmatter metaShare)")
+    ap.add_argument("--variants-a", type=float, default=None, help="with fixed decks: share of the network's own sides that play a real list (default: --variants)")
+    ap.add_argument("--decks-a", default="", help="decks the network plays, slug=weight,... (an exploiter: every deck); overrides --focus's")
+    ap.add_argument("--decks-b", default="", help="decks its opponents play, slug=weight,... (an exploiter: the expert's deck); overrides --focus's")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=480)
     ap.add_argument("--no-server", dest="server", action="store_false", help="compute the networks' moves in the gen.ts workers (no GPU server)")
@@ -175,11 +210,14 @@ def main():
     mix = {k: float(v) for k, v in (x.split(":") for x in a.mix.split(","))}
     focus = {}
     if a.focus:
-        decks = sorted(os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "src", "content", "decks")) if f.endswith(".md"))
-        extra = {k: float(v) for k, v in (x.split("=") for x in a.vs_weights.split(",") if x)}
-        rest = (1 - sum(extra.values())) / len(decks)
-        focus = {"decksA": {a.focus: 1}, "decksB": {d: rest + extra.get(d, 0) for d in decks}}
-        print(f"specialist: plays {a.focus} against {focus['decksB']}", flush=True)
+        focus = {"decksA": {a.focus: 1}, "decksB": opponent_decks(a.vs_weights, a.vs_meta)}
+    if a.decks_a:
+        focus["decksA"] = parse_decks(a.decks_a)
+    if a.decks_b:
+        focus["decksB"] = parse_decks(a.decks_b)
+    if focus:
+        print(f"decks: the network plays {focus.get('decksA', 'all')} against {focus.get('decksB', 'all')}", flush=True)
+    eval_decks = {k: v for k, v in (("decksA", focus.get("decksA")), ("decksB", parse_decks(a.decks_b) if a.decks_b else None)) if v}
     log = open(os.path.join(a.dir, "log.jsonl"), "a")
     server = None
     if a.server:
@@ -193,15 +231,23 @@ def main():
         league = sorted(globmod.glob(os.path.join(a.dir, "league-*.json")))
         players = {
             "net": {"kind": "net", "weights": weights, "temperature": 1, "record": True},
+            # With fixed decks, self-play's other side is the same network unrecorded: only the network's own decks train it.
+            "selfopp": {"kind": "net", "weights": weights, "temperature": 1},
             "old": {"kind": "net", "weights": random.choice(league), "temperature": 1},
             "normal": {"kind": "normal"},
             "hard": {"kind": "hard"},
+            "random": {"kind": "random"},
             "bot": {"kind": "bot", "fast": True},
         }
         if a.frozen:
             players["frozen"] = {"kind": "net", "weights": a.frozen, "temperature": 0}
-        pairs = [{"a": "net", "b": "net" if k == "self" else k, "share": v, **focus} for k, v in mix.items() if v > 0]
-        variants = {"variants": {"path": os.path.join(ROOT, ".cache", "meta", "variants.json"), "share": a.variants}} if a.variants > 0 else {}
+        own = "selfopp" if focus else "net"
+        pairs = [{"a": "net", "b": own if k == "self" else k, "share": v, **focus} for k, v in mix.items() if v > 0]
+        variants = {}
+        if a.variants > 0 or (a.variants_a or 0) > 0:
+            variants = {"variants": {"path": os.path.join(ROOT, ".cache", "meta", "variants.json"), "share": a.variants}}
+            if a.variants_a is not None:
+                variants["variants"]["shareA"] = a.variants_a
         if a.starts:
             variants["starts"] = {"path": os.path.abspath(a.starts), "share": a.starts_share}
         cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs, **variants}
@@ -262,13 +308,17 @@ def main():
                     "bot": {"kind": "bot", "fast": True},
                     **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
                 },
-                "pairs": [{"a": "net", "b": a.eval_vs, "share": 1, **({"decksA": {a.focus: 1}} if a.focus else {})}],
+                # The network's own decks, against every deck evenly (or the --decks-b ones): the field the gates use.
+                "pairs": [{"a": "net", "b": a.eval_vs, "share": 1, **eval_decks}],
                 **({"server": batched} if server else {}),
             }
             er = run_gen(ecfg, os.path.join(a.dir, "eval.json"), server)
             sc = er["scores"][f"net vs {a.eval_vs}"]
             row[f"eval_vs_{a.eval_vs}"] = round(sc["score"] / sc["n"], 4)
             row["eval_n"] = sc["n"]
+            pe = er.get("paired", {}).get(f"net vs {a.eval_vs}")
+            if pe:
+                row["eval_se"] = round(pe["se"], 4)
             shutil.copy(cur_path, os.path.join(a.dir, f"eval-{it}.json"))
         state["iter"] = it
         json.dump(state, open(state_path, "w"))

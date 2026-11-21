@@ -56,8 +56,8 @@ export interface BatchedMatch {
 export interface GameDeps<M extends BatchedMatch, S> {
   players: Record<string, S>;
   newGame(m: M): GameState;
-  /** The served network for a player spec, or null for a bot that plays in the worker. */
-  served(spec: S): Served | null;
+  /** The served network for a player spec playing deck `slug`, or null for a bot that plays in the worker. */
+  served(spec: S, slug: string): Served | null;
   makePlayer(spec: S, slug: string, oppSlug: string, seed: number, out: { add(d: Decision): void } | null): Bot;
   maxActions: number;
 }
@@ -150,7 +150,7 @@ export function* playGame<M extends BatchedMatch, S>(
     const slug = m.decks[i]!;
     const other = m.decks[1 - i]!;
     const seed = m.seed * 2 + i + 1;
-    const served = deps.served(spec);
+    const served = deps.served(spec, slug);
     return {
       bot: served ? null : deps.makePlayer(spec, slug, other, seed, { add: (d) => rows.push(d) }),
       served,

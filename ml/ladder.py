@@ -20,7 +20,7 @@ import time
 import numpy as np
 
 from common import ROOT, run_gen
-from match import spec, wilson
+from match import paired_ci, spec, wilson
 
 LADDER = os.path.join(ROOT, "data", "learn", "ladder.jsonl")
 
@@ -45,11 +45,14 @@ def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note
     r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), srv)
     sc = r["scores"]["A vs B"]
     row = {"a": a, "b": b, "score": sc["score"], "n": sc["n"], "base": base, "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M"), "note": note}
+    pe = r.get("paired", {}).get("A vs B")
+    if pe:
+        row["se"] = round(pe["se"], 5)
     os.makedirs(os.path.dirname(LADDER), exist_ok=True)
     with open(LADDER, "a", encoding="utf-8") as f:
         f.write(json.dumps(row) + "\n")
     lo, hi = wilson(sc["score"], sc["n"])
-    print(f"{a} vs {b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}), {row['seconds']}s")
+    print(f"{a} vs {b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}{paired_ci(r)}), {row['seconds']}s")
     return row
 
 

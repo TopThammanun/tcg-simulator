@@ -3,10 +3,12 @@
     ml/.venv/Scripts/python ml/match.py --a net:.cache/learn/bc.json --b hard --games 960
     ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b net:src/bots/learn/weights.json
 
-Bots: normal, hard, bot / bot-search (the game's bot: bundled network and specialists, without / with look-ahead),
+Bots: normal, hard, random, bot / bot-search (the game's bot: bundled network and the deck's expert, without / with look-ahead),
 net:<weights> (no look-ahead), search:<weights>[@<rollout weights>][:width:samples:horizon] (look-ahead with the
 attack planner's line among the options, as the game uses it; @: a faster network plays the rollouts), search-np:<weights> (look-ahead on policy options only),
 search-ng:<weights> (planner's first step only, without the sure-line checks: the bot of round 2).
+<weights> is a weights file or an expert set: a folder of <deck slug>.json files with default.json for the other decks.
+The score's range is Wilson's over games, then "by deal": each deal's two games (seats swapped) as one mean.
 """
 import argparse
 import math
@@ -17,7 +19,7 @@ from common import ROOT, run_gen
 
 def spec(s: str) -> dict:
     kind, *rest = s.split(":", 1)
-    if kind in ("normal", "hard"):
+    if kind in ("normal", "hard", "random"):
         return {"kind": kind}
     if kind in ("bot", "bot-search"):
         return {"kind": "bot", "fast": kind == "bot"}
@@ -43,6 +45,15 @@ def decks(a) -> dict:
         if text:
             out[side] = {k: float(v) if v else 1.0 for k, _, v in (x.partition("=") for x in text.split(","))}
     return out
+
+
+def paired_ci(r: dict, key: str = "A vs B") -> str:
+    """", by deal x-y" from gen.ts's per-deal scores: each deal's two games (seats swapped) count as one mean, so the
+    deal's luck cancels and the range is usually narrower than Wilson's."""
+    p = r.get("paired", {}).get(key)
+    if not p or p["pairs"] < 2:
+        return ""
+    return f", by deal {(p['mean'] - 1.96 * p['se']) * 100:.1f}-{(p['mean'] + 1.96 * p['se']) * 100:.1f}"
 
 
 def wilson(score: float, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -85,7 +96,7 @@ def main():
     r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), server)
     sc = r["scores"]["A vs B"]
     lo, hi = wilson(sc["score"], sc["n"])
-    print(f"{a.a} vs {a.b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}); "
+    print(f"{a.a} vs {a.b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}{paired_ci(r)}); "
           f"slowest decision A {r['maxThinkMs'].get('A', 0):.0f} ms, B {r['maxThinkMs'].get('B', 0):.0f} ms; {r['seconds']:.0f}s")
     if a.by_deck:
         # A's score by its deck (rows) against B's deck, then by A's deck overall.
