@@ -27,7 +27,17 @@ ml/.venv/Scripts/python ml/train_bc.py --data .cache/learn/bc --out .cache/learn
 ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn/ppo   # self-play PPO; resumes; log.jsonl
 #   the networks' moves run batched on the GPU (ml/serve.py <- scripts/learn/batched.ts, ~8x the games; --no-server = old way);
 #   --overlap plays the next iteration while this one trains, --resign 0.03 lets hopeless sides give up (BOT-LEAP.md L1)
+#   --focus <deck> trains one deck's expert (BOT-NEXT.md: --vs-meta, --variants-a, --pfsp, --patience); --widen --inputs /
+#   --critic: encoder version 4's inputs, the critic that sees all; --sure: imitate lines proved to win; --offmeta: other lists
 ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats (--server: net/bot players batched on the GPU)
+ml/.venv/Scripts/python ml/ladder.py play <A> <B> [--a-decks <deck>]   # one match into data/learn/ladder.jsonl; `table` = everyone's Elo
+ml/.venv/Scripts/python ml/decks.py --a net:<expert> --b net:<W> --decks <deck>   # A plays that deck vs B on every deck (the expert gates) -> data/learn/decks.jsonl
+ml/.venv/Scripts/python ml/experts.py assemble|best|ship   # deck experts: an expert set (folder of <deck>.json + default.json), a run's best eval, float16 into src/bots/learn/experts/
+ml/.venv/Scripts/python ml/league.py --start <set> --root <dir> -- <ppo.py args>   # the experts' league: each deck's expert vs the previous round's set
+ml/.venv/Scripts/python ml/ablate.py --base <expert> --deck <deck> --root <dir>   # each new input group / the critic / --sure vs a control trained as long
+npx tsx scripts/learn/blunders.ts --games 240 [--fast]   # sure wins and Knock Outs the bot misses (--fast: the network alone)
+npx tsx scripts/learn/deck-skills.ts [--weights <file or set>]   # how each deck is piloted: attacks and Prizes per turn, Slowking's combo
+npx tsx scripts/learn/positions.ts --deck slowking --out <file>   # start positions for ppo.py --starts (Slowking ready to Seek)
 ml/.venv/Scripts/python ml/serve_check.py <net.json>   # the GPU server gives model.ts's answers on the same rows
 npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/parity.py <net.json> <dir>   # TS = PyTorch
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
@@ -72,20 +82,29 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `NeedChoice`, becomes `state.pending`, and the action is re-run from `pending.base` with the answers.
   Card effects: `effects/attacks.ts` (by attack name), `abilities.ts`, `trainers.ts`, `energy.ts`;
   passive Abilities, Tools and Stadiums are read where they apply in `rules.ts` / `combat.ts`.
+  What each player can know is kept on `PlayerState` (`prizesKnown` after looking through the whole deck; `revealed`:
+  cards the opponent knows are in that hand; this and the last turn's cards played, attack and Prizes taken:
+  `played` / `lastPlayed`, `attacked` / `lastAttack`, `turnPrizes` / `lastPrizes`); `determinize()` keeps what is known.
   `tests/engine/coverage.test.ts` fails if a card with effect text has no implementation.
 - `src/bots/` — the one bot (there are no difficulty levels): `index.ts` `createBot()` is always the strongest
   version measured: the policy/value network (`learn/weights.json`) with look-ahead (`learn/search.ts`: the
   policy's best few options plus the attack planner's line, played out on determinized deals and scored by the
   value head), or the hard bot when no network is bundled; `{ fast: true }` is the network alone (the simulator
-  and its replays, the review's comparison turn).
+  and its replays, the review's comparison turn). A bot deck can have its own network, an expert trained on that deck
+  (`learn/experts/<deck>.json`, float16, `ml/experts.py ship`): `experts.ts` loads it in the worker at `init`, as its
+  own chunk; decks without one, and a failed load, play the bundled network. Scripts find the same files with
+  `scripts/lib/experts.ts`, and every weights argument also takes an expert set (a folder of `<deck>.json` + `default.json`).
   `scripts/learn/gen.ts` plays training games; with a `server` in its config, `batched.ts` keeps many games in flight
-  per worker and sends every waiting decision to `ml/serve.py` (one select loop, CUDA graphs per batch size) in one frame.
+  per worker and sends every waiting decision to `ml/serve.py` (one select loop, CUDA graphs per batch size) in one frame
+  (`deep.ts`: the look-ahead with its rollouts batched there too, no deadline).
   `learn/`: `encode.ts` (what the network sees: a token per Pokémon in play, card-count bags, globals, one row
-  per legal action or pick; hidden zones only as combined counts), `model.ts` (forward pass; same layers as
+  per legal action or pick; hidden zones only as combined counts; version 4 adds what the player knows and each option
+  tried on the engine, `outcomes`; a network trained on fewer inputs reads its own sizes, `INPUTS_V3`, and
+  `ml/common.py widen()` adds the new ones at zero), `model.ts` (forward pass; same layers as
   `ml/common.py`; version 2 files build card vectors from `card-features.ts`, the printed features, plus a vector
   per trained card, so new cards and changed lists keep the shapes: `ml/common.py` Net2, `train_bc.py --v2`; version 3 is a transformer over every Pokémon, card with a count and option, on the
   same rows: `model3.ts` = `ml/net3.py`, `train_bc.py --v3 --bf16`; BOT-LEAP.md L3), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
-  into training rows). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
+  into training rows; `sureTarget` marks the first move of a line proved to win, for `ppo.py --sure`). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
   `scripts/learn/gen.ts`). The rule-based bots stay as teachers, sparring partners and quick internal models:
   `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning; `sureLine` also runs `winLine` in
   endgames: every order of the moves that draw, search and flip nothing, for a win this turn) + `choose.ts` (pending
