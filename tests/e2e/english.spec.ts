@@ -49,3 +49,14 @@ test('an English game plays to the end and its review is in English', async ({ p
   await expect(page.locator('.sentence')).not.toBeEmpty();
   expect(await visibleText(page)).not.toMatch(THAI);
 });
+
+test('the sitemap lists every page in both languages, each with its other-language address', async ({ request }) => {
+  const xml = await (await request.get('/sitemap.xml')).text();
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!.replace(/^https?:\/\/[^/]+/, ''));
+  for (const path of ['/', '/play/', '/decks/', '/decks/dragapult-ex/', '/review/']) {
+    expect(locs).toContain(path);
+    expect(locs).toContain(path === '/' ? '/en/' : `/en${path}`);
+  }
+  expect(xml.match(/hreflang="en"/g)!.length).toBe(locs.length);
+  expect(await (await request.get('/robots.txt')).text()).toContain('Allow: /');
+});

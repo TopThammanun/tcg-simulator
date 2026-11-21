@@ -59,7 +59,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
 - `src/i18n/` — the two languages: `tx(th, en)` (the current language, `setLang`), `tFor(lang)` for Astro, `localePath`
   / `href` for links that keep the language, `langPaths()` for pages under `src/pages/[...lang]/` (built at `/…` and
   `/en/…`; `Base.astro` writes `<html lang>`, the canonical and hreflang links once `site` is set, and the switch to the
-  other language). Islands read the language from `location.pathname`; Web Workers from their `name` (`remote.ts`).
+  other language; `sitemap.xml.ts` / `robots.txt.ts` list every page in both). Islands read the language from
+  `location.pathname`; Web Workers from their `name` (`remote.ts`).
   English log verbs agree with the player's name (`verb`, `possessive`: "You draw", "Bot draws"); the play screen
   reads log lines in either language (`ui/anim/events.ts`, `ui/recap.ts`). A stored review keeps its language
   (`review/store.ts`); a saved game's end reason is shown in the page's (`reasonText`). `404.astro` has both.
