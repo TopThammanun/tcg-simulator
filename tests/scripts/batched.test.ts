@@ -43,6 +43,18 @@ describe.skipIf(!MODEL)('batched games', () => {
     }, 120_000);
   }
 
+  it('the batched look-ahead (deep.ts) plays move for move like search.ts with the same answers and no deadline', async () => {
+    const players: Record<string, PlayerSpec> = {
+      A: { kind: 'search', weights, width: 3, samples: 2 },
+      B: { kind: 'normal' },
+    };
+    const deep: Record<string, PlayerSpec> = { A: { kind: 'deep', weights, width: 3, samples: 2 }, B: { kind: 'normal' } };
+    const ms = matches(['A', 'B'], 2);
+    const want = ms.map((m) => playMatch(m, players, null, m.id).winner);
+    const got = await playBatched(ms, gameDeps(deep), local, null, { concurrent: 2 });
+    expect(got.sort((x, y) => x.m.id - y.m.id).map((r) => r.winner)).toEqual(want);
+  }, 300_000);
+
   it('resigns a side whose value stays below the line, and plays on to check in the games kept going', async () => {
     const players: Record<string, PlayerSpec> = { A: { kind: 'net', weights }, B: { kind: 'net', weights } };
     // Every network decision says "lost": both sides would resign on their second turn.
