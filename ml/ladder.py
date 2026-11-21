@@ -25,7 +25,7 @@ from match import paired_ci, spec, wilson
 LADDER = os.path.join(ROOT, "data", "learn", "ladder.jsonl")
 
 
-def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note: str) -> dict:
+def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note: str, a_decks: str = "") -> dict:
     tag = f"ladder-{os.getpid()}"
     cfg = {
         "out": os.path.join(ROOT, ".cache", "learn", tag),
@@ -33,7 +33,7 @@ def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note
         "base": base,
         "threads": threads,
         "players": {"A": spec(a), "B": spec(b)},
-        "pairs": [{"a": "A", "b": "B", "share": 1}],
+        "pairs": [{"a": "A", "b": "B", "share": 1, **({"decksA": {d: 1 for d in a_decks.split(",")}} if a_decks else {})}],
     }
     srv = None
     if server:
@@ -45,6 +45,9 @@ def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note
     r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), srv)
     sc = r["scores"]["A vs B"]
     row = {"a": a, "b": b, "score": sc["score"], "n": sc["n"], "base": base, "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M"), "note": note}
+    if a_decks:
+        # A played only these decks: kept for the record, left out of the Elo table (not the same contest).
+        row["a_decks"] = a_decks
     pe = r.get("paired", {}).get("A vs B")
     if pe:
         row["se"] = round(pe["se"], 5)
@@ -114,13 +117,14 @@ def main():
     p.add_argument("--threads", type=int, default=15)
     p.add_argument("--server", action="store_true", help="network players without look-ahead run batched on the GPU")
     p.add_argument("--note", default="")
+    p.add_argument("--a-decks", default="", help="A plays only these decks (comma-separated); the row stays out of the Elo table")
     t = sub.add_parser("table")
     t.add_argument("--anchor", default="bot-search", help="the player rated 0")
     a = ap.parse_args()
     if a.cmd == "play":
-        play(a.a, a.b, a.games, a.base, a.threads, a.server, a.note)
+        play(a.a, a.b, a.games, a.base, a.threads, a.server, a.note, a.a_decks)
         return
-    rows = [json.loads(l) for l in open(LADDER, encoding="utf-8")] if os.path.exists(LADDER) else []
+    rows = [r for r in (json.loads(l) for l in open(LADDER, encoding="utf-8")) if not r.get("a_decks")] if os.path.exists(LADDER) else []
     if not rows:
         raise SystemExit("no results yet")
     print(f"{len(rows)} matches, Elo with {a.anchor} = 0 (95% range)")
