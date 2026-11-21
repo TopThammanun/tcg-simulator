@@ -42,7 +42,7 @@ list มาจากทัวร์นาเมนต์ล่าสุดบน
 
 บอทวางแผนบนการ์ดที่สุ่มใหม่จากข้อมูลสาธารณะเท่านั้น (`determinize()`) จึงไม่เห็นมือหรือเด็คของคุณ บนหน้าเล่นบอทคิดใน Web Worker
 
-ผลการวัดและแผนพัฒนาบอทอยู่ใน [`BOT-RESEARCH.md`](BOT-RESEARCH.md) และ [`BOT-LEAP.md`](BOT-LEAP.md)
+ผลการวัดและแผนพัฒนาบอทอยู่ใน [`BOT-RESEARCH.md`](BOT-RESEARCH.md), [`BOT-LEAP.md`](BOT-LEAP.md) และแผนรอบถัดไป [`BOT-NEXT.md`](BOT-NEXT.md)
 ส่วนระยะห่างระหว่างผล matchup ของบอทกับผลการแข่งจริงอยู่ใน [`data/meta/compare.md`](data/meta/compare.md)
 
 ## เริ่มใช้งาน
@@ -146,6 +146,7 @@ tests/          Vitest และ Playwright (tests/e2e/)
 | [`PLAN.md`](PLAN.md) | แผน เฟส และด่านของโปรเจกต์ |
 | [`BOT-RESEARCH.md`](BOT-RESEARCH.md) | งานวิจัยและการสร้างบอทตัวเดียวที่เก่งที่สุด (network + look-ahead) |
 | [`BOT-LEAP.md`](BOT-LEAP.md) | แผนทำให้บอทเก่งขึ้นแบบก้าวกระโดด (L0–L6) และบันทึกผล |
+| [`BOT-NEXT.md`](BOT-NEXT.md) | แผนรอบถัดไป (N0–N6): ตัวเชี่ยวชาญรายเด็ค, input ที่บอทยังไม่เห็น, writeup ของทีม Kaggle ฉบับเต็ม |
 | [`BATTLE-UX.md`](BATTLE-UX.md) | backlog หน้าเล่น: ให้เหมือนเล่นบนโต๊ะจริง |
 | [`ANIMATION-PLAN.md`](ANIMATION-PLAN.md) | แผนและงานวิจัยแอนิเมชัน |
 | [`AGENTS.md`](AGENTS.md) | คำสั่งทั้งหมด โครงสร้างโค้ดโดยละเอียด และข้อตกลงของโปรเจกต์ |
