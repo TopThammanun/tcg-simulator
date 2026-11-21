@@ -1,10 +1,17 @@
 <script lang="ts">
-  // Game log in Thai. Click a line to see the board at that moment (PLAN.md: ย้อนดูสนามตอนนั้นได้).
+  // Game log in Thai. Click a line to see the board at that moment (PLAN.md: ย้อนดูสนามตอนนั้นได้). When your turn
+  // starts, the bot's turn just played is marked (`recent`): what it did, without a box over the table.
+  import { tx } from '../../i18n';
   import { fly } from 'svelte/transition';
   import type { LogEntry } from '../../engine/types';
   import { motion } from '../../ui/anim/motion';
 
-  let { log, viewing, onview }: { log: LogEntry[]; viewing: number | null; onview: (step: number) => void } = $props();
+  let {
+    log,
+    viewing,
+    recent = null,
+    onview,
+  }: { log: LogEntry[]; viewing: number | null; recent?: number | null; onview: (step: number) => void } = $props();
 
   let box: HTMLDivElement | undefined = $state();
   $effect(() => {
@@ -13,7 +20,7 @@
   });
 </script>
 
-<div class="log" bind:this={box} aria-label="บันทึกเกม">
+<div class="log" bind:this={box} aria-label={tx('บันทึกเกม', 'Game log')}>
   {#each log as e, i (i)}
     <button
       type="button"
@@ -22,6 +29,7 @@
       class:me={e.player === 0}
       class:bot={e.player === 1}
       class:at={viewing === e.step}
+      class:recent={recent !== null && e.turn === recent}
       onclick={() => onview(e.step)}
       in:fly={{ x: -10, duration: motion(220) }}
     >
@@ -31,20 +39,22 @@
 </div>
 
 <style>
+  /* Fills what the side column has left under the card text panel; it scrolls itself. */
   .log {
-    /* Keeps its height in the side column (which scrolls instead), however much sits above it. */
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    max-height: 420px;
+    min-height: 120px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     border: 1px solid var(--line);
     background: var(--card-bg);
-    font-size: 0.8rem;
+    font-size: 12px;
+    line-height: 16px;
     border-radius: var(--radius-lg);
   }
   .line {
-    padding: 2px 8px;
+    padding: 4px 8px;
     border: 0;
     border-left: 3px solid transparent;
     background: none;
@@ -66,6 +76,10 @@
     margin-top: 6px;
     font-weight: 600;
     background: var(--paper-deep);
+  }
+  /* The bot's turn just played, when yours starts. */
+  .line.recent {
+    background: color-mix(in srgb, var(--stamp) 10%, transparent);
   }
   .line.at {
     background: color-mix(in srgb, var(--primary) 14%, transparent);

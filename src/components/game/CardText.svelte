@@ -2,6 +2,7 @@
   // A card's printed text as text (the image is too small to read on the table): name, kind, Abilities and attacks
   // with their cost, or the Trainer / Energy effect. Used by the card view (CardInfo) and the card picked up from the
   // hand (HandDetail).
+  import { tx } from '../../i18n';
   import { def } from '../../engine/db';
   import EffectText from './EffectText.svelte';
   import Energy from './Energy.svelte';
@@ -18,7 +19,7 @@
       {#each d.resistances as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · retreat {d.retreat}
     {/snippet}
     <p class="sub">
-      {d.stage === 'Stage1' ? 'Stage 1' : d.stage === 'Stage2' ? 'Stage 2' : 'Basic'}{d.evolvesFrom ? ` · จาก ${d.evolvesFrom}` : ''}
+      {d.stage === 'Stage1' ? 'Stage 1' : d.stage === 'Stage2' ? 'Stage 2' : 'Basic'}{d.evolvesFrom ? tx(` · จาก ${d.evolvesFrom}`, ` · from ${d.evolvesFrom}`) : ''}
       · {d.hp} HP · {d.types.join('/')}{d.tera ? ' · Tera' : ''}{d.prizes > 1 ? ` · ${d.prizes} prize` : ''}
       <!-- Compact (the card picked up from the hand): weakness, resistance and retreat on the same line, to save one. -->
       {#if compact}<span class="mono"> · {@render battle()}</span>{/if}
@@ -65,15 +66,15 @@
   }
   .sub {
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
   }
   .tag {
     padding: 0 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--stamp);
     color: #fff;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 12px;
   }
   .cost {
     display: inline-flex;
@@ -87,10 +88,10 @@
     width: 1.2em;
     height: 1.2em;
     border-radius: 50%;
-    background: #bbb;
+    background: var(--t-colorless);
     color: #fff;
     font-style: normal;
-    font-size: 0.72em;
+    font-size: 12px;
     font-weight: 700;
   }
   .dmg {

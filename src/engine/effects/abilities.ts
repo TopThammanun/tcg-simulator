@@ -1,6 +1,7 @@
 // Abilities a player uses or that trigger. Passive Abilities (Skyliner, Fairy Zone, Cobalt Command,
 // Flower Curtain, Spherical Shield, Midnight Fluttering, Memory Helix, Festival Lead, Seasoned Skill,
 // ACE Nullifier) are read directly by the rules where they apply.
+import { tx, verb } from '../../i18n';
 import { uniqueByKey, type Ctx } from '../ctx';
 import { def, isTrainerType } from '../db';
 import { abilityOn, addCondition, isActive, provides, stadiumIs, switchIn } from '../rules';
@@ -34,7 +35,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     when: 'activated',
     canUse: (s, p) => s.players[p].hand.length > 0,
     use: (ctx, p) => {
-      const [c] = ctx.pickCards(p, ctx.ps(p).hand, { purpose: 'discard-cost', prompt: 'Trade: ทิ้งการ์ด 1 ใบ', source: 'ns-zoroark-ex' });
+      const [c] = ctx.pickCards(p, ctx.ps(p).hand, { purpose: 'discard-cost', prompt: tx('Trade: ทิ้งการ์ด 1 ใบ', 'Trade: discard a card'), source: 'ns-zoroark-ex' });
       ctx.toDiscard(p, [c!]);
       ctx.draw(p, 2);
     },
@@ -47,7 +48,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       ctx.detachSlot(p, slot);
       ps.deck.push(...slot.stack, ...slot.energy, ...(slot.tool !== null ? [slot.tool] : []));
       ctx.shuffle(p);
-      ctx.log('Dudunsparce สับกลับเข้าเด็ค', p);
+      ctx.log(tx('Dudunsparce สับกลับเข้าเด็ค', 'Dudunsparce is shuffled back into the deck'), p);
     },
   },
   'Recon Directive': {
@@ -56,7 +57,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     use: (ctx, p) => {
       const ps = ctx.ps(p);
       const top = ps.deck.slice(0, 2);
-      const [keep] = ctx.pickCards(p, top, { purpose: 'take', prompt: 'Recon Directive: เลือก 1 ใบขึ้นมือ', secret: true, source: 'drakloak', view: top });
+      const [keep] = ctx.pickCards(p, top, { purpose: 'take', prompt: tx('Recon Directive: เลือก 1 ใบขึ้นมือ', 'Recon Directive: choose a card to put into your hand'), secret: true, source: 'drakloak', view: top });
       ctx.toHand(p, [keep!]);
       for (const c of top) if (c !== keep) ps.deck.push(ctx.take(p, c));
     },
@@ -69,7 +70,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       const sups = top.filter((c) => isTrainerType(keyOf(ctx.s, c), 'Supporter'));
       const picked = ctx.pickCards(p, uniqueByKey(ctx.s, sups), {
         purpose: 'take',
-        prompt: 'Attract Customers: เลือก Supporter',
+        prompt: tx('Attract Customers: เลือก Supporter', 'Attract Customers: choose a Supporter'),
         min: 0,
         secret: true,
         reveal: true,
@@ -87,7 +88,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       return !!a && abilityOn(s, a, 'Festival Lead') && s.players[p].deck.length > 0;
     },
     use: (ctx, p) => {
-      const picked = ctx.search(p, () => true, { prompt: 'Boom Boom Groove: ค้นการ์ด 1 ใบ', max: 1, source: 'thwackey', any: true });
+      const picked = ctx.search(p, () => true, { prompt: tx('Boom Boom Groove: ค้นการ์ด 1 ใบ', 'Boom Boom Groove: search for a card'), max: 1, source: 'thwackey', any: true });
       ctx.toHand(p, picked);
       ctx.shuffle(p);
     },
@@ -97,7 +98,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     canUse: (s, p) => s.players[p].hand.some((c) => def(keyOf(s, c)).category === 'energy' && def(keyOf(s, c)).name === 'Grass Energy'),
     use: (ctx, p, slot) => {
       const grass = ctx.ps(p).hand.filter((c) => ctx.cardName(c) === 'Grass Energy');
-      const [e] = ctx.pickCards(p, uniqueByKey(ctx.s, grass), { purpose: 'attach', prompt: 'Teal Dance: ติด Grass Energy', source: 'teal-mask-ogerpon-ex' });
+      const [e] = ctx.pickCards(p, uniqueByKey(ctx.s, grass), { purpose: 'attach', prompt: tx('Teal Dance: ติด Grass Energy', 'Teal Dance: attach a Grass Energy'), source: 'teal-mask-ogerpon-ex' });
       ctx.take(p, e!);
       slot.energy.push(e!);
       ctx.draw(p, 1);
@@ -112,13 +113,13 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     use: (ctx, p) => {
       const s = ctx.s;
       const damaged = slotsOf(s.players[p]).filter((sl) => sl.damage > 0);
-      const [from] = ctx.pickSlots(p, damaged, { purpose: 'target', prompt: 'Adrena-Brain: ย้ายตัวนับดาเมจจาก Pokémon ของคุณ', source: 'munkidori', hint: 'own' });
+      const [from] = ctx.pickSlots(p, damaged, { purpose: 'target', prompt: tx('Adrena-Brain: ย้ายตัวนับดาเมจจาก Pokémon ของคุณ', 'Adrena-Brain: move damage counters from one of your Pokémon'), source: 'munkidori', hint: 'own' });
       const most = Math.min(3, from!.damage / 10);
-      const n = ctx.pickOption(p, 'ย้ายกี่ตัว', Array.from({ length: most }, (_, i) => `${i + 1} ตัว`), 'munkidori') + 1;
-      const [to] = ctx.pickSlots(p, adrenaTargets(s, p), { purpose: 'target', prompt: 'ย้ายไปไว้ที่ Pokémon ฝั่งตรงข้าม', source: 'munkidori' });
+      const n = ctx.pickOption(p, tx('ย้ายกี่ตัว', 'How many?'), Array.from({ length: most }, (_, i) => tx(`${i + 1} ตัว`, String(i + 1))), 'munkidori') + 1;
+      const [to] = ctx.pickSlots(p, adrenaTargets(s, p), { purpose: 'target', prompt: tx('ย้ายไปไว้ที่ Pokémon ฝั่งตรงข้าม', "Move them to one of your opponent's Pokémon"), source: 'munkidori' });
       from!.damage -= 10 * n;
       to!.damage += 10 * n;
-      ctx.log(`Adrena-Brain ย้ายตัวนับดาเมจ ${n} ตัวไปที่ ${topDef(s, to!).name}`, p);
+      ctx.log(tx(`Adrena-Brain ย้ายตัวนับดาเมจ ${n} ตัวไปที่ ${topDef(s, to!).name}`, `Adrena-Brain moves ${n} damage ${n === 1 ? 'counter' : 'counters'} to ${topDef(s, to!).name}`), p);
     },
   },
   'Subjugating Chains': {
@@ -126,7 +127,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     shared: 'Subjugating Chains',
     canUse: (s, p) => !!s.players[p].active && chainsTargets(s, p).length > 0,
     use: (ctx, p) => {
-      const [to] = ctx.pickSlots(p, chainsTargets(ctx.s, p), { purpose: 'switch', prompt: 'Subjugating Chains: เลือก Pokémon {D} มาเป็นตัวหลัก', source: 'pecharunt-ex' });
+      const [to] = ctx.pickSlots(p, chainsTargets(ctx.s, p), { purpose: 'switch', prompt: tx('Subjugating Chains: เลือก Pokémon {D} มาเป็นตัวหลัก', 'Subjugating Chains: choose a {D} Pokémon to switch in'), source: 'pecharunt-ex' });
       switchIn(ctx, p, to!);
       addCondition(ctx, to!, 'poisoned');
     },
@@ -137,7 +138,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
     when: 'bench',
     shared: 'Last-Ditch',
     use: (ctx, p) => {
-      const picked = ctx.search(p, (k) => isTrainerType(k, 'Supporter'), { prompt: 'Last-Ditch Catch: ค้น Supporter', max: 1, source: 'meowth-ex' });
+      const picked = ctx.search(p, (k) => isTrainerType(k, 'Supporter'), { prompt: tx('Last-Ditch Catch: ค้น Supporter', 'Last-Ditch Catch: search for a Supporter'), max: 1, source: 'meowth-ex' });
       ctx.toHand(p, picked);
       ctx.shuffle(p);
     },
@@ -156,7 +157,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       const energy = others.flatMap((sl) => sl.energy);
       const picked = ctx.pickCards(p, energy, {
         purpose: 'energy',
-        prompt: 'Rapid Vernier: ย้ายพลังงานจาก Pokémon ตัวอื่นมาที่ Iron Leaves ex (กี่ใบก็ได้)',
+        prompt: tx('Rapid Vernier: ย้ายพลังงานจาก Pokémon ตัวอื่นมาที่ Iron Leaves ex (กี่ใบก็ได้)', 'Rapid Vernier: move any amount of Energy from your other Pokémon to Iron Leaves ex'),
         min: 0,
         max: energy.length,
         source: 'iron-leaves-ex',
@@ -207,10 +208,10 @@ export function offerTrigger(ctx: Ctx, p: PlayerId, slot: Slot, when: 'bench' | 
     if (!impl || impl.when !== when || !abilityOn(s, slot, a.name)) continue;
     if (impl.shared && ctx.ps(p).namedUsed.includes(impl.shared)) continue;
     if (impl.canUse && !impl.canUse(s, p, slot)) continue;
-    if (!ctx.yesNo(p, `ใช้ Ability ${a.name}?`, topKey(s, slot), a.name)) continue;
+    if (!ctx.yesNo(p, tx(`ใช้ Ability ${a.name}?`, `Use Ability ${a.name}?`), topKey(s, slot), a.name)) continue;
     if (impl.shared) ctx.ps(p).namedUsed.push(impl.shared);
     slot.usedAbility[a.name] = s.turn;
-    ctx.log(`${ctx.who(p)} ใช้ Ability ${a.name}`, p);
+    ctx.log(tx(`${ctx.who(p)} ใช้ Ability ${a.name}`, `${ctx.who(p)} ${verb(ctx.who(p), 'use')} Ability ${a.name}`), p);
     impl.use(ctx, p, slot);
   }
 }

@@ -1,5 +1,7 @@
 ---
 // One meta deck as a card: its headline Pokémon's art (cropped from the card image), rank, name, meta share.
+import { langOfPath, tFor } from '../i18n';
+
 interface Props {
   href: string;
   name: string;
@@ -13,13 +15,14 @@ interface Props {
   counts?: string;
 }
 const { href, name, rank, share, maxShare = 100, art, note, counts } = Astro.props;
+const t = tFor(langOfPath(Astro.url.pathname));
 ---
 
 <a class="deck-card" href={href}>
   <span class="art" aria-hidden="true">{art && <img src={art} alt="" loading="lazy" decoding="async" width="600" height="825" />}</span>
   <span class="body">
     <span class="top">
-      {rank !== undefined && <span class="caption-4 rank">อันดับ {rank}</span>}
+      {rank !== undefined && <span class="caption-4 rank">{t('อันดับ', 'Rank')} {rank}</span>}
       {share !== undefined && <span class="mono caption-4 pct">{share.toFixed(1)}%</span>}
     </span>
     <span class="name title-2">{name}</span>
@@ -49,7 +52,7 @@ const { href, name, rank, share, maxShare = 100, art, note, counts } = Astro.pro
       transform 0.5s var(--ease);
   }
   .deck-card:hover {
-    border-color: #4a4a4a;
+    border-color: var(--line-strong);
     transform: translateY(-4px);
   }
   .deck-card:active {
@@ -107,7 +110,7 @@ const { href, name, rank, share, maxShare = 100, art, note, counts } = Astro.pro
     height: 4px;
     margin-top: 8px;
     overflow: hidden;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: var(--control);
   }
   .bar span {

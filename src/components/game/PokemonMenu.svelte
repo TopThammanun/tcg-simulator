@@ -2,6 +2,7 @@
   // The pop-up for one of your Pokémon (tap it on the table): Abilities, attacks with their cost and
   // text (and why one can't be used), retreating. Reading never acts: an attack has its own button, and a retreat
   // is picked and then confirmed. Next to the card on wide screens, a sheet at the bottom on phones.
+  import { tx } from '../../i18n';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
   import { def } from '../../engine/db';
@@ -69,12 +70,12 @@
   transition:scale={{ start: 0.9, duration: motion(180), easing: backOut }}
 >
   <header>
-    <button type="button" class="thumb" onclick={() => onzoom(menu.key)} aria-label="ดูการ์ด"><CardFace cardKey={menu.key} /></button>
+    <button type="button" class="thumb" onclick={() => onzoom(menu.key)} aria-label={tx('ดูการ์ด', 'View the card')}><CardFace cardKey={menu.key} /></button>
     <div class="title">
       <strong>{name}</strong>
       <span class="hp mono">HP {hp.left}/{hp.max}</span>
     </div>
-    <button type="button" class="x" onclick={onclose} aria-label="ปิด">✕</button>
+    <button type="button" class="x" onclick={onclose} aria-label={tx('ปิด', 'Close')}>✕</button>
   </header>
   {#if info && (info.energy.length || info.tool || info.conditions.length || info.marks.length)}
     <div class="state">
@@ -91,9 +92,9 @@
         <span class="tag">Ability</span>
         <strong>{ab.name}</strong>
         {#if ab.action}
-          <button type="button" class="use" onclick={() => onact(ab.action!)}>ใช้</button>
+          <button type="button" class="use" onclick={() => onact(ab.action!)}>{tx('ใช้', 'Use')}</button>
         {:else}
-          <span class="auto">{ab.passive ? 'ทำงานเอง' : 'ใช้ไม่ได้ตอนนี้'}</span>
+          <span class="auto">{ab.passive ? tx('ทำงานเอง', 'Always on') : tx('ใช้ไม่ได้ตอนนี้', "Can't be used now")}</span>
         {/if}
       </div>
       <p class="text"><EffectText text={ab.effect} /></p>
@@ -111,14 +112,14 @@
               {#each atk.cost as c}<Energy type={c} />{/each}
               {#if atk.cost.length === 0}<i class="free">–</i>{/if}
             </span>
-            <span class="aname">{atk.name}{atk.from ? ` (จาก ${atk.from})` : ''}</span>
+            <span class="aname">{atk.name}{atk.from ? tx(` (จาก ${atk.from})`, ` (from ${atk.from})`) : ''}</span>
             <span class="dmg mono">{atk.damage}</span>
           </span>
           {#if atk.effect}<span class="text"><EffectText text={atk.effect} /></span>{/if}
           {#if atk.reason}<span class="why">{atk.reason}</span>{/if}
           {#if pvText}<span class="pv" class:ko={pv!.ko > 0} class:sure={pv!.ko >= 1}>{pvText}</span>{/if}
           <button type="button" class="go" disabled={!atk.action} onclick={() => atk.action && onact(atk.action)}>
-            โจมตี{atk.action ? ' · จบเทิร์น' : ''}
+            {tx('โจมตี', 'Attack')}{atk.action ? tx(' · จบเทิร์น', ' · ends the turn') : ''}
           </button>
         </div>
       {/each}
@@ -128,13 +129,13 @@
   {#if menu.retreat}
     <section class="retreat">
       <div class="row">
-        <strong>{menu.active ? 'ถอย' : 'สลับขึ้นเป็นตัวหลัก'}</strong>
-        <span class="rcost">ทิ้งพลังงาน {menu.retreat.cost} ใบ</span>
+        <strong>{menu.active ? tx('ถอย', 'Retreat') : tx('สลับขึ้นเป็นตัวหลัก', 'Switch in')}</strong>
+        <span class="rcost">{tx(`ทิ้งพลังงาน ${menu.retreat.cost} ใบ`, `Discard ${menu.retreat.cost} Energy`)}</span>
       </div>
       {#if menu.retreat.reason}
         <p class="why">{menu.retreat.reason}</p>
       {:else if menu.active}
-        <p class="hint">เลือกตัวที่จะขึ้นมาแทน</p>
+        <p class="hint">{tx('เลือกตัวที่จะขึ้นมาแทน', 'Choose the Pokémon to switch in')}</p>
         <div class="bench">
           {#each menu.retreat.options as o (o.to)}
             <button type="button" class="pick" class:on={retreatTo === o.to} onclick={() => (retreatTo = o.to)} title={def(o.key).name}>
@@ -144,10 +145,10 @@
           {/each}
         </div>
         <button type="button" class="use wide" disabled={!retreatPick} onclick={() => retreatPick && onact(retreatPick.action)}>
-          {retreatPick ? `ถอย ให้ ${def(retreatPick.key).name} ขึ้นมาแทน` : 'แตะตัวที่จะขึ้นมาแทน'}
+          {retreatPick ? tx(`ถอย ให้ ${def(retreatPick.key).name} ขึ้นมาแทน`, `Retreat for ${def(retreatPick.key).name}`) : tx('แตะตัวที่จะขึ้นมาแทน', 'Tap the Pokémon to switch in')}
         </button>
       {:else}
-        <button type="button" class="use wide" onclick={() => onact(menu.retreat!.options[0]!.action)}>สลับขึ้นมา</button>
+        <button type="button" class="use wide" onclick={() => onact(menu.retreat!.options[0]!.action)}>{tx('สลับขึ้นมา', 'Switch in')}</button>
       {/if}
     </section>
   {/if}
@@ -170,12 +171,12 @@
     padding: 10px 12px 12px;
     border: 1px solid #ffffff24;
     border-radius: var(--radius-lg);
-    background: #1f1f1ff5;
-    color: #eceef1;
+    background: color-mix(in srgb, var(--raised) 96%, transparent);
+    color: var(--ink);
     box-shadow:
       0 0 0 1px #0006,
       0 24px 50px -16px #000e;
-    font-size: 0.85rem;
+    font-size: 14px;
     overscroll-behavior: contain;
   }
   .pmenu.sheet {
@@ -205,10 +206,10 @@
   }
   .state .chip {
     padding: 0 7px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: var(--c, #ffffff22);
     color: #fff;
-    font-size: 0.72rem;
+    font-size: 12px;
     font-weight: 600;
   }
   .state .chip.energy {
@@ -221,7 +222,7 @@
     background: #ffffff2e;
   }
   .state .chip.cond {
-    background: #c3352b;
+    background: var(--stamp);
   }
   .title {
     display: flex;
@@ -231,20 +232,20 @@
   }
   .title strong {
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 16px;
     line-height: 1.2;
   }
   .hp {
-    color: #9fd6ac;
-    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--hp-ok) 55%, var(--ink-strong));
+    font-size: 12px;
   }
   .x {
     align-self: flex-start;
     padding: 2px 8px;
     border: 0;
     background: none;
-    color: #eef3ef;
-    font-size: 1rem;
+    color: var(--ink);
+    font-size: 16px;
     cursor: pointer;
   }
   .row {
@@ -255,16 +256,16 @@
   }
   .tag {
     padding: 0 6px;
-    border-radius: 3px;
-    background: #c3352b;
+    border-radius: var(--radius-sm);
+    background: var(--stamp);
     color: #fff;
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
     font-weight: 700;
   }
   .text {
     margin: 0;
-    color: #c9d4cf;
-    font-size: 0.76rem;
+    color: var(--ink-soft);
+    font-size: 12px;
     line-height: 1.4;
   }
   .ability {
@@ -272,19 +273,24 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: #ffffff0a;
   }
+  /* Using an Ability, retreating: ordinary buttons (the attack is the main one). */
   .use {
     margin-left: auto;
-    padding: 4px 14px;
-    border: 0;
-    border-radius: 3px;
-    background: var(--accent);
-    color: var(--accent-ink);
+    padding: 6px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--control);
+    color: var(--ink-strong);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.3s var(--ease);
+  }
+  .use:hover:not(:disabled) {
+    background: var(--control-hover);
   }
   .use.wide {
     margin: 0;
@@ -292,8 +298,8 @@
   }
   .auto {
     margin-left: auto;
-    color: #9aa7a2;
-    font-size: 0.72rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .attacks {
     display: flex;
@@ -314,29 +320,30 @@
   .attack.off {
     border-color: #ffffff1c;
     background: #ffffff06;
-    color: #9aa7a2;
+    color: var(--ink-soft);
   }
   /* The attack itself: its own button, so reading the text never attacks. */
   .attack .go {
     align-self: flex-end;
     margin-top: 4px;
-    padding: 5px 18px;
-    border: 0;
-    border-radius: 3px;
-    background: #c2362b;
-    color: #fff;
+    padding: 6px 20px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-ink);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.12s ease;
+    transition: background-color 0.3s var(--ease);
   }
   .attack .go:hover:not(:disabled) {
-    background: #a52b22;
+    border-color: var(--press);
+    background: var(--press);
   }
   .attack .go:disabled {
-    background: #ffffff14;
-    color: #9aa7a2;
-    box-shadow: none;
+    border-color: var(--line);
+    background: var(--control);
+    color: var(--ink-soft);
     cursor: not-allowed;
   }
   .line {
@@ -360,20 +367,20 @@
     border: 1.5px solid #ffffff44;
     border-radius: 50%;
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: var(--fs-card);
     font-style: normal;
     font-weight: 700;
   }
   .aname {
     flex: 1;
-    font-size: 1rem;
+    font-size: 16px;
     font-weight: 600;
   }
   .dmg {
     font-family: var(--font-mono);
-    font-size: 1.05rem;
+    font-size: 16px;
     font-weight: 600;
-    color: #f0d48a;
+    color: var(--accent);
   }
   .attack.off .dmg {
     color: inherit;
@@ -382,15 +389,15 @@
   .pv {
     align-self: flex-start;
     padding: 2px 8px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: #ffffff1a;
-    color: #cfe0ff;
-    font-size: 0.74rem;
+    color: var(--ink);
+    font-size: 12px;
     font-weight: 600;
   }
   .pv.ko {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
-    color: #ffe08a;
+    color: var(--accent);
   }
   .pv.sure {
     background: var(--accent);
@@ -398,8 +405,8 @@
   }
   .why {
     margin: 0;
-    color: #ff9a8f;
-    font-size: 0.74rem;
+    color: color-mix(in srgb, var(--stamp) 70%, var(--ink-strong));
+    font-size: 12px;
   }
   .retreat {
     display: flex;
@@ -410,13 +417,13 @@
   }
   .rcost {
     margin-left: auto;
-    color: #c9d4cf;
-    font-size: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .hint {
     margin: 0;
-    color: #c9d4cf;
-    font-size: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .bench {
     display: flex;
@@ -432,9 +439,9 @@
     padding: 0;
     border: 0;
     background: none;
-    color: #eef3ef;
+    color: var(--ink);
     font: inherit;
-    font-size: 0.62rem;
+    font-size: var(--fs-card);
     line-height: 1.2;
     text-align: center;
     cursor: pointer;

@@ -1,5 +1,6 @@
 // A Pokémon in play as the zoomed card shows it (CardInfo): what the board draws small or not at all — HP left,
 // Energy and Tool by name, conditions and what they do, effects on it, and the cards under it.
+import { tx } from '../i18n';
 import type { EnergyType } from '../data/cards';
 import { def } from '../engine/db';
 import { maxHp, provides } from '../engine/rules';
@@ -13,31 +14,38 @@ export interface SlotInfo {
   energy: { name: string; type: EnergyType }[];
   tool: string | null;
   conditions: { name: string; does: string }[];
-  /** Effects lasting a while (can't attack next turn, protected), in Thai. */
+  /** Effects lasting a while (can't attack next turn, protected). */
   marks: string[];
   /** The cards under it, the Basic first (what it evolved from). */
   under: string[];
 }
 
-export const CONDITION: Record<Condition, { name: string; does: string }> = {
-  poisoned: { name: 'พิษ (Poisoned)', does: 'โดนดาเมจ 10 ทุกครั้งที่จบเทิร์น จนกว่าจะถอยหรือวิวัฒนาการ' },
-  confused: {
-    name: 'สับสน (Confused)',
-    does: 'ก่อนโจมตีต้องโยนเหรียญ: ก้อย = โจมตีไม่ได้และโดน 30 เอง · หายเมื่อถอยหรือวิวัฒนาการ',
-  },
-};
+export function condition(c: Condition): { name: string; does: string } {
+  return c === 'poisoned'
+    ? {
+        name: tx('พิษ (Poisoned)', 'Poisoned'),
+        does: tx('โดนดาเมจ 10 ทุกครั้งที่จบเทิร์น จนกว่าจะถอยหรือวิวัฒนาการ', 'Takes 10 damage between turns until it retreats or evolves'),
+      }
+    : {
+        name: tx('สับสน (Confused)', 'Confused'),
+        does: tx(
+          'ก่อนโจมตีต้องโยนเหรียญ: ก้อย = โจมตีไม่ได้และโดน 30 เอง · หายเมื่อถอยหรือวิวัฒนาการ',
+          'Flip a coin before attacking: tails = no attack and 30 damage to itself · ends when it retreats or evolves',
+        ),
+      };
+}
 
 function markText(m: Mark, s: GameState): string {
-  const when = m.turn === s.turn ? 'เทิร์นนี้' : `เทิร์น ${m.turn}`;
+  const when = m.turn === s.turn ? tx('เทิร์นนี้', 'this turn') : tx(`เทิร์น ${m.turn}`, `turn ${m.turn}`);
   switch (m.kind) {
     case 'cant-attack':
-      return `โจมตีไม่ได้ (${when})`;
+      return tx(`โจมตีไม่ได้ (${when})`, `Can't attack (${when})`);
     case 'cant-use':
-      return `ใช้ ${m.attack} ไม่ได้ (${when})`;
+      return tx(`ใช้ ${m.attack} ไม่ได้ (${when})`, `Can't use ${m.attack} (${when})`);
     case 'cant-retreat':
-      return `ถอยไม่ได้ (${when})`;
+      return tx(`ถอยไม่ได้ (${when})`, `Can't retreat (${when})`);
     case 'protected':
-      return `ไม่โดนดาเมจจากการโจมตี (${when})`;
+      return tx(`ไม่โดนดาเมจจากการโจมตี (${when})`, `No damage from attacks (${when})`);
   }
 }
 
@@ -56,7 +64,7 @@ export function slotInfo(s: GameState, uid: SlotId): SlotInfo | null {
         return { name: def(k).name, type: def(k).category === 'energy' ? provides(k) : ('Colorless' as EnergyType) };
       }),
       tool: sl.tool !== null ? def(keyOf(s, sl.tool)).name : null,
-      conditions: sl.conditions.map((c) => CONDITION[c]),
+      conditions: sl.conditions.map(condition),
       marks: sl.marks.filter((m) => m.turn >= s.turn).map((m) => markText(m, s)),
       under: sl.stack.slice(0, -1).map((c) => def(keyOf(s, c)).name),
     };

@@ -1,6 +1,7 @@
 // Saved games and their reviews, in this browser's IndexedDB. Without IndexedDB (private windows, blocked
 // storage) everything is kept in memory for the page's life instead, and `persistent` says so.
 import type { TurnReview } from '../analysis/review';
+import { lang, type Lang } from '../i18n';
 import type { SavedGame } from './record';
 
 /** Bump when the review's analysis changes: older stored reviews are then redone. */
@@ -9,6 +10,8 @@ export const REVIEW_VERSION = 4;
 export interface StoredReview {
   id: number;
   version: number;
+  /** The language its words (the moves, why the bot plays its way) are in; none = Thai (older reviews). */
+  lang?: Lang;
   turns: TurnReview[];
 }
 
@@ -108,15 +111,22 @@ export async function restoreGame(x: Deleted): Promise<void> {
   if (x.review) await run(d, REVIEWS, 'readwrite', (s) => s.put(x.review!));
 }
 
-/** The stored review of a game, if it was made by this version of the analysis. */
+/** The stored review of a game, if it was made by this version of the analysis, in the page's language. */
 export async function getReview(id: number): Promise<StoredReview | undefined> {
   const d = await db();
   const r = d ? await run<StoredReview | undefined>(d, REVIEWS, 'readonly', (s) => s.get(id)) : memory.reviews.get(id);
-  return r && r.version === REVIEW_VERSION ? r : undefined;
+  return r && r.version === REVIEW_VERSION && (r.lang ?? 'th') === lang() ? r : undefined;
+}
+
+/** Every stored review made by this version of the analysis, by game id (the game list's badges: numbers only, so any language). */
+export async function listReviews(): Promise<Map<number, StoredReview>> {
+  const d = await db();
+  const all = d ? await run<StoredReview[]>(d, REVIEWS, 'readonly', (s) => s.getAll()) : [...memory.reviews.values()];
+  return new Map(all.filter((r) => r.version === REVIEW_VERSION).map((r) => [r.id, r]));
 }
 
 export async function saveReview(id: number, turns: TurnReview[]): Promise<void> {
-  const r: StoredReview = { id, version: REVIEW_VERSION, turns: structuredClone(turns) };
+  const r: StoredReview = { id, version: REVIEW_VERSION, lang: lang(), turns: structuredClone(turns) };
   const d = await db();
   if (!d) memory.reviews.set(id, r);
   else await run(d, REVIEWS, 'readwrite', (s) => s.put(r));

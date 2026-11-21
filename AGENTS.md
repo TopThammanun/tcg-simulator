@@ -4,7 +4,11 @@ Pokémon TCG matchup simulator: the player's deck vs bots playing the top meta d
 phases and gates are in `PLAN.md` (Thai). Work one phase at a time; each phase starts only after
 the previous phase's gate passes and the user has checked it.
 
-UI text is Thai; card names and card text stay in English.
+The site is in two languages: Thai at `/`, English at `/en/` (`src/i18n/`). Every text a player sees is written in
+place, Thai first: `tx('จบเทิร์น', 'End turn')` in the engine, bots, `src/ui` and Svelte, `t(…)` = `tFor(lang)` in Astro
+pages. Never call `tx` at module top level (the language is set at start: `setLang` in each island and worker). Card
+names and card text stay in English in both. The bot must not read its text (labels, prompts): it plays the same in
+both languages (`tests/i18n/english.test.ts`).
 
 ## Commands
 
@@ -52,6 +56,14 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   scripts' own list (simulator, gates, training) and is not shown on the site.
 - `data/meta/` — real tournament results (`scripts/meta/limitless.ts`) and how far the bots' matchups are from them
   (`scripts/meta/compare.ts`, `compare.md`)
+- `src/i18n/` — the two languages: `tx(th, en)` (the current language, `setLang`), `tFor(lang)` for Astro, `localePath`
+  / `href` for links that keep the language, `langPaths()` for pages under `src/pages/[...lang]/` (built at `/…` and
+  `/en/…`; `Base.astro` writes `<html lang>`, the canonical and hreflang links once `site` is set, and the switch to the
+  other language; `sitemap.xml.ts` / `robots.txt.ts` list every page in both). Islands read the language from
+  `location.pathname`; Web Workers from their `name` (`remote.ts`).
+  English log verbs agree with the player's name (`verb`, `possessive`: "You draw", "Bot draws"); the play screen
+  reads log lines in either language (`ui/anim/events.ts`, `ui/recap.ts`). A stored review keeps its language
+  (`review/store.ts`); a saved game's end reason is shown in the page's (`reasonText`). `404.astro` has both.
 - `src/data/` — plain TypeScript shared by scripts, pages and (later) the engine; no Astro imports
   except `astro/zod`
 - `scripts/` — Node build scripts run with `tsx`
@@ -99,14 +111,25 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `RULES_VERSION`) is raised by a fix that changes how games play out, the old behaviour kept for older games so they
   replay), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
-  game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
-  `ReplayViewer.svelte` replays one turn full screen (a `<dialog>`) with the play screen's Board, hand and animations,
-  step by step or playing on its own: your turn, or the bot's from the same start (`TurnReview.alt.actions`);
-  `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.
+  game; `/review/` exports them all as one file (`gamesFile`) and imports such files. `components/review/`:
+  `Review.svelte` routes to `GameList.svelte` (your record with a link to practise the matchup lost most, the games
+  filtered by deck / opponent / result, each with what its review found, `listReviews()`) or `GameReview.svelte`
+  (one game: the result and one sentence on what mattered most, a button going through the turns worth a look,
+  `summary.ts` `keyTurns` / `reviewSummary`; `WinChart.svelte`, two points per turn of yours, your turns solid and
+  the bot's dashed, `winPoints`; a strip of the turns; `TurnDetail.svelte`, the turn's verdict, the moves played
+  alike folded, the two ways from there as cards, `turnLines`). On a computer the turn is on the table beside it
+  (`ReplayStage.svelte`: Board, hand, step controls, animations; your way or the bot's); on a phone
+  `ReplayViewer.svelte` shows it full screen (a `<dialog>` around ReplayStage) with the moves and the hidden cards:
+  your turn, or the bot's from the same start (`TurnReview.alt.actions`);
+  `/play/?resume=<id>&at=<state index>` plays a saved game on from that point. `current.ts`: the game being played,
+  kept in localStorage after every move (the same record, so `replay()` rebuilds the very same position); the match
+  sheet offers "เล่นต่อเกมที่ค้างไว้"; cleared when the game ends or is left.
 - `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
   its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,
   managed by `MyDecks.svelte` on `/decks/`; `decklist.ts` checks them and names unsupported cards),
-  `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
+  `play.ts` (labels, hand actions), `action-bar.ts` (the command bar under the table: what it says and its buttons
+  for every situation, which one is the main one), `tips.ts` (one-time tips shown in the command bar when their
+  moment comes, instead of a manual read before the first game), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back while it loads or if it fails),
   `images.ts` (card pictures fetched ahead at low priority: the card back and the picked decks' small pictures on
@@ -123,18 +146,23 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   changes at once; animations only show it, the bot waits for them, any input of yours skips them.
   Animations on real elements must not keep `fill: forwards` (it would pin HP and transforms).
 - `src/sim/` — bot-vs-bot runner and stats (Wilson CI, meta-weighted and paired-difference) for the scripts.
-- Pages: `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
+- Pages (each also at `/en/…` in English; the files are in `src/pages/[...lang]/`): `/` (home), `/play/` (Game.svelte: the match sheet — your deck, a meta deck or one of your lists, vs the
   opponent — then the game, played as at a real table; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
-  Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
-  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo. Under the table, the dock's
-  command bar (`.cmd` in Game.svelte) is always there at one height, so the table never moves: what is going on at
-  the left, its buttons at the right (the turn's chips and "จบเทิร์น"; the card picked up: "ใช้ …" or why it can't
-  be played; the questions before ending a turn with an attack left and before leaving a game that isn't over; on
-  the bot's turn its last log line: `waitingText()` in `ui/play.ts`). A tap picks a hand card up and shows its text
-  (`HandDetail.svelte`: over the opponent's side, no taller than that half, the whole text without a scroll box; a
-  second tap or the dock's button plays it, a drag plays it at once). Touch screens (`pointer: coarse`) get 44px
-  buttons; a screen shorter than 480px in landscape is asked to turn. A choice of Pokémon or of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
+  Twin Shotels ruling; `HowTo.svelte` from the match sheet and the game menu), `/review/` (ประวัติเกม: your record, saved games, one
+  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo. The game screen: `TopBar`
+  (☰ the game menu — a `Sheet` with new game, how to play, bot speed, animations, sound, hand order, links —, whose
+  turn, the decks; on a phone the log button), the table, the dock, and on a computer the side column: `Inspector`
+  (the card under the mouse for a moment, any face-up card carrying `data-inspect`, else the card picked up, with a
+  Pokémon's state in play from `SlotState.svelte`) over the log (the bot's last turn marked). Under the table the
+  command bar (`ActionBar.svelte`, from `ui/action-bar.ts`; `ChoiceBar.svelte` for a choice on the table) is always
+  there at one height, so the table never moves: what is going on at the left, its buttons at the right (white =
+  the main one; "จบเทิร์น" turns white when nothing else can be done; red only for leaving a game). A choice in a box
+  over the table (`ChoicePanel`) is confirmed there too. A tap picks a hand card up: its text in the `Inspector` on a
+  computer, in `HandDetail.svelte` over the opponent's half on a phone (whole, no scroll box); a second tap or the
+  bar's button plays it, a drag plays it at once. On a phone the bot's last turn is a button in the bar (a sheet).
+  Touch screens (`pointer: coarse`) get 44px buttons; a screen shorter than 480px in landscape is asked to turn.
+  Shared controls: `src/components/ui/` (`Button`, `IconButton`, `Sheet`, `Switch`, `Segmented`, `Toast`). A choice of Pokémon or of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
   grow) is made on the table: the dock shows `ChoiceBar.svelte` (what is asked, this card's earlier answers) and the
   Pokémon that aren't options dim. Prize cards: `rules.pickPrizes` (the play screen only) asks player 0 which
   face-down Prize to take, by position; bots and look-ahead take them in order (`determinize()` turns it off); the
@@ -151,13 +179,20 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Theme: one dark, flat theme, tokens on `:root` in `layouts/Base.astro` (black page, `--card-bg` #181818 /
   `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` / `--rule` hairlines; `--primary` white for the one
   main action, `--accent` amber for what can be played or picked, `--stamp` red for danger and the opponent;
-  `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve). One type family: Geist
+  `--radius-sm` 4px, `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve; by meaning
+  `--can`, `--mine`, `--theirs`, `--hp-ok` / `--hp-hurt` / `--hp-low`, `--control-hover`, `--line-strong`,
+  `--stamp-press`, `--card-paper`). One type family: Geist
   for Latin and figures with Noto Sans Thai for Thai (`--font-body`), Geist Mono for numbers; named text styles
-  (`.heading-1` … `.caption-5`) on a 12/14/16/18/20/24/30/36/48/60 scale, spacing on 4/8/12/16/24/32/40/48/64/80/96.
+  (`.heading-1` … `.caption-5`) on a 12/14/16/18/20/24/30/36/48/60 scale (`--fs-card` 11px only for what is drawn on
+  a card), spacing on 4/8/12/16/24/32/40/48/64/80/96. `tests/ui/design-tokens.test.ts` fails on a component's text
+  size off the scale, a colour that isn't a token (black and white shades aside) or a token that isn't defined; the
+  drawn cards (`FxLayer`, `CardBack`, `CardFace`) are its exceptions.
   No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. Header: a floating bar,
   a full-height menu on phones. Home: hero with a real game screenshot (`public/home/board.jpg`, retake it after
-  restyling the play screen), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
-  `headlines()` in `lib/decks.ts`), steps, a tagline lit word by word on scroll, FAQ (facts only). The playmat is
+  restyling the play screen; it is also the shared link's `og:image`, an absolute URL once `site` is set in
+  astro.config), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
+  `headlines()` in `lib/decks.ts`), steps, the review beside its screenshot (`public/home/review.jpg`, retake it after
+  restyling the review), a tagline lit word by word on scroll, FAQ (facts only). The playmat is
   flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
   site's own design; the game pieces on the table (card images and back, Energy symbols, the coin) are the real ones.
 

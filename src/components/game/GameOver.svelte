@@ -1,5 +1,6 @@
 <script lang="ts">
   // The end of the game: "ชนะ", "แพ้" or a draw, on a plain sheet over the table.
+  import { tx } from '../../i18n';
   import { fade, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { motion } from '../../ui/anim/motion';
@@ -28,20 +29,23 @@
   } = $props();
 
   const won = $derived(winner === 0);
-  const title = $derived(winner === 'draw' ? 'เสมอ' : won ? 'ชนะ' : 'แพ้');
+  const title = $derived(winner === 'draw' ? tx('เสมอ', 'Draw') : won ? tx('ชนะ', 'You win') : tx('แพ้', 'You lose'));
 </script>
 
 <div class="over" class:won class:lost={winner === 1} transition:fade={{ duration: motion(250) }}>
-  <div class="panel" role="dialog" aria-label="จบเกม" in:scale={{ duration: motion(260), start: 0.96, easing: cubicOut }}>
+  <div class="panel" role="dialog" aria-label={tx('จบเกม', 'Game over')} in:scale={{ duration: motion(260), start: 0.96, easing: cubicOut }}>
     <p class="title">{title}</p>
     <p class="reason">{reason}</p>
     <div class="buttons">
-      {#if onagain}<button type="button" class="primary" onclick={onagain}>เล่นอีกครั้ง (เด็คเดิม)</button>{/if}
-      <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? 'เลือกเด็คใหม่' : 'เกมใหม่'}</button>
-      <button type="button" onclick={onclose}>ดูสนาม</button>
+      {#if onagain}<button type="button" class="primary" onclick={onagain}>{tx('เล่นอีกครั้ง (เด็คเดิม)', 'Play again (same decks)')}</button>{/if}
+      <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? tx('เลือกเด็คใหม่', 'Pick new decks') : tx('เกมใหม่', 'New game')}</button>
+      <button type="button" onclick={onclose}>{tx('ดูสนาม', 'See the table')}</button>
     </div>
-    {#if reviewHref}<a class="review" href={reviewHref}>ทบทวนเกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}
-    <a href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
+    {#if reviewHref}
+      <a class="review" href={reviewHref}>{tx('ทบทวนเกมนี้', 'Review this game')}</a>
+      <span class="what">{tx('เทิร์นไหนพลาด · win% ทั้งเกม · บอทจะเล่นต่างตรงไหน', "Your slips · win% over the game · where the bot would differ")}</span>
+    {/if}
+    <a class="list" href={botHref}>{tx(`ดู list ที่บอทใช้ (${botDeck}) →`, `The bot's list (${botDeck}) →`)}</a>
   </div>
 </div>
 
@@ -105,7 +109,7 @@
       transform 0.3s var(--ease);
   }
   button:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   button:active {
     transform: scale(0.98);
@@ -119,15 +123,40 @@
     border-color: var(--press);
     background: var(--press);
   }
-  a {
-    font-size: 0.85rem;
-    color: var(--primary);
+  /* The review: a button of its own under the others, with what it shows. */
+  a.review {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 240px;
+    margin-top: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--ink-soft);
+    border-radius: var(--radius);
+    color: var(--ink-strong);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.3s var(--ease);
+  }
+  a.review:hover {
+    background: var(--control);
+  }
+  .what {
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  a.list {
+    margin-top: 4px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
     text-underline-offset: 3px;
   }
-  a.review {
-    display: block;
-    margin: 6px 0 4px;
-    font-size: 0.95rem;
-    font-weight: 600;
+  @media (pointer: coarse) {
+    button,
+    a.review {
+      min-height: 44px;
+    }
   }
 </style>

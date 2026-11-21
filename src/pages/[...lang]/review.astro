@@ -1,0 +1,51 @@
+---
+import Review from '../../components/review/Review.svelte';
+import { langPaths, tFor } from '../../i18n';
+import Base from '../../layouts/Base.astro';
+
+export function getStaticPaths() {
+  return langPaths();
+}
+
+const t = tFor(Astro.props.lang);
+---
+
+<Base title={t('ประวัติเกม', 'Game history')}>
+  <header class="page-head">
+    <p class="eyebrow">{t('หลังเกม · เทิร์นไหนที่เกมพลิก', 'After the game · the turn it turned on')}</p>
+    <h1 class="heading-3">{t('ประวัติเกม', 'Game history')}</h1>
+    <p class="how body-7">
+      {
+        t(
+          'เกมที่คุณเล่นจบจะถูกเก็บไว้ในเบราว์เซอร์นี้ กดทบทวนเพื่อดู win% ทุกเทิร์น เทิร์นที่ควรดูก่อน และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่ได้',
+          "Every game you finish is kept in this browser. Review one to see your win% on every turn, the turns to look at first and where the bot would have played differently, then play that turn again.",
+        )
+      }
+    </p>
+  </header>
+  <Review client:only="svelte" />
+</Base>
+
+<style>
+  .page-head {
+    max-width: 680px;
+    margin-bottom: 40px;
+  }
+  /* One game's review has its own heading. */
+  :global(main:has(.head)) .page-head {
+    display: none;
+  }
+  h1 {
+    margin: 0 0 12px;
+  }
+  .how {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+  /* One game's review on a phone: less empty space before the footer. */
+  @media (max-width: 640px) {
+    :global(main:has(.turn-detail)) {
+      padding-bottom: 40px;
+    }
+  }
+</style>

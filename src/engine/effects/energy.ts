@@ -1,4 +1,5 @@
 // Special Energy that does something when attached from hand.
+import { tx } from '../../i18n';
 import type { Ctx } from '../ctx';
 import { isBasicPokemon, pokemon } from '../db';
 import { topDef } from '../state';
@@ -11,7 +12,7 @@ export const ON_ATTACH: Record<string, (ctx: Ctx, p: PlayerId, card: CardId, slo
     const room = benchSpace(ctx, p);
     if (room <= 0) return;
     const picked = ctx.search(p, (k) => isBasicPokemon(k) && pokemon(k).types.includes('Psychic'), {
-      prompt: 'Telepathic Psychic Energy: ค้น Basic Pokémon {P} ลง Bench (สูงสุด 2)',
+      prompt: tx('Telepathic Psychic Energy: ค้น Basic Pokémon {P} ลง Bench (สูงสุด 2)', 'Telepathic Psychic Energy: search for up to 2 Basic {P} Pokémon and put them onto your Bench'),
       max: Math.min(2, room),
       source: 'telepathic-psychic-energy',
     });

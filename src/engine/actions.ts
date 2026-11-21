@@ -1,4 +1,5 @@
 // apply(state, action) -> new state, and legalActions(state). The public engine API.
+import { tx, verb } from '../i18n';
 import { Ctx, GameOver, NeedChoice } from './ctx';
 import { def, isBasicPokemon, pokemon } from './db';
 import { performAttack } from './combat';
@@ -154,72 +155,84 @@ function excitedDive(s: GameState, p: PlayerId, key: string): boolean {
 }
 
 /**
- * Why the current player's hand card can't be played now, in a few Thai words for the play screen; null when it can
+ * Why the current player's hand card can't be played now, in a few words for the play screen; null when it can
  * (exactly when legalActions() has an action for a card of its name). Follows legalActions() check by check.
  */
 export function whyNotPlayable(s: GameState, card: CardId): string | null {
-  if (s.winner !== null || s.phase !== 'main') return 'เกมยังไม่เริ่มหรือจบแล้ว';
-  if (s.pending) return 'ตอบตัวเลือกที่ค้างอยู่ก่อน';
+  if (s.winner !== null || s.phase !== 'main') return tx('เกมยังไม่เริ่มหรือจบแล้ว', "The game hasn't started or is over");
+  if (s.pending) return tx('ตอบตัวเลือกที่ค้างอยู่ก่อน', 'Answer the open choice first');
   const p = s.current;
   const ps = s.players[p];
-  if (!ps.hand.includes(card)) return 'การ์ดไม่ได้อยู่ในมือ';
+  if (!ps.hand.includes(card)) return tx('การ์ดไม่ได้อยู่ในมือ', 'The card is not in your hand');
   const k = keyOf(s, card);
   const d = def(k);
   const mine = slotsOf(ps);
   const aceBlocked = slotsWithAbility(s, opp(p), 'ACE Nullifier').some((sl) => sl.tool !== null);
   if (d.category === 'pokemon') {
     if (d.stage === 'Basic' || excitedDive(s, p, k)) {
-      return ps.bench.length < benchLimit(s, p) ? null : `Bench เต็มแล้ว (${benchLimit(s, p)} ตัว)`;
+      return ps.bench.length < benchLimit(s, p) ? null : tx(`Bench เต็มแล้ว (${benchLimit(s, p)} ตัว)`, `Your Bench is full (${benchLimit(s, p)})`);
     }
-    if (s.turn <= 2) return 'เทิร์นแรกของแต่ละคนยังวิวัฒนาการไม่ได้';
+    if (s.turn <= 2) return tx('เทิร์นแรกของแต่ละคนยังวิวัฒนาการไม่ได้', 'No one can evolve on their first turn');
     if (mine.some((sl) => canEvolve(s, sl, k))) return null;
     const from = pokemon(k).evolvesFrom;
-    if (!from) return 'ลงจากมือตรงๆ ไม่ได้';
+    if (!from) return tx('ลงจากมือตรงๆ ไม่ได้', "It can't be played straight from your hand");
     return mine.some((sl) => topDef(s, sl).name === from)
-      ? `${from} เพิ่งลงสนามหรือเพิ่งวิวัฒนาการเทิร์นนี้ (วิวัฒนาการได้เทิร์นหน้า)`
-      : `ต้องมี ${from} ในสนามก่อน`;
+      ? tx(`${from} เพิ่งลงสนามหรือเพิ่งวิวัฒนาการเทิร์นนี้ (วิวัฒนาการได้เทิร์นหน้า)`, `${from} came into play or evolved this turn (it can evolve next turn)`)
+      : tx(`ต้องมี ${from} ในสนามก่อน`, `You need ${from} in play first`);
   }
-  if (aceBlocked && d.aceSpec) return 'ACE Nullifier ของคู่แข่งห้ามใช้การ์ด ACE SPEC';
-  if (d.category === 'energy') return ps.energyAttached ? 'ติดพลังงานจากมือไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)' : null;
-  if (d.trainerType === 'Tool') return mine.some((sl) => sl.tool === null) ? null : 'Pokémon ทุกตัวติด Tool อยู่แล้ว';
-  if (d.trainerType === 'Item' && ps.itemLockTurn === s.turn) return 'เทิร์นนี้ถูกห้ามใช้ Item';
+  if (aceBlocked && d.aceSpec) return tx('ACE Nullifier ของคู่แข่งห้ามใช้การ์ด ACE SPEC', "Your opponent's ACE Nullifier blocks ACE SPEC cards");
+  if (d.category === 'energy') return ps.energyAttached ? tx('ติดพลังงานจากมือไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)', 'You already attached an Energy from your hand this turn (1 per turn)') : null;
+  if (d.trainerType === 'Tool') return mine.some((sl) => sl.tool === null) ? null : tx('Pokémon ทุกตัวติด Tool อยู่แล้ว', 'All your Pokémon already have a Tool');
+  if (d.trainerType === 'Item' && ps.itemLockTurn === s.turn) return tx('เทิร์นนี้ถูกห้ามใช้ Item', "You can't play Items this turn");
   if (d.trainerType === 'Supporter') {
-    if (ps.supporterPlayed) return 'เล่น Supporter ไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)';
-    if (s.turn === 1) return 'คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก';
+    if (ps.supporterPlayed) return tx('เล่น Supporter ไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)', 'You already played a Supporter this turn (1 per turn)');
+    if (s.turn === 1) return tx('คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก', "The player going first can't play a Supporter on their first turn");
   }
   if (d.trainerType === 'Stadium') {
-    if (ps.stadiumPlayed) return 'เล่น Stadium ไปแล้วเทิร์นนี้';
-    if (s.stadium && keyOf(s, s.stadium.card) === k) return 'Stadium ใบนี้อยู่ในสนามแล้ว';
+    if (ps.stadiumPlayed) return tx('เล่น Stadium ไปแล้วเทิร์นนี้', 'You already played a Stadium this turn');
+    if (s.stadium && keyOf(s, s.stadium.card) === k) return tx('Stadium ใบนี้อยู่ในสนามแล้ว', 'This Stadium is already in play');
   }
   const impl = TRAINERS[k];
-  if (impl?.canPlay && !impl.canPlay(s, p, card)) return TRAINER_NEEDS[k]?.(s, p) ?? 'เงื่อนไขบนการ์ดยังไม่ครบ';
+  if (impl?.canPlay && !impl.canPlay(s, p, card)) return TRAINER_NEEDS[k]?.(s, p) ?? tx('เงื่อนไขบนการ์ดยังไม่ครบ', "The card's conditions aren't met");
   return null;
 }
 
 /** What each Trainer with a condition needs, said when it isn't met (tests/ui/why.test.ts: every one has a line). */
 export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string> = {
-  'ultra-ball': () => 'ต้องมีการ์ดอื่นในมือให้ทิ้ง 2 ใบ',
-  'buddy-buddy-poffin': () => 'Bench เต็มแล้ว',
-  'night-stretcher': () => 'ไม่มี Pokémon หรือพลังงานพื้นฐานในกองทิ้ง',
-  'energy-switch': () => 'ต้องมี Pokémon 2 ตัวขึ้นไป และมีพลังงานพื้นฐานติดอยู่ให้ย้าย',
-  switch: () => 'ไม่มี Pokémon บน Bench ให้สลับ',
-  'crushing-hammer': () => 'Pokémon ของคู่แข่งไม่มีพลังงานติดอยู่',
-  'enhanced-hammer': () => 'Pokémon ของคู่แข่งไม่มีพลังงานพิเศษ',
-  'rare-candy': (s) => (s.turn <= 2 ? 'เทิร์นแรกของแต่ละคนใช้ไม่ได้' : 'ไม่มี Basic ในสนามที่มี Stage 2 ของมันอยู่ในมือ'),
-  'tool-scrapper': () => 'ไม่มี Tool ติดอยู่ในสนาม',
-  'sacred-ash': () => 'ไม่มี Pokémon ในกองทิ้ง',
-  'secret-box': () => 'ต้องมีการ์ดอื่นในมือให้ทิ้ง 3 ใบ',
-  'unfair-stamp': () => 'ใช้ได้เฉพาะเทิร์นหลังจาก Pokémon ของคุณถูก KO',
-  'special-red-card': () => 'ใช้ได้เมื่อคู่แข่งเหลือ Prize 3 ใบหรือน้อยกว่า',
-  'wondrous-patch': () => 'ต้องมี Psychic Energy ในกองทิ้ง และ Pokémon ประเภท Psychic บน Bench',
-  'ns-pp-up': () => "ต้องมีพลังงานพื้นฐานในกองทิ้ง และ N's Pokémon บน Bench",
-  'glass-trumpet': () => 'ต้องมี Tera Pokémon ในสนาม พลังงานพื้นฐานในกองทิ้ง และ Pokémon ประเภท Colorless บน Bench',
-  'bosss-orders': () => 'คู่แข่งไม่มี Pokémon บน Bench',
-  'janines-secret-art': () => 'ไม่มี Pokémon ประเภท Darkness',
-  'rosas-encouragement': () => 'ต้องเหลือ Prize มากกว่าคู่แข่ง มี Stage 2 ในสนาม และพลังงานพื้นฐานในกองทิ้ง',
-  'gladions-final-battle': () => 'ต้องเป็นการ์ดใบเดียวที่เหลือในมือ',
-  'lanas-aid': () => 'ไม่มี Pokémon (ที่ไม่มี Rule Box) หรือพลังงานพื้นฐานในกองทิ้ง',
-  surfer: () => 'ไม่มี Pokémon บน Bench ให้สลับ',
+  'ultra-ball': () => tx('ต้องมีการ์ดอื่นในมือให้ทิ้ง 2 ใบ', 'You need 2 other cards in your hand to discard'),
+  'buddy-buddy-poffin': () => tx('Bench เต็มแล้ว', 'Your Bench is full'),
+  'night-stretcher': () => tx('ไม่มี Pokémon หรือพลังงานพื้นฐานในกองทิ้ง', 'No Pokémon or Basic Energy in your discard pile'),
+  'energy-switch': () => tx('ต้องมี Pokémon 2 ตัวขึ้นไป และมีพลังงานพื้นฐานติดอยู่ให้ย้าย', 'You need 2 or more Pokémon and a Basic Energy attached to move'),
+  switch: () => tx('ไม่มี Pokémon บน Bench ให้สลับ', 'No Benched Pokémon to switch with'),
+  'crushing-hammer': () => tx('Pokémon ของคู่แข่งไม่มีพลังงานติดอยู่', "Your opponent's Pokémon have no Energy attached"),
+  'enhanced-hammer': () => tx('Pokémon ของคู่แข่งไม่มีพลังงานพิเศษ', "Your opponent's Pokémon have no Special Energy"),
+  'rare-candy': (s) =>
+    s.turn <= 2
+      ? tx('เทิร์นแรกของแต่ละคนใช้ไม่ได้', "It can't be used on anyone's first turn")
+      : tx('ไม่มี Basic ในสนามที่มี Stage 2 ของมันอยู่ในมือ', 'No Basic in play whose Stage 2 is in your hand'),
+  'tool-scrapper': () => tx('ไม่มี Tool ติดอยู่ในสนาม', 'No Tools attached in play'),
+  'sacred-ash': () => tx('ไม่มี Pokémon ในกองทิ้ง', 'No Pokémon in your discard pile'),
+  'secret-box': () => tx('ต้องมีการ์ดอื่นในมือให้ทิ้ง 3 ใบ', 'You need 3 other cards in your hand to discard'),
+  'unfair-stamp': () => tx('ใช้ได้เฉพาะเทิร์นหลังจาก Pokémon ของคุณถูก KO', 'Only during a turn right after one of your Pokémon was Knocked Out'),
+  'special-red-card': () => tx('ใช้ได้เมื่อคู่แข่งเหลือ Prize 3 ใบหรือน้อยกว่า', 'Only when your opponent has 3 or fewer Prize cards left'),
+  'wondrous-patch': () =>
+    tx('ต้องมี Psychic Energy ในกองทิ้ง และ Pokémon ประเภท Psychic บน Bench', 'You need a Psychic Energy in your discard pile and a Psychic Pokémon on your Bench'),
+  'ns-pp-up': () => tx("ต้องมีพลังงานพื้นฐานในกองทิ้ง และ N's Pokémon บน Bench", "You need a Basic Energy in your discard pile and an N's Pokémon on your Bench"),
+  'glass-trumpet': () =>
+    tx(
+      'ต้องมี Tera Pokémon ในสนาม พลังงานพื้นฐานในกองทิ้ง และ Pokémon ประเภท Colorless บน Bench',
+      'You need a Tera Pokémon in play, a Basic Energy in your discard pile and a Colorless Pokémon on your Bench',
+    ),
+  'bosss-orders': () => tx('คู่แข่งไม่มี Pokémon บน Bench', 'Your opponent has no Benched Pokémon'),
+  'janines-secret-art': () => tx('ไม่มี Pokémon ประเภท Darkness', 'You have no Darkness Pokémon'),
+  'rosas-encouragement': () =>
+    tx(
+      'ต้องเหลือ Prize มากกว่าคู่แข่ง มี Stage 2 ในสนาม และพลังงานพื้นฐานในกองทิ้ง',
+      'You need more Prize cards left than your opponent, a Stage 2 in play and a Basic Energy in your discard pile',
+    ),
+  'gladions-final-battle': () => tx('ต้องเป็นการ์ดใบเดียวที่เหลือในมือ', 'It must be the only card left in your hand'),
+  'lanas-aid': () => tx('ไม่มี Pokémon (ที่ไม่มี Rule Box) หรือพลังงานพื้นฐานในกองทิ้ง', 'No Pokémon without a Rule Box or Basic Energy in your discard pile'),
+  surfer: () => tx('ไม่มี Pokémon บน Bench ให้สลับ', 'No Benched Pokémon to switch with'),
 };
 
 /** Same as one of legalActions(), treating copies of the same card as equal. */
@@ -250,7 +263,7 @@ function execute(ctx: Ctx, action: Action): void {
       const { slot } = mustSlot(s, action.target);
       ctx.take(p, action.card);
       evolveSlot(ctx, slot, action.card);
-      ctx.log(`${ctx.who(p)} วิวัฒนาการเป็น ${ctx.cardName(action.card)}`, p);
+      ctx.log(tx(`${ctx.who(p)} วิวัฒนาการเป็น ${ctx.cardName(action.card)}`, `${ctx.who(p)} ${verb(ctx.who(p), 'evolve')} into ${ctx.cardName(action.card)}`), p);
       offerTrigger(ctx, p, slot, 'evolve');
       break;
     }
@@ -260,7 +273,13 @@ function execute(ctx: Ctx, action: Action): void {
       ps.energyAttached = true;
       ctx.take(p, action.card);
       slot.energy.push(action.card);
-      ctx.log(`${ctx.who(p)} ติด ${ctx.cardName(action.card)} ให้ ${topDef(s, slot).name}`, p);
+      ctx.log(
+        tx(
+          `${ctx.who(p)} ติด ${ctx.cardName(action.card)} ให้ ${topDef(s, slot).name}`,
+          `${ctx.who(p)} ${verb(ctx.who(p), 'attach', 'attaches')} ${ctx.cardName(action.card)} to ${topDef(s, slot).name}`,
+        ),
+        p,
+      );
       ON_ATTACH[keyOf(s, action.card)]?.(ctx, p, action.card, slot);
       break;
     }
@@ -269,7 +288,13 @@ function execute(ctx: Ctx, action: Action): void {
       if (slot.tool !== null) throw new Error('Pokémon already has a Tool');
       ctx.take(p, action.card);
       slot.tool = action.card;
-      ctx.log(`${ctx.who(p)} ติด ${ctx.cardName(action.card)} ให้ ${topDef(s, slot).name}`, p);
+      ctx.log(
+        tx(
+          `${ctx.who(p)} ติด ${ctx.cardName(action.card)} ให้ ${topDef(s, slot).name}`,
+          `${ctx.who(p)} ${verb(ctx.who(p), 'attach', 'attaches')} ${ctx.cardName(action.card)} to ${topDef(s, slot).name}`,
+        ),
+        p,
+      );
       break;
     }
     case 'trainer':
@@ -281,30 +306,33 @@ function execute(ctx: Ctx, action: Action): void {
       if (!impl) throw new Error(`no ability ${action.name}`);
       slot.usedAbility[action.name] = s.turn;
       if (impl.shared) ps.namedUsed.push(impl.shared);
-      ctx.log(`${ctx.who(p)} ใช้ Ability ${action.name} (${topDef(s, slot).name})`, p);
+      ctx.log(
+        tx(`${ctx.who(p)} ใช้ Ability ${action.name} (${topDef(s, slot).name})`, `${ctx.who(p)} ${verb(ctx.who(p), 'use')} Ability ${action.name} (${topDef(s, slot).name})`),
+        p,
+      );
       impl.use(ctx, p, slot);
       break;
     }
     case 'stadium': {
       ps.namedUsed.push('Academy at Night');
-      const [c] = ctx.pickCards(p, ps.hand, { purpose: 'discard', prompt: 'Academy at Night: วางการ์ดจากมือไว้บนเด็ค', source: 'academy-at-night' });
+      const [c] = ctx.pickCards(p, ps.hand, { purpose: 'discard', prompt: tx('Academy at Night: วางการ์ดจากมือไว้บนเด็ค', 'Academy at Night: put a card from your hand on top of your deck'), source: 'academy-at-night' });
       ctx.take(p, c!);
       const known = knownTopCards(ps);
       ps.deck.unshift(c!);
       ps.knownTop = [c!, ...known];
-      ctx.log(`${ctx.who(p)} วางการ์ด 1 ใบไว้บนเด็ค`, p);
+      ctx.log(tx(`${ctx.who(p)} วางการ์ด 1 ใบไว้บนเด็ค`, `${ctx.who(p)} ${verb(ctx.who(p), 'put')} a card on top of the deck`), p);
       break;
     }
     case 'retreat': {
       const active = ps.active!;
       const cost = retreatCost(s, p, active);
-      const paid = ctx.pickCards(p, active.energy, { purpose: 'discard-cost', prompt: `ถอยตัว: ทิ้งพลังงาน ${cost} ใบ`, min: cost, max: cost });
+      const paid = ctx.pickCards(p, active.energy, { purpose: 'discard-cost', prompt: tx(`ถอยตัว: ทิ้งพลังงาน ${cost} ใบ`, `Retreat: discard ${cost} Energy`), min: cost, max: cost });
       for (const e of paid) {
         active.energy = active.energy.filter((x) => x !== e);
         ps.discard.push(e);
       }
       ps.retreated = true;
-      ctx.log(`${ctx.who(p)} ถอย ${topDef(s, active).name}`, p);
+      ctx.log(tx(`${ctx.who(p)} ถอย ${topDef(s, active).name}`, `${ctx.who(p)} ${verb(ctx.who(p), 'retreat')} ${topDef(s, active).name}`), p);
       switchIn(ctx, p, mustSlot(s, action.to).slot);
       break;
     }
@@ -312,7 +340,7 @@ function execute(ctx: Ctx, action: Action): void {
       performAttack(ctx, p, action.name, action.from);
       return;
     case 'end':
-      ctx.log(`${ctx.who(p)} จบเทิร์น`, p);
+      ctx.log(tx(`${ctx.who(p)} จบเทิร์น`, `${ctx.who(p)} ${verb(ctx.who(p), 'end')} the turn`), p);
       endTurn(ctx);
       return;
     case 'choose':
@@ -335,7 +363,7 @@ function playTrainer(ctx: Ctx, p: PlayerId, card: CardId): void {
   const d = def(k);
   if (d.category !== 'trainer') throw new Error(`${k} is not a Trainer`);
   ctx.take(p, card);
-  ctx.log(`${ctx.who(p)} ใช้ ${d.name}`, p);
+  ctx.log(tx(`${ctx.who(p)} ใช้ ${d.name}`, `${ctx.who(p)} ${verb(ctx.who(p), 'play')} ${d.name}`), p);
 
   if (d.trainerType === 'Stadium') {
     if (ps.stadiumPlayed) throw new Error('already played a Stadium this turn');
@@ -360,9 +388,17 @@ function playTrainer(ctx: Ctx, p: PlayerId, card: CardId): void {
 function setup(ctx: Ctx): void {
   const s = ctx.s;
   const winner: PlayerId = ctx.flip() ? 0 : 1;
-  const goFirst = ctx.pickOption(winner, `${ctx.who(winner)} ชนะการโยนเหรียญ: ไปก่อนหรือไปหลัง?`, ['ไปก่อน', 'ไปหลัง'], undefined, 'first') === 0;
+  const won = ctx.who(winner);
+  const goFirst =
+    ctx.pickOption(
+      winner,
+      tx(`${won} ชนะการโยนเหรียญ: ไปก่อนหรือไปหลัง?`, `${won} ${verb(won, 'win')} the coin flip: go first or second?`),
+      [tx('ไปก่อน', 'Go first'), tx('ไปหลัง', 'Go second')],
+      undefined,
+      'first',
+    ) === 0;
   s.first = goFirst ? winner : opp(winner);
-  ctx.log(`${ctx.who(s.first)} ได้เล่นก่อน`);
+  ctx.log(tx(`${ctx.who(s.first)} ได้เล่นก่อน`, `${ctx.who(s.first)} ${verb(ctx.who(s.first), 'go', 'goes')} first`));
 
   for (const p of [0, 1] as const) {
     const ps = ctx.ps(p);
@@ -371,7 +407,7 @@ function setup(ctx: Ctx): void {
     ps.hand.push(...ps.deck.splice(0, 7));
     while (!ps.hand.some((c) => isBasicPokemon(keyOf(s, c)))) {
       ps.mulligans += 1;
-      ctx.log(`${ctx.who(p)} mulligan (ครั้งที่ ${ps.mulligans})`, p);
+      ctx.log(tx(`${ctx.who(p)} mulligan (ครั้งที่ ${ps.mulligans})`, `${ctx.who(p)} ${verb(ctx.who(p), 'mulligan')} (${ps.mulligans})`), p);
       ps.deck.push(...ps.hand.splice(0));
       ctx.shuffle(p);
       ps.hand.push(...ps.deck.splice(0, 7));
@@ -383,10 +419,10 @@ function setup(ctx: Ctx): void {
   for (const p of [s.first, opp(s.first)] as const) {
     const ps = ctx.ps(p);
     const basics = () => ps.hand.filter((c) => isBasicPokemon(keyOf(s, c)));
-    const [a] = ctx.pickCards(p, basics(), { purpose: 'setup-active', prompt: 'เลือก Pokémon ตัวหลัก', min: 1, max: 1 });
+    const [a] = ctx.pickCards(p, basics(), { purpose: 'setup-active', prompt: tx('เลือก Pokémon ตัวหลัก', 'Choose your Active Pokémon'), min: 1, max: 1 });
     ctx.take(p, a!);
     ps.active = ctx.newSlot(a!);
-    benchFrom(ctx, p, basics(), 'เลือก Pokémon ลง Bench (ไม่เกิน 5)');
+    benchFrom(ctx, p, basics(), tx('เลือก Pokémon ลง Bench (ไม่เกิน 5)', 'Choose Pokémon for your Bench (up to 5)'));
   }
   // The extra cards for the opponent's mulligans come once both sides have put their Pokémon down; Basics
   // drawn that way may still go onto the Bench.
@@ -394,13 +430,16 @@ function setup(ctx: Ctx): void {
     for (const p of [s.first, opp(s.first)] as const) {
       const drawn = mulliganDraw(ctx, p);
       const basics = drawn.filter((c) => isBasicPokemon(keyOf(s, c)));
-      if (basics.length) benchFrom(ctx, p, basics, 'Basic ที่จั่วเพิ่มจาก mulligan: ลง Bench ตัวไหน', 'mulligan');
+      if (basics.length) benchFrom(ctx, p, basics, tx('Basic ที่จั่วเพิ่มจาก mulligan: ลง Bench ตัวไหน', 'Basics drawn for the mulligan: which go onto your Bench?'), 'mulligan');
     }
   }
   for (const p of [0, 1] as const) {
     const ps = ctx.ps(p);
     ps.prizes = ps.deck.splice(0, 6);
-    ctx.log(`${ctx.who(p)}: ${topDef(s, ps.active!).name} เป็นตัวหลัก, Bench ${ps.bench.length} ตัว`, p);
+    ctx.log(
+      tx(`${ctx.who(p)}: ${topDef(s, ps.active!).name} เป็นตัวหลัก, Bench ${ps.bench.length} ตัว`, `${ctx.who(p)}: ${topDef(s, ps.active!).name} Active, ${ps.bench.length} on the Bench`),
+      p,
+    );
   }
   s.phase = 'main';
   startTurn(ctx, s.first);
@@ -410,8 +449,10 @@ function setup(ctx: Ctx): void {
 function mulliganDraw(ctx: Ctx, p: PlayerId): CardId[] {
   const m = ctx.ps(opp(p)).mulligans;
   if (m === 0) return [];
-  const labels = Array.from({ length: m + 1 }, (_, i) => `${i} ใบ`);
-  const n = ctx.pickOption(p, `${ctx.who(opp(p))} mulligan ${m} ครั้ง: จั่วเพิ่มกี่ใบ?`, labels, undefined, 'mulligan-draw');
+  const labels = Array.from({ length: m + 1 }, (_, i) => tx(`${i} ใบ`, `${i} ${i === 1 ? 'card' : 'cards'}`));
+  const who = ctx.who(opp(p));
+  const prompt = tx(`${who} mulligan ${m} ครั้ง: จั่วเพิ่มกี่ใบ?`, `${who} took ${m} ${m === 1 ? 'mulligan' : 'mulligans'}: how many extra cards to draw?`);
+  const n = ctx.pickOption(p, prompt, labels, undefined, 'mulligan-draw');
   const ps = ctx.ps(p);
   const drawn = ps.deck.slice(0, n);
   if (n > 0) ctx.draw(p, n);

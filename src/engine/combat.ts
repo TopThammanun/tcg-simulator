@@ -1,5 +1,6 @@
 // Attacks: damage calculation (PLAN.md order), damage counters, copied attacks and Festival Lead.
 import type { Attack, TypeValue } from '../data/cards';
+import { tx } from '../i18n';
 import { uniqueByKey, type Ctx } from './ctx';
 import { hasRuleBox } from './db';
 import { ATTACKS } from './effects/attacks';
@@ -88,7 +89,7 @@ export class AttackCtx {
     if (dmg <= 0) return 0;
     target.damage += dmg;
     this.hits.add(target.uid);
-    this.ctx.log(`${topDef(s, target).name} โดน ${dmg}`);
+    this.ctx.log(tx(`${topDef(s, target).name} โดน ${dmg}`, `${topDef(s, target).name} takes ${dmg}`));
     return dmg;
   }
 
@@ -112,7 +113,7 @@ export class AttackCtx {
       if (stadiumIs(s, 'battle-cage') && !isActive(s, target)) return;
     }
     target.damage += 10 * n;
-    this.ctx.log(`วางตัวนับดาเมจ ${n} ตัวบน ${topDef(s, target).name}`);
+    this.ctx.log(tx(`วางตัวนับดาเมจ ${n} ตัวบน ${topDef(s, target).name}`, `${n} damage ${n === 1 ? 'counter' : 'counters'} on ${topDef(s, target).name}`));
   }
 
   condition(target: Slot | null, c: Condition): void {
@@ -131,7 +132,7 @@ export class AttackCtx {
       this.s.players[owner].discard.push(c);
       if (slot.uid === this.user.uid && keyOf(this.s, c) === 'boomerang-energy') this.boomerang.push(c);
     }
-    if (cards.length) this.ctx.log(`ทิ้งพลังงาน ${cards.length} ใบจาก ${topDef(this.s, slot).name}`);
+    if (cards.length) this.ctx.log(tx(`ทิ้งพลังงาน ${cards.length} ใบจาก ${topDef(this.s, slot).name}`, `${cards.length} Energy discarded from ${topDef(this.s, slot).name}`));
   }
 
   /** The attacking player picks one Pokémon from `from`. */
@@ -224,10 +225,10 @@ export function performAttack(ctx: Ctx, p: PlayerId, name: string, from?: SlotId
 function resolveAttack(ctx: Ctx, p: PlayerId, attack: Attack): void {
   const s = ctx.s;
   const user = s.players[p].active!;
-  ctx.log(`${ctx.who(p)}: ${topDef(s, user).name} ใช้ ${attack.name}`, p);
+  ctx.log(tx(`${ctx.who(p)}: ${topDef(s, user).name} ใช้ ${attack.name}`, `${ctx.who(p)}: ${topDef(s, user).name} uses ${attack.name}`), p);
   if (user.conditions.includes('confused') && !ctx.flip()) {
     user.damage += 30;
-    ctx.log(`${topDef(s, user).name} สับสน ทำร้ายตัวเอง 30`, p);
+    ctx.log(tx(`${topDef(s, user).name} สับสน ทำร้ายตัวเอง 30`, `${topDef(s, user).name} is Confused and hurts itself for 30`), p);
     checkKOs(ctx);
     return;
   }
@@ -246,23 +247,23 @@ function afterAttack(a: AttackCtx): void {
     // Punk Helmet: 4 damage counters on the attacker, even when the Darkness Pokémon is Knocked Out.
     if (tk === 'punk-helmet' && userInPlay && topDef(s, defender).types.includes('Darkness')) {
       user.damage += 40;
-      ctx.log(`Punk Helmet: วางตัวนับดาเมจ 4 ตัวบน ${topDef(s, user).name}`);
+      ctx.log(tx(`Punk Helmet: วางตัวนับดาเมจ 4 ตัวบน ${topDef(s, user).name}`, `Punk Helmet: 4 damage counters on ${topDef(s, user).name}`));
     }
     const bench = s.players[a.me].bench;
     if (tk === 'handheld-fan' && userInPlay && user.energy.length > 0 && bench.length > 0) {
       const [e] = ctx.pickCards(a.opp, uniqueByKey(s, user.energy), {
         purpose: 'energy',
-        prompt: 'Handheld Fan: เลือกพลังงานของตัวที่โจมตี',
+        prompt: tx('Handheld Fan: เลือกพลังงานของตัวที่โจมตี', "Handheld Fan: choose an Energy on the Attacking Pokémon"),
         source: 'handheld-fan',
       });
       const [to] = ctx.pickSlots(a.opp, bench, {
         purpose: 'target',
-        prompt: 'Handheld Fan: ย้ายพลังงานไปไว้ที่ Pokémon บน Bench ของอีกฝั่ง',
+        prompt: tx('Handheld Fan: ย้ายพลังงานไปไว้ที่ Pokémon บน Bench ของอีกฝั่ง', "Handheld Fan: move it to one of the attacker's Benched Pokémon"),
         source: 'handheld-fan',
       });
       user.energy = user.energy.filter((x) => x !== e);
       to!.energy.push(e!);
-      ctx.log(`Handheld Fan ย้ายพลังงานไปที่ ${topDef(s, to!).name}`);
+      ctx.log(tx(`Handheld Fan ย้ายพลังงานไปที่ ${topDef(s, to!).name}`, `Handheld Fan moves an Energy to ${topDef(s, to!).name}`));
     }
   }
 
@@ -271,7 +272,7 @@ function afterAttack(a: AttackCtx): void {
     if (userInPlay && discard.includes(e)) {
       discard.splice(discard.indexOf(e), 1);
       user.energy.push(e);
-      ctx.log('Boomerang Energy กลับมาติด');
+      ctx.log(tx('Boomerang Energy กลับมาติด', 'Boomerang Energy is attached again'));
     }
   }
   checkKOs(ctx, a.hits);
@@ -284,7 +285,7 @@ function festivalLead(ctx: Ctx, p: PlayerId, userUid: SlotId): void {
   if (!stadiumIs(s, 'festival-grounds') || !abilityOn(s, user, 'Festival Lead')) return;
   const options = usableAttacks(s, p).filter((x) => x.from === undefined);
   if (options.length === 0) return;
-  const labels = [...options.map((o) => o.attack.name), 'ไม่โจมตีอีก'];
-  const i = ctx.pickOption(p, 'Festival Lead: โจมตีอีกครั้ง?', labels, topKey(s, user), 'attack');
+  const labels = [...options.map((o) => o.attack.name), tx('ไม่โจมตีอีก', 'No more attacks')];
+  const i = ctx.pickOption(p, tx('Festival Lead: โจมตีอีกครั้ง?', 'Festival Lead: attack again?'), labels, topKey(s, user), 'attack');
   if (i < options.length) resolveAttack(ctx, p, options[i]!.attack);
 }

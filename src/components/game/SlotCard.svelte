@@ -3,11 +3,12 @@
   // below it, the Tool peeking out above it, conditions on top. Tapping it opens its pop-up
   // (PokemonMenu); `ready` makes it glow when it has an attack or Ability to use.
   // The container sets the width (Active Spot or a Bench cell).
+  import { tx } from '../../i18n';
   import { maxHp, provides, toolKey } from '../../engine/rules';
   import { keyOf, topKey } from '../../engine/state';
   import type { CardId, GameState, Slot } from '../../engine/types';
   import { def } from '../../engine/db';
-  import { CONDITION } from '../../ui/slot-info';
+  import { condition } from '../../ui/slot-info';
   import { energyIcon } from '../../ui/symbols';
   import CardFace from './CardFace.svelte';
 
@@ -85,6 +86,7 @@
     type="button"
     class="card"
     data-card={slot.stack[slot.stack.length - 1]}
+    data-inspect={key}
     aria-label={`${def(key).name} HP ${left}/${hp}`}
     onclick={onclick}
     onpointerdown={onpress}
@@ -97,8 +99,8 @@
     {#if tool}<span class="tool" data-card={slot.tool} title={def(tool).name}>{def(tool).name}</span>{/if}
     {#if slot.damage > 0}<span class="dmg mono" aria-hidden="true"></span>{/if}
     {#if picked > 0}<span class="pick mono">{picked > 1 ? `×${picked}` : '✓'}</span>{/if}
-    {#if slot.conditions.length}<span class="cond" title={slot.conditions.map((c) => `${CONDITION[c].name}: ${CONDITION[c].does}`).join('\n')}
-        >{slot.conditions.map((c) => (c === 'poisoned' ? 'พิษ' : 'สับสน')).join(' ')}</span
+    {#if slot.conditions.length}<span class="cond" title={slot.conditions.map((c) => `${condition(c).name}: ${condition(c).does}`).join('\n')}
+        >{slot.conditions.map((c) => (c === 'poisoned' ? tx('พิษ', 'PSN') : tx('สับสน', 'CNF'))).join(' ')}</span
       >{/if}
     <span class={`hp ${health}`} aria-hidden="true"><span class="mono"></span></span>
   </button>
@@ -113,7 +115,7 @@
             data-card={e.id}
             style:background-image={`url(${energyIcon(e.type)})`}
             title={def(e.key).name}
-            aria-label={`เลือก ${def(e.key).name}`}
+            aria-label={tx(`เลือก ${def(e.key).name}`, `Choose ${def(e.key).name}`)}
             onclick={() => onpickcard?.(pickable.get(e.id)!)}></button
           >
         {:else}
@@ -177,7 +179,7 @@
     border: 0;
     background: none;
     cursor: pointer;
-    border-radius: 7px;
+    border-radius: var(--radius);
     container-type: inline-size;
     transition: transform 0.12s ease;
     -webkit-touch-callout: none;
@@ -226,13 +228,13 @@
     max-height: 17px;
     display: grid;
     place-items: center;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     border: 1px solid #0009;
-    background: #111111cc;
+    background: color-mix(in srgb, var(--card-bg) 80%, transparent);
     color: #fff;
     isolation: isolate;
     overflow: hidden;
-    font-size: 0.66rem;
+    font-size: var(--fs-card);
     font-weight: 600;
     line-height: 1;
     text-shadow: 0 1px 1px #000c;
@@ -248,13 +250,13 @@
     background: var(--fill);
   }
   .hp.ok {
-    --fill: #3f9b5a;
+    --fill: var(--hp-ok);
   }
   .hp.hurt {
-    --fill: #c8941f;
+    --fill: var(--hp-hurt);
   }
   .hp.low {
-    --fill: #c3352b;
+    --fill: var(--hp-low);
   }
   .dmg {
     position: absolute;
@@ -263,12 +265,12 @@
     min-width: 28px;
     padding: 2px 6px;
     border: 1.5px solid #fff;
-    border-radius: 3px;
-    background: #c3352b;
+    border-radius: var(--radius-sm);
+    background: var(--stamp);
     color: #fff;
     font-weight: 700;
-    font-size: 0.82rem;
-    line-height: 1.2;
+    font-size: 14px;
+    line-height: 16px;
     text-align: center;
     box-shadow: 0 2px 5px #000a;
   }
@@ -279,12 +281,12 @@
     max-width: 84%;
     padding: 1px 6px;
     border: 1px solid #0007;
-    border-radius: 4px 4px 2px 2px;
-    background: #e4ddcc;
-    color: #2a261e;
-    font-size: 0.6rem;
+    border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) var(--radius-sm);
+    background: var(--card-paper);
+    color: var(--card-paper-ink);
+    font-size: var(--fs-card);
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 14px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -297,18 +299,20 @@
     padding: 1px 6px;
     background: var(--stamp);
     color: #fff;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 16px;
   }
   .cond {
     position: absolute;
     top: 14%;
     left: 4px;
     padding: 1px 5px;
-    background: #6b2f8a;
+    background: var(--t-psychic);
     color: #fff;
-    font-size: 0.68rem;
-    border-radius: 3px;
+    font-size: var(--fs-card);
+    line-height: 14px;
+    border-radius: var(--radius-sm);
     box-shadow: 0 1px 2px #0008;
   }
   /* Attached Energy peeks out from under the card. */
@@ -323,17 +327,18 @@
     gap: 2px;
     pointer-events: none;
   }
+  /* More than four: they overlap, so a row of them stays as wide as the card. */
   .energy.many .pip + .pip {
-    margin-left: -6px;
+    margin-left: -8px;
   }
   /* The Energy symbol as printed (src/ui/symbols.ts). */
   .pip {
     display: block;
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: #555 center / cover no-repeat;
+    background: var(--control) center / cover no-repeat;
     box-shadow:
       0 0 0 1px #000a,
       0 1px 3px #000c;
@@ -352,18 +357,19 @@
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 53%, transparent);
     }
   }
+  /* An Ability to use: a tab at the top right corner, clear of the picture. */
   .ability-badge {
     position: absolute;
-    left: 50%;
-    top: 46%;
+    right: -6px;
+    top: -9px;
     z-index: 3;
-    transform: translate(-50%, -50%);
-    padding: 2px 8px;
+    padding: 1px 6px;
     border: 1px solid #0006;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 0.62rem;
+    font-size: var(--fs-card);
+    line-height: 14px;
     font-weight: 600;
     white-space: nowrap;
     pointer-events: none;
@@ -417,10 +423,11 @@
     z-index: 4;
     transform: translateX(-50%);
     padding: 1px 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 0.7rem;
+    font-size: var(--fs-card);
+    line-height: 16px;
     font-weight: 700;
     box-shadow: 0 2px 6px #000a;
     pointer-events: none;
@@ -433,26 +440,23 @@
     font-family: var(--font-mono);
   }
   @media (max-width: 700px) {
-    .hp {
-      font-size: 0.56rem;
-    }
     .dmg {
       min-width: 22px;
       padding: 1px 4px;
-      font-size: 0.7rem;
+      font-size: var(--fs-card);
+      line-height: 14px;
     }
     .pip {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
     }
     .tool {
-      top: -7px;
-      font-size: 0.5rem;
+      top: -8px;
       padding: 0 4px;
     }
     .ability-badge {
-      padding: 1px 5px;
-      font-size: 0.52rem;
+      right: -4px;
+      padding: 0 4px;
     }
   }
 </style>

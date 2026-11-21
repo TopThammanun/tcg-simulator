@@ -1,6 +1,7 @@
 <script lang="ts">
   // The card picked up from your hand, as at a real table: its text to read, whole (no scrolling box inside). What
   // you can do with it (play it, tap a Pokémon, or why it can't be played now) is said in the dock, by your hand.
+  import { tx } from '../../i18n';
   import { fly } from 'svelte/transition';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState } from '../../engine/types';
@@ -22,10 +23,10 @@
   const k = $derived(keyOf(s, card));
 </script>
 
-<aside class="detail" aria-label="การ์ดที่หยิบจากมือ" in:fly={{ y: 18, duration: motion(200) }}>
-  <button type="button" class="img" onclick={() => onzoom(k)} title="ดูใบใหญ่"><CardFace cardKey={k} /></button>
+<aside class="detail" aria-label={tx('การ์ดที่หยิบจากมือ', 'Picked up from your hand')} in:fly={{ y: 18, duration: motion(200) }}>
+  <button type="button" class="img" onclick={() => onzoom(k)} title={tx('ดูใบใหญ่', 'See it large')}><CardFace cardKey={k} /></button>
   <div class="body"><CardText cardKey={k} compact /></div>
-  <button type="button" class="close" onclick={onclose} aria-label="ปิด" title="ปิด (Esc)">
+  <button type="button" class="close" onclick={onclose} aria-label={tx('ปิด', 'Close')} title={tx('ปิด (Esc)', 'Close (Esc)')}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
   </button>
 </aside>

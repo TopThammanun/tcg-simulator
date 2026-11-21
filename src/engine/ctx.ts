@@ -1,6 +1,7 @@
 // Execution context for one action. Effects are written as straight-line code; when a player must
 // choose, ctx.choose() either returns the answer given earlier or throws NeedChoice. apply() then
 // stores the request as `pending` and, once answered, re-runs the action from its starting state.
+import { tx, verb } from '../i18n';
 import { def } from './db';
 import { next, shuffleInPlace } from './rng';
 import { keyOf, nameOf } from './state';
@@ -73,8 +74,8 @@ export class Ctx {
       source,
       hint,
       options: [
-        { value: 1, label: 'ใช่' },
-        { value: 0, label: 'ไม่' },
+        { value: 1, label: tx('ใช่', 'Yes') },
+        { value: 0, label: tx('ไม่', 'No') },
       ],
       min: 1,
       max: 1,
@@ -161,7 +162,8 @@ export class Ctx {
     this.s.winner = winner;
     this.s.winReason = reason;
     this.s.phase = 'over';
-    this.log(winner === 'draw' ? `เสมอ (${reason})` : `${this.who(winner)} ชนะ (${reason})`);
+    const w = winner === 'draw' ? '' : this.who(winner);
+    this.log(winner === 'draw' ? tx(`เสมอ (${reason})`, `Draw (${reason})`) : tx(`${w} ชนะ (${reason})`, `${w} ${verb(w, 'win')} (${reason})`));
     throw new GameOver();
   }
 
@@ -171,7 +173,7 @@ export class Ctx {
     const [r, st] = next(this.s.rng.coin);
     this.s.rng.coin = st;
     const heads = r < 0.5;
-    this.log(`โยนเหรียญ: ${heads ? 'หัว' : 'ก้อย'}`);
+    this.log(tx(`โยนเหรียญ: ${heads ? 'หัว' : 'ก้อย'}`, `Coin flip: ${heads ? 'heads' : 'tails'}`));
     return heads;
   }
 
@@ -186,7 +188,10 @@ export class Ctx {
     const ps = this.ps(p);
     const k = Math.max(0, Math.min(n, ps.deck.length));
     if (k > 0) ps.hand.push(...ps.deck.splice(0, k));
-    if (k > 0) this.log(`${this.who(p)} จั่ว ${k} ใบ`, p);
+    if (k > 0) {
+      const w = this.who(p);
+      this.log(tx(`${w} จั่ว ${k} ใบ`, `${w} ${verb(w, 'draw')} ${k} ${k === 1 ? 'card' : 'cards'}`), p);
+    }
     return k;
   }
 

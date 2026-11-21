@@ -2,6 +2,7 @@
   // Taking Prize cards after a Knock Out (engine/rules.ts takePrizes): the whole screen, your six Prize spots as
   // large face-down cards in the order they lie on the mat, a taken one leaving its gap. One to take: a tap takes
   // it. More: tap to mark, then confirm.
+  import { tx } from '../../i18n';
   import { fade, fly } from 'svelte/transition';
   import type { ChoiceRequest } from '../../engine/types';
   import { motion } from '../../ui/anim/motion';
@@ -33,13 +34,13 @@
   const ready = $derived(picks.length === take);
 </script>
 
-<div class="prize-pick" role="dialog" aria-modal="true" aria-label="เลือก Prize" transition:fade={{ duration: motion(180) }}>
+<div class="prize-pick" role="dialog" aria-modal="true" aria-label={tx('เลือก Prize', 'Choose Prize cards')} transition:fade={{ duration: motion(180) }}>
   <header>
-    <p class="kicker">{knockedOut.length ? `${knockedOut.join(', ')} ของบอทถูก Knock Out` : 'Knock Out'}</p>
-    <h2>เลือก Prize {take} ใบ</h2>
+    <p class="kicker">{knockedOut.length ? tx(`${knockedOut.join(', ')} ของบอทถูก Knock Out`, `The bot's ${knockedOut.join(', ')} Knocked Out`) : 'Knock Out'}</p>
+    <h2>{tx(`เลือก Prize ${take} ใบ`, `Choose ${take} Prize ${take === 1 ? 'card' : 'cards'}`)}</h2>
     <p class="how">
-      การ์ดคว่ำอยู่ทุกใบ เลือกใบไหนก็ได้ ใบที่เลือกจะเข้ามือ ·
-      เหลือ <span class="mono">{left}</span> ใบ เก็บแล้วจะเหลือ <span class="mono">{left - take}</span>
+      {tx('การ์ดคว่ำอยู่ทุกใบ เลือกใบไหนก็ได้ ใบที่เลือกจะเข้ามือ ·', 'Every card is face down: pick any, they go into your hand ·')}
+      {tx('เหลือ', '')} <span class="mono">{left}</span> {tx('ใบ เก็บแล้วจะเหลือ', 'left, then')} <span class="mono">{left - take}</span>
     </p>
   </header>
 
@@ -52,7 +53,7 @@
           type="button"
           class="pz"
           class:on={picks.includes(at)}
-          aria-label={`เก็บ Prize ใบที่ ${i + 1}`}
+          aria-label={tx(`เก็บ Prize ใบที่ ${i + 1}`, `Take Prize card ${i + 1}`)}
           aria-pressed={single ? undefined : picks.includes(at)}
           aria-keyshortcuts={String(i + 1)}
           onclick={() => onpick(at)}
@@ -68,11 +69,11 @@
 
   <footer>
     {#if single}
-      <p class="hint">แตะการ์ดใบที่จะเก็บ<span class="keys"> (หรือกดเลข 1–6)</span></p>
+      <p class="hint">{tx('แตะการ์ดใบที่จะเก็บ', 'Tap the card to take')}<span class="keys">{tx(' (หรือกดเลข 1–6)', ' (or press 1–6)')}</span></p>
     {:else}
-      <p class="hint">เลือกแล้ว <span class="mono">{picks.length}/{take}</span></p>
-      <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>ล้าง</button>
-      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>เก็บ {take} ใบ</button>
+      <p class="hint">{tx('เลือกแล้ว', 'Chosen')} <span class="mono">{picks.length}/{take}</span></p>
+      <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>{tx('ล้าง', 'Clear')}</button>
+      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>{tx(`เก็บ ${take} ใบ`, `Take ${take}`)}</button>
     {/if}
   </footer>
 </div>
@@ -88,8 +89,8 @@
     justify-content: center;
     gap: 22px;
     padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-    background: #0d1014f0;
-    color: #eceef1;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    color: var(--ink);
     text-align: center;
     overflow-y: auto;
   }
@@ -99,19 +100,19 @@
   .kicker {
     margin: 0 0 4px;
     color: var(--accent);
-    font-size: 0.85rem;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.02em;
   }
   h2 {
     margin: 0 0 6px;
     color: #fff;
-    font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+    font-size: 30px;
   }
   .how {
     margin: 0;
-    color: #b8bec8;
-    font-size: 0.95rem;
+    color: var(--ink-soft);
+    font-size: 16px;
   }
   /* Three by two on a wide screen, two by three when it stands up; the card size fits both ways. */
   .grid {
@@ -170,10 +171,10 @@
     top: 6px;
     min-width: 22px;
     padding: 0 5px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #000b;
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 12px;
   }
   .tick {
     position: absolute;
@@ -187,7 +188,7 @@
     border-radius: 50%;
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 1.4rem;
+    font-size: 24px;
     font-weight: 700;
   }
   .gap {
@@ -203,8 +204,8 @@
   }
   .hint {
     margin: 0;
-    color: #b8bec8;
-    font-size: 0.9rem;
+    color: var(--ink-soft);
+    font-size: 14px;
   }
   /* No keyboard on a touch screen. */
   @media (hover: none) {
@@ -228,7 +229,7 @@
   .ghost {
     border: 1px solid #ffffff40;
     background: transparent;
-    color: #eceef1;
+    color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;

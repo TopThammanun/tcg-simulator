@@ -2,6 +2,7 @@
 // copies of the position (determinize: hidden cards and coin flips drawn again, so it never peeks at the real ones),
 // any question on the way answered with its first options. The damage (a range when coins or hidden cards decide
 // it), the share of copies where the Active is Knocked Out, and whether Weakness or Resistance applies.
+import { tx } from '../i18n';
 import { apply } from '../engine/actions';
 import { weaknessOf } from '../engine/combat';
 import { opp, slotsOf, topDef } from '../engine/state';
@@ -66,13 +67,14 @@ function find(s: GameState, uid: SlotId) {
  * null when it does nothing to the Active.
  */
 export function previewText(p: AttackPreview): string | null {
-  const tags = [p.weak && 'จุดอ่อน ×2', p.resist && 'ต้านทาน'].filter(Boolean).join(', ');
+  const tags = [p.weak && tx('จุดอ่อน ×2', 'Weakness ×2'), p.resist && tx('ต้านทาน', 'Resistance')].filter(Boolean).join(', ');
   const range = p.min === p.max ? `${p.min}` : `${p.min}–${p.max}`;
-  if (p.ko >= 1) return `KO ตัวหลักได้แน่นอน${tags ? ` (${tags})` : ''}`;
+  const t = tags ? ` (${tags})` : '';
+  if (p.ko >= 1) return tx(`KO ตัวหลักได้แน่นอน${t}`, `Sure KO of the Active Pokémon${t}`);
   if (p.ko > 0) {
     const pct = Math.min(95, Math.max(5, Math.round(p.ko * 20) * 5));
-    return `KO ตัวหลัก ~${pct}% · ไม่ KO ก็เข้า ${range}${tags ? ` (${tags})` : ''}`;
+    return tx(`KO ตัวหลัก ~${pct}% · ไม่ KO ก็เข้า ${range}${t}`, `KO of the Active Pokémon ~${pct}% · else ${range} damage${t}`);
   }
   if (p.max === 0) return null;
-  return `เข้าตัวหลักจริง ${range}${tags ? ` (${tags})` : ''}`;
+  return tx(`เข้าตัวหลักจริง ${range}${t}`, `${range} damage to the Active Pokémon${t}`);
 }

@@ -1,4 +1,5 @@
 import type { Attack, EnergyType } from '../data/cards';
+import { possessive, tx, verb } from '../i18n';
 import type { Ctx } from './ctx';
 import { def, energyCard, hasRuleBox, isLilliesPokemon } from './db';
 import { keyOf, opp, slotsOf, topDef, topKey } from './state';
@@ -145,12 +146,12 @@ export function trimBenches(ctx: Ctx, order: PlayerId[]): void {
     if (over <= 0) continue;
     const gone = ctx.pickSlots(p, ps.bench, {
       purpose: 'bench-trim',
-      prompt: `ทิ้ง Pokémon บน Bench ${over} ตัวให้เหลือ ${benchLimit(ctx.s, p)}`,
+      prompt: tx(`ทิ้ง Pokémon บน Bench ${over} ตัวให้เหลือ ${benchLimit(ctx.s, p)}`, `Discard ${over} Benched Pokémon to get down to ${benchLimit(ctx.s, p)}`),
       min: over,
       max: over,
     });
     for (const sl of gone) {
-      ctx.log(`${ctx.who(p)} ทิ้ง ${topDef(ctx.s, sl).name} จาก Bench`, p);
+      ctx.log(tx(`${ctx.who(p)} ทิ้ง ${topDef(ctx.s, sl).name} จาก Bench`, `${ctx.who(p)} ${verb(ctx.who(p), 'discard')} ${topDef(ctx.s, sl).name} from the Bench`), p);
       ctx.discardSlot(p, sl);
     }
   }
@@ -162,7 +163,8 @@ export function addCondition(ctx: Ctx, slot: Slot, c: Condition): void {
   if (stadiumIs(ctx.s, 'festival-grounds') && slot.energy.length > 0) return;
   if (!isActive(ctx.s, slot) || slot.conditions.includes(c)) return;
   slot.conditions.push(c);
-  ctx.log(`${topDef(ctx.s, slot).name} ติดสถานะ ${c === 'poisoned' ? 'Poisoned' : 'Confused'}`);
+  const cond = c === 'poisoned' ? 'Poisoned' : 'Confused';
+  ctx.log(tx(`${topDef(ctx.s, slot).name} ติดสถานะ ${cond}`, `${topDef(ctx.s, slot).name} is now ${cond}`));
 }
 
 /** Festival Grounds: Pokémon with Energy recover from Special Conditions. */
@@ -193,14 +195,14 @@ export function switchIn(ctx: Ctx, p: PlayerId, benched: Slot): void {
     ps.bench.splice(i, 1);
   }
   ps.active = benched;
-  ctx.log(`${ctx.who(p)}: ${topDef(ctx.s, benched).name} ขึ้นเป็นตัวหลัก`, p);
+  ctx.log(tx(`${ctx.who(p)}: ${topDef(ctx.s, benched).name} ขึ้นเป็นตัวหลัก`, `${ctx.who(p)}: ${topDef(ctx.s, benched).name} becomes Active`), p);
 }
 
 /** p picks one of their Benched Pokémon and switches it with the Active. */
 export function chooseSwitch(ctx: Ctx, p: PlayerId, source?: string): boolean {
   const ps = ctx.ps(p);
   if (ps.bench.length === 0 || !ps.active) return false;
-  const [to] = ctx.pickSlots(p, ps.bench, { purpose: 'switch', prompt: 'เลือก Pokémon บน Bench มาเป็นตัวหลัก', source });
+  const [to] = ctx.pickSlots(p, ps.bench, { purpose: 'switch', prompt: tx('เลือก Pokémon บน Bench มาเป็นตัวหลัก', 'Choose a Benched Pokémon to switch in'), source });
   switchIn(ctx, p, to!);
   return true;
 }
@@ -208,7 +210,7 @@ export function chooseSwitch(ctx: Ctx, p: PlayerId, source?: string): boolean {
 export function promote(ctx: Ctx, p: PlayerId): void {
   const ps = ctx.ps(p);
   if (ps.active || ps.bench.length === 0) return;
-  const [to] = ctx.pickSlots(p, ps.bench, { purpose: 'promote', prompt: 'เลือก Pokémon ขึ้นเป็นตัวหลัก' });
+  const [to] = ctx.pickSlots(p, ps.bench, { purpose: 'promote', prompt: tx('เลือก Pokémon ขึ้นเป็นตัวหลัก', 'Choose your new Active Pokémon') });
   switchIn(ctx, p, to!);
 }
 
@@ -231,7 +233,7 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
           durableTried.add(sl.uid);
           if (ctx.flip()) {
             sl.damage = maxHp(s, sl) - 10;
-            ctx.log(`Durable Body: ${topDef(s, sl).name} ไม่ถูก Knock Out เหลือ HP 10`, p);
+            ctx.log(tx(`Durable Body: ${topDef(s, sl).name} ไม่ถูก Knock Out เหลือ HP 10`, `Durable Body: ${topDef(s, sl).name} is not Knocked Out and keeps 10 HP`), p);
             continue;
           }
         }
@@ -245,7 +247,7 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
       const attacked = byAttack.has(slot.uid);
       let prizes = d.prizes;
       if (attacked && toolKey(s, slot) === 'lillies-pearl' && isLilliesPokemon(topKey(s, slot))) prizes -= 1;
-      ctx.log(`${d.name} ของ${ctx.who(p)} ถูก Knock Out`, p);
+      ctx.log(tx(`${d.name} ของ${ctx.who(p)} ถูก Knock Out`, `${possessive(ctx.who(p))} ${d.name} is Knocked Out`), p);
       ctx.discardSlot(p, slot);
       if (s.current !== p) {
         s.players[p].koThisTurn = true;
@@ -259,10 +261,10 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
   const wins = ([0, 1] as const).map(
     (p) => s.players[p].prizes.length === 0 || slotsOf(s.players[opp(p)]).length === 0,
   );
-  if (wins[0] && wins[1]) ctx.end('draw', 'ทั้งสองฝั่งชนะพร้อมกัน');
+  if (wins[0] && wins[1]) ctx.end('draw', tx('ทั้งสองฝั่งชนะพร้อมกัน', 'both sides won at once'));
   if (wins[0] || wins[1]) {
     const w: PlayerId = wins[0] ? 0 : 1;
-    ctx.end(w, s.players[w].prizes.length === 0 ? 'เก็บ Prize ครบ' : 'อีกฝั่งไม่มี Pokémon ในสนาม');
+    ctx.end(w, s.players[w].prizes.length === 0 ? tx('เก็บ Prize ครบ', 'took every Prize card') : tx('อีกฝั่งไม่มี Pokémon ในสนาม', 'the other side has no Pokémon in play'));
   }
   promote(ctx, opp(s.current));
   promote(ctx, s.current);
@@ -279,7 +281,7 @@ function takePrizes(ctx: Ctx, p: PlayerId, n: number): void {
       player: p,
       purpose: 'take',
       hint: 'prizes',
-      prompt: `เลือก Prize ${k} ใบ`,
+      prompt: tx(`เลือก Prize ${k} ใบ`, `Choose ${k} Prize ${k === 1 ? 'card' : 'cards'}`),
       options: ps.prizes.map((_, i) => ({ value: i, label: `Prize ${i + 1}` })),
       min: k,
       max: k,
@@ -288,7 +290,10 @@ function takePrizes(ctx: Ctx, p: PlayerId, n: number): void {
     for (const i of [...at].sort((a, b) => b - a)) ps.prizes.splice(i, 1);
     ps.hand.push(...taken);
   } else ps.hand.push(...ps.prizes.splice(0, k));
-  ctx.log(`${ctx.who(p)} เก็บ Prize ${k} ใบ (เหลือ ${ps.prizes.length})`, p);
+  ctx.log(
+    tx(`${ctx.who(p)} เก็บ Prize ${k} ใบ (เหลือ ${ps.prizes.length})`, `${ctx.who(p)} ${verb(ctx.who(p), 'take')} ${k} Prize ${k === 1 ? 'card' : 'cards'} (${ps.prizes.length} left)`),
+    p,
+  );
 }
 
 // ---------- turns ----------
@@ -311,7 +316,7 @@ export function endTurn(ctx: Ctx): void {
     const a = s.players[q].active;
     if (a?.conditions.includes('poisoned')) {
       a.damage += 10;
-      ctx.log(`${topDef(s, a).name} โดนพิษ 10`, q);
+      ctx.log(tx(`${topDef(s, a).name} โดนพิษ 10`, `${topDef(s, a).name} takes 10 from Poison`), q);
     }
   }
   checkKOs(ctx);
@@ -340,8 +345,8 @@ export function startTurn(ctx: Ctx, p: PlayerId): void {
       if (sl.marks.length) sl.marks = sl.marks.filter((m) => m.turn >= s.turn);
     }
   }
-  ctx.log(`— เทิร์น ${s.turn}: ${ctx.who(p)} —`, p);
-  if (ps.deck.length === 0) ctx.end(opp(p), `${ctx.who(p)} ไม่มีการ์ดให้จั่ว`);
+  ctx.log(tx(`— เทิร์น ${s.turn}: ${ctx.who(p)} —`, `— Turn ${s.turn}: ${ctx.who(p)} —`), p);
+  if (ps.deck.length === 0) ctx.end(opp(p), tx(`${ctx.who(p)} ไม่มีการ์ดให้จั่ว`, `${ctx.who(p)} had no card to draw`));
   ctx.draw(p, 1);
 }
 

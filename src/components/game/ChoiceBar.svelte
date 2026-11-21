@@ -2,6 +2,7 @@
   // A choice made on the table (a Pokémon: your new Active, Boss's Orders' target, where Energy goes; an Energy
   // attached to a Pokémon): only a short bar with what is asked, the card asking, and what this card's earlier
   // questions were answered with. You tap on the table itself; a pick of several has its buttons here.
+  import { tx } from '../../i18n';
   import { fly } from 'svelte/transition';
   import { CARDS } from '../../engine/db';
   import type { ChoiceRequest } from '../../engine/types';
@@ -28,13 +29,13 @@
   const single = $derived(req.min === 1 && req.max === 1);
   const ready = $derived(picks.length >= req.min && picks.length <= req.max);
   const onEnergy = $derived(req.options.length > 0 && req.options[0]!.slot === undefined);
-  const how = $derived(onEnergy ? 'แตะพลังงานบน Pokémon ที่สว่าง' : 'แตะ Pokémon ที่สว่างบนสนาม');
+  const how = $derived(onEnergy ? tx('แตะพลังงานบน Pokémon ที่สว่าง', 'Tap an Energy on a lit Pokémon') : tx('แตะ Pokémon ที่สว่างบนสนาม', 'Tap a lit Pokémon on the table'));
   const source = $derived(req.source && CARDS[req.source] ? req.source : null);
 </script>
 
 <div class="bar" role="status" aria-label={req.prompt} in:fly={{ y: 10, duration: motion(180) }}>
   {#if source}
-    <button type="button" class="src" title="การ์ดที่กำลังใช้" onclick={() => onzoom(source)}><CardFace cardKey={source} /></button>
+    <button type="button" class="src" title={tx('การ์ดที่กำลังใช้', 'The card being played')} onclick={() => onzoom(source)}><CardFace cardKey={source} /></button>
   {/if}
   <div class="what">
     {#if earlier.length}
@@ -42,15 +43,15 @@
     {/if}
     <strong>{req.prompt}</strong>
     <span class="how">
-      {how}{req.repeat ? ' (แตะซ้ำได้)' : ''}{single
+      {how}{req.repeat ? tx(' (แตะซ้ำได้)', ' (tap again for more)') : ''}{single
         ? ''
-        : ` · เลือกแล้ว ${picks.length}${req.max < 99 ? `/${req.max}` : ''}`}
+        : ` · ${tx('เลือกแล้ว', 'chosen')} ${picks.length}${req.max < 99 ? `/${req.max}` : ''}`}
     </span>
   </div>
   {#if !single}
     <div class="acts">
-      <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>ล้าง</button>
-      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>ยืนยัน</button>
+      <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>{tx('ล้าง', 'Clear')}</button>
+      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>{tx('ยืนยัน', 'Confirm')}</button>
     </div>
   {/if}
 </div>
@@ -96,7 +97,7 @@
   }
   .chip {
     padding: 0 8px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--accent) 22%, transparent);
     font-size: 12px;
     line-height: 18px;

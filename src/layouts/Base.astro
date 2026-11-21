@@ -1,31 +1,59 @@
 ---
+import { langOfPath, localePath, stripLang, tFor } from '../i18n';
+
 interface Props {
   title: string;
   description?: string;
 }
-const { title, description = 'ซ้อม matchup Pokémon TCG กับบอทที่เล่นเด็คใน meta ในเบราว์เซอร์' } = Astro.props;
-const path = Astro.url.pathname;
+// The page's language comes from its path: /en/… is English (src/pages/[...lang]/), everything else Thai.
+const lang = langOfPath(Astro.url.pathname);
+const t = tFor(lang);
+const {
+  title,
+  description = t('ซ้อม matchup Pokémon TCG กับบอทที่เล่นเด็คใน meta ในเบราว์เซอร์', 'Practise Pokémon TCG matchups against bots playing the meta decks, in your browser'),
+} = Astro.props;
+const path = stripLang(Astro.url.pathname);
 const nav = [
-  { href: '/', label: 'หน้าแรก' },
-  { href: '/play/', label: 'เล่น' },
-  { href: '/decks/', label: 'เด็ค' },
-  { href: '/review/', label: 'ประวัติเกม' },
+  { href: '/', label: t('หน้าแรก', 'Home') },
+  { href: '/play/', label: t('เล่น', 'Play') },
+  { href: '/decks/', label: t('เด็ค', 'Decks') },
+  { href: '/review/', label: t('ประวัติเกม', 'History') },
 ];
 const current = (href: string) => path === href || (href !== '/' && path.startsWith(href));
 const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
-const fullTitle = `${title} · สนามซ้อม Matchup`;
+const brand = t('สนามซ้อม Matchup', 'Matchup Practice');
+const fullTitle = `${title} · ${brand}`;
+// Search engines: this page's address in each language (absolute once `site` is set in astro.config).
+const url = (p: string) => (Astro.site ? new URL(p, Astro.site).href : p);
+const alternates = [
+  { hreflang: 'th', href: url(localePath('th', path)) },
+  { hreflang: 'en', href: url(localePath('en', path)) },
+  { hreflang: 'x-default', href: url(localePath('th', path)) },
+];
+const other = lang === 'th' ? 'en' : 'th';
+const switchTo = { lang: other, href: localePath(other, path), label: other === 'en' ? 'EN' : 'ไทย', title: other === 'en' ? 'English' : 'ภาษาไทย' };
+// The picture a shared link shows: absolute once `site` is set in astro.config (crawlers want a full URL).
+const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
 ---
 
 <!doctype html>
-<html lang="th">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#000000" />
+    <link rel="canonical" href={url(localePath(lang, path))} />
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'th_TH'} />
+    <meta property="og:locale:alternate" content={lang === 'en' ? 'th_TH' : 'en_US'} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1440" />
+    <meta property="og:image:height" content="900" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,26 +69,29 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     <script is:inline>document.documentElement.classList.add('js');</script>
   </head>
   <body>
-    <a class="skip" href="#main">ข้ามไปเนื้อหา</a>
+    <a class="skip" href="#main">{t('ข้ามไปเนื้อหา', 'Skip to content')}</a>
     <header class="nav-wrap">
-      <nav class="nav" aria-label="เมนูหลัก">
-        <a class="brand" href="/">
+      <nav class="nav" aria-label={t('เมนูหลัก', 'Main menu')}>
+        <a class="brand" href={localePath(lang, '/')}>
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
             <rect x="4" y="4" width="14" height="20" rx="3" fill="currentColor" opacity="0.35" />
             <rect x="12" y="8" width="14" height="20" rx="3" fill="currentColor" />
           </svg>
-          สนามซ้อม Matchup
+          {brand}
         </a>
         <div class="links" id="nav-links">
           {
             nav.map((n, i) => (
-              <a href={n.href} style={`--i:${i}`} aria-current={current(n.href) ? 'page' : undefined}>
+              <a href={localePath(lang, n.href)} style={`--i:${i}`} aria-current={current(n.href) ? 'page' : undefined}>
                 {n.label}
               </a>
             ))
           }
+          <a class="lang-switch" href={switchTo.href} hreflang={switchTo.lang} lang={switchTo.lang} title={switchTo.title} style={`--i:${nav.length}`}>
+            {switchTo.label}
+          </a>
         </div>
-        <button type="button" class="toggle" aria-expanded="false" aria-controls="nav-links" aria-label="เปิดเมนู">
+        <button type="button" class="toggle" aria-expanded="false" aria-controls="nav-links" aria-label={t('เปิดเมนู', 'Open the menu')}>
           <span></span><span></span>
         </button>
       </nav>
@@ -71,21 +102,26 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     <footer class="footer">
       <div class="footer-inner">
         <div>
-          <a class="brand" href="/">
+          <a class="brand" href={localePath(lang, '/')}>
             <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
               <rect x="4" y="4" width="14" height="20" rx="3" fill="currentColor" opacity="0.35" />
               <rect x="12" y="8" width="14" height="20" rx="3" fill="currentColor" />
             </svg>
-            สนามซ้อม Matchup
+            {brand}
           </a>
           <p class="caption-5 legal">
-            เว็บแฟนเมด ไม่หากำไร ไม่เกี่ยวข้องกับ The Pokémon Company, Nintendo, Creatures หรือ GAME FREAK
-            รูปและข้อความการ์ดเป็นของเจ้าของลิขสิทธิ์ ดึงจาก TCGdex และ pokemontcg.io
+            {
+              t(
+                'เว็บแฟนเมด ไม่หากำไร ไม่เกี่ยวข้องกับ The Pokémon Company, Nintendo, Creatures หรือ GAME FREAK รูปและข้อความการ์ดเป็นของเจ้าของลิขสิทธิ์ ดึงจาก TCGdex และ pokemontcg.io',
+                'A non-profit fan site, not affiliated with The Pokémon Company, Nintendo, Creatures or GAME FREAK. Card images and text belong to their owners, loaded from TCGdex and pokemontcg.io.',
+              )
+            }
           </p>
         </div>
-        <nav class="footer-links" aria-label="ลิงก์ท้ายเว็บ">
-          {nav.slice(1).map((n) => <a href={n.href}>{n.label}</a>)}
-          <a href={ISSUES} rel="noopener">แจ้งปัญหา</a>
+        <nav class="footer-links" aria-label={t('ลิงก์ท้ายเว็บ', 'Footer links')}>
+          {nav.slice(1).map((n) => <a href={localePath(lang, n.href)}>{n.label}</a>)}
+          <a href={ISSUES} rel="noopener">{t('แจ้งปัญหา', 'Report a problem')}</a>
+          <a class="lang-switch" href={switchTo.href} hreflang={switchTo.lang} lang={switchTo.lang}>{switchTo.title}</a>
         </nav>
       </div>
     </footer>
@@ -96,11 +132,14 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
   // Phones: the menu opens as a full height panel; the toggle's two lines turn into a cross.
   const toggle = document.querySelector<HTMLButtonElement>('.nav .toggle');
   const root = document.documentElement;
+  const en = root.lang === 'en';
   const setOpen = (open: boolean) => {
     root.classList.toggle('menu-open', open);
     toggle?.setAttribute('aria-expanded', String(open));
-    toggle?.setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+    toggle?.setAttribute('aria-label', open ? (en ? 'Close the menu' : 'ปิดเมนู') : en ? 'Open the menu' : 'เปิดเมนู');
   };
+  // The other language's link keeps this page's query (/play/?opp=…) and anchor (/decks/#mine).
+  document.querySelectorAll<HTMLAnchorElement>('a.lang-switch').forEach((a) => (a.href = a.pathname + location.search + location.hash));
   toggle?.addEventListener('click', () => setOpen(!root.classList.contains('menu-open')));
   document.querySelectorAll('#nav-links a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
   addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
@@ -146,6 +185,22 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     --radius: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
+    --radius-sm: 4px;
+    /* The one size under the text scale: numbers and labels drawn on a card (HP, a Tool's name). */
+    --fs-card: 11px;
+    --control-hover: #313131;
+    --line-strong: #4a4a4a;
+    --stamp-press: #c93c41;
+    /* By meaning: what can be played or picked, your side, the bot's side, HP left. */
+    --can: var(--accent);
+    --mine: #ffffff;
+    --theirs: var(--stamp);
+    --hp-ok: #3f9b5a;
+    --hp-hurt: #c8941f;
+    --hp-low: #c3352b;
+    /* A card's own paper (a Tool's tab peeking out of a Pokémon in play). */
+    --card-paper: #e4ddcc;
+    --card-paper-ink: #2a261e;
     --shadow: 0 1px 2px #0009;
     --shadow-lg: 0 24px 48px -16px #000;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -443,6 +498,12 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     background: var(--control);
     color: var(--ink-strong);
   }
+  /* The other language, set apart from the pages. */
+  .links .lang-switch {
+    margin-left: 4px;
+    border-left: 1px solid var(--line);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
   .toggle {
     display: none;
     position: relative;
@@ -510,6 +571,14 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
       font-size: 24px;
       line-height: 32px;
       font-weight: 600;
+    }
+    .links .lang-switch {
+      margin: 16px 0 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      font-size: 18px;
+      font-weight: 500;
     }
     .menu-open .links a {
       animation: menu-in 0.5s var(--ease) both;

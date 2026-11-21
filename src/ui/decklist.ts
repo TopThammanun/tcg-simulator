@@ -1,5 +1,6 @@
 // Validate a decklist pasted in the browser (your own decks, my-decks.ts).
 // Only cards the engine implements can be played; another print of a supported card is matched by name.
+import { tx } from '../i18n';
 import manifestJson from '../../data/cards.manifest.json';
 import type { CardDef, CardManifest } from '../data/cards';
 import { parseDecklist, printKey } from '../data/decklist';
@@ -31,13 +32,13 @@ export interface ListCheck {
 /** Every card the engine can play, by name (the decks page lists them for building a list). */
 export const SUPPORTED: readonly CardDef[] = Object.values(manifest.cards).sort((a, b) => a.name.localeCompare(b.name));
 
-/** The parser's message (data/decklist.ts) in Thai. */
+/** The parser's message (data/decklist.ts) in the page's language. */
 function thai(message: string, shift: number): string {
   const m = message.replace(/^decklist:? ?/, '');
   const line = m.match(/^line (\d+): cannot read "(.*)"$/);
-  if (line) return `บรรทัด ${Number(line[1]) - shift} อ่านไม่ออก: "${line[2]}" (รูปแบบ: จำนวน ชื่อการ์ด ชุด เลข เช่น 4 Dreepy TWM 128)`;
+  if (line) return tx(`บรรทัด ${Number(line[1]) - shift} อ่านไม่ออก: "${line[2]}" (รูปแบบ: จำนวน ชื่อการ์ด ชุด เลข เช่น 4 Dreepy TWM 128)`, `Line ${Number(line[1]) - shift} can't be read: "${line[2]}" (format: count, card name, set, number, e.g. 4 Dreepy TWM 128)`);
   const total = m.match(/^has (\d+) cards, expected (\d+)$/);
-  if (total) return `มี ${total[1]} ใบ (ต้องมี ${total[2]} ใบ)`;
+  if (total) return tx(`มี ${total[1]} ใบ (ต้องมี ${total[2]} ใบ)`, `${total[1]} cards (${total[2]} needed)`);
   return m;
 }
 
@@ -65,10 +66,10 @@ export function checkList(text: string): ListCheck {
     // An exact print, else the only card with this name (prints of one card share text).
     const card = print ? manifest.cards[print.card] : sameName.length === 1 ? sameName[0] : undefined;
     if (!card) {
-      if (sameName.length > 1) errors.push(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`);
+      if (sameName.length > 1) errors.push(tx(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`, `${e.name} ${e.set} ${e.number}: several versions with different text; give the set and card number`));
       else {
         unsupported.push(e.name);
-        errors.push(`${e.name}: ยังไม่รองรับ`);
+        errors.push(tx(`${e.name}: ยังไม่รองรับ`, `${e.name}: not supported yet`));
       }
       continue;
     }
@@ -82,17 +83,17 @@ export function checkList(text: string): ListCheck {
     if (c.category === 'energy' && c.energyType === 'Basic') continue;
     counts.set(c.name, (counts.get(c.name) ?? 0) + 1);
   }
-  for (const [name, n] of counts) if (n > 4) errors.push(`${name} มี ${n} ใบ (ชื่อเดียวกันได้ไม่เกิน 4)`);
+  for (const [name, n] of counts) if (n > 4) errors.push(tx(`${name} มี ${n} ใบ (ชื่อเดียวกันได้ไม่เกิน 4)`, `${n} copies of ${name} (4 at most with the same name)`));
   const ace = cards.filter((k) => {
     const c = manifest.cards[k]!;
     return c.category !== 'pokemon' && c.aceSpec;
   }).length;
-  if (ace > 1) errors.push(`มี ACE SPEC ${ace} ใบ (ได้ไม่เกิน 1)`);
+  if (ace > 1) errors.push(tx(`มี ACE SPEC ${ace} ใบ (ได้ไม่เกิน 1)`, `${ace} ACE SPEC cards (1 at most)`));
   if (!cards.some((k) => {
     const c = manifest.cards[k]!;
     return c.category === 'pokemon' && c.stage === 'Basic';
   })) {
-    errors.push('ต้องมี Basic Pokémon อย่างน้อย 1 ใบ');
+    errors.push(tx('ต้องมี Basic Pokémon อย่างน้อย 1 ใบ', 'At least 1 Basic Pokémon is needed'));
   }
   return errors.length ? { errors, unsupported } : { cards, errors: [], unsupported };
 }

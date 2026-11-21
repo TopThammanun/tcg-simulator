@@ -1,6 +1,7 @@
 ---
 // One decklist line as a card: low-res image, or the text frame when there is no image
 // or it fails to load (offline, blocked). Click opens the detail dialog (see decks/[slug]).
+import { langOfPath, tFor } from '../i18n';
 import type { CardDef, CardPrint } from '../data/cards';
 import CardText from './CardText.astro';
 
@@ -12,7 +13,8 @@ interface Props {
 }
 const { print, card, count, index = 0 } = Astro.props;
 const src = print.image.source === 'none' ? undefined : print.image.low;
-const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูปจาก print อื่น' : undefined;
+const t = tFor(langOfPath(Astro.url.pathname));
+const note = !src ? t('ไม่มีรูป', 'No image') : print.image.altOf ? t('รูปจาก print อื่น', 'Image from another print') : undefined;
 ---
 
 <button
@@ -21,7 +23,7 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
   style={`--i:${index}`}
   data-detail={print.key}
   data-broken={src ? undefined : ''}
-  aria-label={`${count} ใบ ${card.name} — ดูรายละเอียด`}
+  aria-label={t(`${count} ใบ ${card.name} — ดูรายละเอียด`, `${count} ${card.name} — details`)}
 >
   {
     src && (
@@ -96,7 +98,7 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     font-size: 12px;
     line-height: 16px;
     text-align: center;
-    border-radius: 6px;
+    border-radius: var(--radius);
   }
   .note {
     position: absolute;
@@ -106,6 +108,6 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     background: color-mix(in srgb, var(--paper) 88%, transparent);
     border: 1px solid var(--stamp);
     color: var(--stamp);
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
   }
 </style>

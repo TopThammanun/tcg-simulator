@@ -13,6 +13,7 @@
   // discard on the right, the Active Pokémon facing the other side and the Bench behind it. The bot sits
   // across the table (mirrored, its hand peeking in at the top); the Stadium sits between the Actives.
   // Drop zones for drag and drop: every Pokémon (`slot:<uid>`), your Active Spot and Bench, the board (`play`).
+  import { tx } from '../../i18n';
   import { benchLimit, stadiumKey } from '../../engine/rules';
   import { keyOf } from '../../engine/state';
   import type { CardId, GameState, PlayerId, Slot, SlotId } from '../../engine/types';
@@ -123,8 +124,8 @@
   {@const top = ps.discard[ps.discard.length - 1]}
   {@const ghosts = mine ? ghostBench : []}
   {@const open = Math.max(0, benchLimit(s, p) - ps.bench.length - ghosts.length)}
-  <section class="side" class:mine class:theirs={!mine} aria-label={mine ? 'สนามของคุณ' : 'สนามของบอท'}>
-    <div class="prizes" title="Prize ที่เหลือ">
+  <section class="side" class:mine class:theirs={!mine} aria-label={mine ? tx('สนามของคุณ', 'Your side') : tx('สนามของบอท', "The bot's side")}>
+    <div class="prizes" title={tx('Prize ที่เหลือ', 'Prize cards left')}>
       <div class="prize-grid" data-zone={`prizes-${p}`}>
         {#each { length: PRIZES } as _, i}
           {@const at = prizeGrid ? prizeGrid[p][i] : i < ps.prizes.length ? i : null}
@@ -138,20 +139,27 @@
       <div
         class="pile deck"
         class:low={ps.deck.length <= LOW_DECK}
-        title={`การ์ดในเด็ค ${ps.deck.length} ใบ${ps.deck.length <= LOW_DECK ? ' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที' : ''}`}
+        title={tx(`การ์ดในเด็ค ${ps.deck.length} ใบ`, `${ps.deck.length} cards in the deck`) +
+          (ps.deck.length <= LOW_DECK ? tx(' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที', ' · running out: no card to draw at the start of a turn loses the game') : '')}
       >
         <span class="spot" data-zone={`deck-${p}`}>
           {#if ps.deck.length}<span class="stack" style:box-shadow={stackShadow(ps.deck.length)}><CardBack /></span>{/if}
           <span class="n mono">{ps.deck.length}</span>
         </span>
-        <span class="lbl">เด็ค</span>
+        <span class="lbl">{tx('เด็ค', 'Deck')}</span>
       </div>
-      <button type="button" class="pile discard" onclick={() => ondiscard(p)} title={`ดูกองทิ้ง (${ps.discard.length} ใบ)`}>
+      <button
+        type="button"
+        class="pile discard"
+        data-inspect={top !== undefined ? keyOf(s, top) : undefined}
+        onclick={() => ondiscard(p)}
+        title={tx(`ดูกองทิ้ง (${ps.discard.length} ใบ)`, `Discard pile (${ps.discard.length})`)}
+      >
         <span class="spot" data-zone={`discard-${p}`}>
           {#if top !== undefined}<CardFace cardKey={keyOf(s, top)} />{/if}
           <span class="n mono">{ps.discard.length}</span>
         </span>
-        <span class="lbl">กองทิ้ง</span>
+        <span class="lbl">{tx('กองทิ้ง', 'Discard')}</span>
       </button>
     </div>
 
@@ -167,7 +175,7 @@
       {:else if mine && ghostActive}
         <div class="ghost-card"><CardFace cardKey={ghostActive} /></div>
       {:else}
-        <div class="empty">{mine && accepts('active') ? 'วางตัวหลักที่นี่' : 'ตัวหลัก'}</div>
+        <div class="empty">{mine && accepts('active') ? tx('วางตัวหลักที่นี่', 'Active Pokémon here') : tx('ตัวหลัก', 'Active')}</div>
       {/if}
     </div>
 
@@ -176,7 +184,7 @@
         {@render slotCard(p, b, false)}
       {/each}
       {#each ghosts as k, i (i)}
-        <button type="button" class="ghost-card" title="แตะเพื่อเอาคืน" onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
+        <button type="button" class="ghost-card" title={tx('แตะเพื่อเอาคืน', 'Tap to take it back')} onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
       {/each}
       {#each { length: open } as _, i}
         {#if mine && i === 0 && accepts('bench')}
@@ -201,14 +209,14 @@
   <div class="their-half" aria-hidden="true"></div>
   <div class="midline" aria-hidden="true"><span class="emblem">◆</span></div>
 
-  <div class="their-hand" data-zone="hand-1" title={`มือบอท ${s.players[1].hand.length} ใบ`}>
+  <div class="their-hand" data-zone="hand-1" title={tx(`มือบอท ${s.players[1].hand.length} ใบ`, `Bot's hand: ${s.players[1].hand.length} cards`)}>
     <span class="fan">
       {#each { length: Math.min(12, s.players[1].hand.length) } as _, i}
         {@const n = Math.min(12, s.players[1].hand.length)}
         <span class="fan-card" style:--a={`${(i - (n - 1) / 2) * 5}deg`}><CardBack /></span>
       {/each}
     </span>
-    <span class="hand-count">มือ <span class="mono">{s.players[1].hand.length}</span></span>
+    <span class="hand-count">{tx('มือ', 'Hand')} <span class="mono">{s.players[1].hand.length}</span></span>
   </div>
 
   {@render side(1)}
@@ -219,6 +227,7 @@
         type="button"
         class="stadium"
         data-card={s.stadium?.card}
+        data-inspect={stadium}
         class:usable={canUseStadium}
         class:yours={s.stadium?.owner === 0}
         onclick={() => (canUseStadium ? onstadium?.() : onzoom(stadium))}
@@ -226,11 +235,11 @@
           e.preventDefault();
           onzoom(stadium);
         }}
-        title={canUseStadium ? 'ใช้ Academy at Night' : def(stadium).name}
+        title={canUseStadium ? tx('ใช้ Academy at Night', 'Use Academy at Night') : def(stadium).name}
       >
         <span class="stadium-card"><CardFace cardKey={stadium} /></span>
         <span class="stadium-name">{def(stadium).name}</span>
-        <span class="owner">{s.stadium?.owner === 0 ? 'ของคุณ' : 'ของบอท'}</span>
+        <span class="owner">{s.stadium?.owner === 0 ? tx('ของคุณ', 'yours') : tx('ของบอท', "bot's")}</span>
       </button>
     {:else}
       <div class="stadium-empty">Stadium</div>
@@ -239,15 +248,14 @@
 
   <div class="turn" aria-hidden="true">
     {#if s.phase === 'main' && s.winner === null}
-      <span class="turn-no">เทิร์น {s.turn}</span>
-      <span class="whose" class:you={s.current === 0}>{s.current === 0 ? 'ตาคุณ' : 'ตาบอท'}</span>
+      <span class="whose" class:you={s.current === 0}>{s.current === 0 ? tx('ตาคุณ', 'Your turn') : tx('ตาบอท', "Bot's turn")}</span>
     {/if}
   </div>
 
   {@render side(0)}
 
   {#if accepts('play')}
-    <div class="play-hint" aria-hidden="true">{isOver('play') ? `ปล่อยเพื่อ${drag?.label}` : 'ลากมาวางบนสนามเพื่อใช้'}</div>
+    <div class="play-hint" aria-hidden="true">{isOver('play') ? tx(`ปล่อยเพื่อ${drag?.label}`, `Drop to play: ${drag?.label}`) : tx('ลากมาวางบนสนามเพื่อใช้', 'Drag onto the table to play')}</div>
   {/if}
 </div>
 
@@ -264,7 +272,7 @@
     }
   }
   .board {
-    --mat-ink: #ededed;
+    --mat-ink: var(--ink);
     --line: #ffffff1f;
     --pad: 14px;
     --row-gap: 14px;
@@ -294,9 +302,9 @@
     row-gap: var(--row-gap);
     padding: 0 var(--pad) 20px;
     border-radius: var(--radius-lg);
-    background: #181818;
+    background: var(--card-bg);
     color: var(--mat-ink);
-    box-shadow: inset 0 0 0 1px #272727;
+    box-shadow: inset 0 0 0 1px var(--rule);
     overflow: hidden;
     transition: box-shadow 0.3s var(--ease);
   }
@@ -313,11 +321,11 @@
     top: 6px;
     transform: translateX(-50%);
     padding: 6px 14px;
-    border-radius: 3px;
-    background: #0d1014dd;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--paper) 87%, transparent);
     color: var(--accent);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 14px;
     white-space: nowrap;
     pointer-events: none;
     z-index: 5;
@@ -374,9 +382,9 @@
     transform: translate(-50%, -50%);
     border: 1px solid #ffffff40;
     border-radius: 50%;
-    background: #181818;
+    background: var(--card-bg);
     color: var(--stamp);
-    font-size: 10px;
+    font-size: var(--fs-card);
   }
 
   .side {
@@ -423,12 +431,12 @@
     gap: 5px;
     padding: 6px;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .prize-slot {
     width: var(--prize-w);
     aspect-ratio: 63 / 88;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     outline: 1px dashed #ffffff2a;
     outline-offset: -1px;
   }
@@ -437,13 +445,13 @@
     gap: 5px;
     align-items: baseline;
     padding: 0 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #0005;
-    font-size: 0.72rem;
+    font-size: 12px;
   }
   .count .n {
     color: var(--accent);
-    font-size: 0.95rem;
+    font-size: 16px;
     font-weight: 700;
   }
 
@@ -493,15 +501,15 @@
     transform: translateX(-50%);
     min-width: 26px;
     padding: 0 6px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #000c;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 12px;
     font-weight: 600;
     text-align: center;
   }
   .lbl {
-    font-size: 0.66rem;
+    font-size: var(--fs-card);
     letter-spacing: 0.04em;
     opacity: 0.75;
   }
@@ -510,14 +518,14 @@
   .active-spot {
     position: relative;
     width: var(--active-w);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
   }
   .active-spot::before {
     content: '';
     position: absolute;
     inset: -6px;
     border: 1.5px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     pointer-events: none;
   }
   .theirs .active-spot {
@@ -532,8 +540,8 @@
     width: 100%;
     aspect-ratio: 63 / 88;
     padding: 4px;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: var(--radius);
+    font-size: 12px;
     text-align: center;
     opacity: 0.55;
   }
@@ -551,19 +559,19 @@
     justify-content: center;
     align-items: start;
     gap: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .bench-slot {
     display: grid;
     place-items: center;
     aspect-ratio: 63 / 88;
     border: 1.5px dashed #ffffff26;
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .bench-drop {
     border: 2px dashed var(--accent);
     color: var(--accent);
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 600;
     transition:
       background 0.12s ease,
@@ -581,7 +589,7 @@
     opacity: 0.85;
     outline: 2px dashed var(--accent);
     outline-offset: 2px;
-    border-radius: 7px;
+    border-radius: var(--radius);
     cursor: pointer;
     animation: ghost-in 0.22s ease-out;
   }
@@ -621,7 +629,7 @@
   }
   .hand-count {
     align-self: center;
-    font-size: 0.7rem;
+    font-size: var(--fs-card);
     opacity: 0.75;
   }
 
@@ -647,11 +655,11 @@
   }
   .stadium-card {
     width: var(--stadium-w);
-    border-radius: 6px;
-    box-shadow: 0 0 0 2px #e2574b;
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 2px var(--theirs);
   }
   .stadium.yours .stadium-card {
-    box-shadow: 0 0 0 2px #4fb3aa;
+    box-shadow: 0 0 0 2px var(--mine);
   }
   .stadium.usable .stadium-card {
     outline: 3px solid var(--accent);
@@ -664,12 +672,12 @@
     }
   }
   .stadium-name {
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
     line-height: 1.2;
     text-align: center;
   }
   .owner {
-    font-size: 0.6rem;
+    font-size: var(--fs-card);
     opacity: 0.7;
   }
   .stadium-empty {
@@ -678,8 +686,8 @@
     width: var(--stadium-w);
     aspect-ratio: 63 / 88;
     border: 1.5px dashed #ffffff22;
-    border-radius: 6px;
-    font-size: 0.62rem;
+    border-radius: var(--radius);
+    font-size: var(--fs-card);
     opacity: 0.5;
   }
 
@@ -695,17 +703,12 @@
     z-index: 1;
     text-align: center;
   }
-  .turn-no {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    opacity: 0.75;
-  }
   .whose {
     padding: 4px 14px;
     border: 1px solid #ffffff30;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #0005;
-    font-size: 0.88rem;
+    font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -740,7 +743,7 @@
         'mbench mbench  mbench  mbench mbench';
       column-gap: 6px;
       padding-bottom: 14px;
-      border-radius: 10px;
+      border-radius: var(--radius-lg);
     }
     .bench {
       gap: 6px;
@@ -751,10 +754,10 @@
     .prize-grid {
       gap: 3px;
       padding: 3px;
-      border-radius: 5px;
+      border-radius: var(--radius-sm);
     }
     .prize-slot {
-      border-radius: 2px;
+      border-radius: var(--radius-sm);
     }
     .count {
       padding: 0 6px;
@@ -763,7 +766,7 @@
       display: none;
     }
     .count .n {
-      font-size: 0.8rem;
+      font-size: 12px;
     }
     .piles {
       gap: 6px;
@@ -775,14 +778,14 @@
       bottom: 3px;
       min-width: 0;
       padding: 0 4px;
-      font-size: 0.62rem;
+      font-size: var(--fs-card);
     }
     .active-spot::before {
       inset: -4px;
-      border-radius: 9px;
+      border-radius: var(--radius);
     }
     .empty {
-      font-size: 0.65rem;
+      font-size: var(--fs-card);
     }
     .stadium {
       max-width: 80px;
@@ -793,20 +796,17 @@
       line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      font-size: 0.56rem;
+      font-size: var(--fs-card);
     }
     .owner {
-      font-size: 0.54rem;
-    }
-    .turn-no {
-      font-size: 0.62rem;
+      font-size: var(--fs-card);
     }
     .whose {
       padding: 3px 8px;
-      font-size: 0.72rem;
+      font-size: 12px;
     }
     .hand-count {
-      font-size: 0.62rem;
+      font-size: var(--fs-card);
     }
   }
 </style>

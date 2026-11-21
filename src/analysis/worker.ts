@@ -1,9 +1,13 @@
 // Web Worker for "ภัยเทิร์นหน้า": samples the opponent's next turn a batch at a time and posts the report
 // after each batch, so the numbers appear quickly and firm up. A newer position replaces the one being
 // sampled (the page asks again after every move).
+import { asLang, setLang } from '../i18n';
 import { planFor, type PlayerPolicy } from '../bots/plans';
 import type { GameState, PlayerId } from '../engine/types';
 import { ThreatSampler, type ThreatReport } from './threat';
+
+// The page's language, passed as the worker's name (remote.ts): its text (logs, the review's words) follows it.
+setLang(asLang((self as unknown as { name?: string }).name));
 
 export interface ThreatAsk {
   id: number;

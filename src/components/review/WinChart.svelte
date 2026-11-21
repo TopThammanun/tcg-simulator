@@ -1,8 +1,12 @@
 <script lang="ts">
-  // Win% after each of your turns: one line, a marker per turn (a cross for a clear mistake, a triangle
-  // for "probably better", a dot otherwise), 50% as the reference. Hover for a turn's readout; click or tap a point
-  // (or Enter on it) to pick that turn in the list below, the chart's table view.
+  // Win% through the game: two points per turn of yours, where it started and where it ended (review/summary.ts
+  // winPoints). Your turns are solid lines, the bot's turns in between dashed, so a drop shows whose turn it came in.
+  // The end of each turn of yours is marked by its verdict (a cross for a clear mistake, a triangle for "probably
+  // better", a dot otherwise) and is a button: click, tap or Enter picks that turn. The picked turn is shaded and
+  // labelled; hovering shows any turn's numbers.
+  import { tx } from '../../i18n';
   import type { TurnReview } from '../../analysis/review';
+  import { winPoints } from '../../review/summary';
 
   let {
     turns,
@@ -10,65 +14,80 @@
     onpick,
   }: { turns: TurnReview[]; selected?: number | null; onpick?: (turn: number) => void } = $props();
 
-  // Drawn at the box's real width (text stays 11px), a fixed height.
+  // Drawn at the box's real width (text stays 11px); a phone's chart is a little shorter.
   let W = $state(640);
-  const H = 180;
-  const pad = { l: 40, r: 14, t: 14, b: 26 };
-  const pts = $derived([...turns].sort((a, b) => a.turn - b.turn));
-  const x = (i: number) => pad.l + (pts.length <= 1 ? (W - pad.l - pad.r) / 2 : (i * (W - pad.l - pad.r)) / (pts.length - 1));
+  const H = $derived(W < 480 ? 120 : 150);
+  const pad = { l: 36, r: 12, t: 12, b: 24 };
+  const data = $derived(winPoints(turns));
+  const n = $derived(Math.max(1, data.points.length - 1));
+  const x = (i: number) => pad.l + (data.points.length <= 1 ? (W - pad.l - pad.r) / 2 : (i * (W - pad.l - pad.r)) / n);
   const y = (p: number) => pad.t + (1 - p) * (H - pad.t - pad.b);
-  const path = $derived(pts.map((t, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(t.win.p).toFixed(1)}`).join(' '));
+  const byTurn = $derived(new Map(turns.map((t) => [t.turn, t])));
+  const ends = $derived(data.points.filter((p) => p.at === 'end'));
   let hover = $state<number | null>(null);
   const VERDICT: Record<string, string> = {
-    'missed-win': 'พลาดชัด: มีทางชนะ',
-    'missed-ko': 'พลาดชัด: มีทาง KO มากกว่า',
-    better: 'น่าจะมีทางที่ดีกว่า',
-    ok: 'ไม่พบจุดพลาด',
+    'missed-win': tx('พลาดชัด: มีทางชนะ', 'Clear slip: a win was there'),
+    'missed-ko': tx('พลาดชัด: มีทาง KO มากกว่า', 'Clear slip: a bigger Knock Out was there'),
+    better: tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way'),
+    ok: tx('ไม่พบจุดพลาด', 'No slip found'),
   };
+  const pct = (p: number) => `${Math.round(p * 100)}%`;
 
   function move(e: PointerEvent) {
     const svg = e.currentTarget as SVGSVGElement;
     const r = svg.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W;
-    let best = 0;
-    pts.forEach((_, i) => {
-      if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i;
-    });
-    hover = pts.length ? best : null;
+    let best: number | null = null;
+    for (const p of ends) if (best === null || Math.abs(x(p.x) - px) < Math.abs(x(best) - px)) best = p.x;
+    hover = best;
   }
-  const shown = $derived(hover !== null ? pts[hover] : null);
+  const hovered = $derived(hover !== null ? data.points.find((p) => p.x === hover) : null);
+  const sel = $derived(selected !== null ? byTurn.get(selected) : undefined);
+  const selPts = $derived(selected !== null ? data.points.filter((p) => p.turn === selected) : []);
 </script>
 
 <figure class="chart">
-  <figcaption>win% หลังจบเทิร์นของคุณ</figcaption>
+  <figcaption>
+    <span>{tx('win% ทั้งเกม', 'Win% over the game')}</span>
+    <span class="legend" aria-hidden="true"><i class="solid"></i>{tx('ตาคุณ', 'your turns')} <i class="dash"></i>{tx('ตาบอท', "the bot's")}</span>
+  </figcaption>
   <div class="plot" bind:clientWidth={W}>
     <svg
       width={W}
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       role="group"
-      aria-label="กราฟ win% หลังจบเทิร์นของคุณแต่ละเทิร์น (แต่ละจุดกดเพื่อไปที่เทิร์นนั้น)"
+      aria-label={tx('กราฟ win% ทั้งเกม (จุดท้ายแต่ละเทิร์นของคุณกดเพื่อไปที่เทิร์นนั้น)', 'Win% over the game (the point ending each of your turns opens that turn)')}
       onpointermove={move}
       onpointerleave={() => (hover = null)}
     >
+      {#if selPts.length === 2}
+        <rect class="band" x={x(selPts[0]!.x) - 6} y={pad.t} width={x(selPts[1]!.x) - x(selPts[0]!.x) + 12} height={H - pad.t - pad.b} rx="4" />
+      {/if}
       {#each [0, 0.5, 1] as g}
         <line class="grid" class:mid={g === 0.5} x1={pad.l} x2={W - pad.r} y1={y(g)} y2={y(g)} />
         <text class="tick" x={pad.l - 6} y={y(g) + 4} text-anchor="end">{g * 100}%</text>
       {/each}
-      {#each pts as t, i (t.turn)}
-        <text class="tick" x={x(i)} y={H - 8} text-anchor="middle">{t.turn}</text>
+      {#each ends as p (p.x)}
+        <text class="tick" x={x(p.x)} y={H - 6} text-anchor="middle">{p.turn}</text>
       {/each}
       {#if hover !== null}<line class="cross" x1={x(hover)} x2={x(hover)} y1={pad.t} y2={H - pad.b} />{/if}
-      <path class="line" d={path} />
-      {#each pts as t, i (t.turn)}
-        {@const cx = x(i)}
-        {@const cy = y(t.win.p)}
+      {#each data.segments as s, i (i)}
+        <line class={`seg ${s.whose}`} x1={x(s.from.x)} y1={y(s.from.p)} x2={x(s.to.x)} y2={y(s.to.p)} />
+      {/each}
+      {#each data.points.filter((p) => p.at === 'start') as p (p.x)}
+        <circle class="start" cx={x(p.x)} cy={y(p.p)} r="3" />
+      {/each}
+      {#each ends as p (p.x)}
+        {@const t = byTurn.get(p.turn)!}
+        {@const cx = x(p.x)}
+        {@const cy = y(p.p)}
         <g
           class={`mark ${t.verdict}`}
           class:sel={selected === t.turn}
           role="button"
           tabindex="0"
-          aria-label={`เทิร์น ${t.turn}: ${VERDICT[t.verdict]}, win% ${Math.round(t.win.p * 100)}%`}
+          aria-label={`${tx('เทิร์น', 'Turn')} ${t.turn}: ${VERDICT[t.verdict]}, win% ${pct(t.before)} → ${pct(t.win.p)}`}
           onclick={() => onpick?.(t.turn)}
           onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onpick?.(t.turn))}
         >
@@ -84,25 +103,28 @@
         </g>
       {/each}
     </svg>
-    {#if shown}
-      <div class="tip" style:left={`${(x(hover!) / W) * 100}%`} style:top={`${(y(shown.win.p) / H) * 100}%`}>
-        <strong>{Math.round(shown.win.p * 100)}%</strong> หลังเทิร์น {shown.turn}
-        <span>{VERDICT[shown.verdict]}</span>
+    {#if hovered}
+      {@const t = byTurn.get(hovered.turn)!}
+      <div class="tip" style:left={`${(x(hovered.x) / W) * 100}%`} style:top={`${(y(hovered.p) / H) * 100}%`}>
+        <strong>{tx('เทิร์น', 'Turn')} {t.turn}</strong> {pct(t.before)} → {pct(t.win.p)}
+        <span>{VERDICT[t.verdict]}</span>
       </div>
+    {:else if sel}
+      <p class="picked">{tx('เทิร์น', 'Turn')} {sel.turn} · {tx('ก่อนเทิร์น', 'before')} {pct(sel.before)} → {tx('หลังเทิร์น', 'after')} {pct(sel.win.p)}</p>
     {/if}
   </div>
   <p class="key">
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="x" d="M2,2L10,10M10,2L2,10" /></svg>พลาดชัด</span>
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="tri" d="M6,1L11,10H1Z" /></svg>น่าจะมีทางที่ดีกว่า</span>
-    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="dot" cx="6" cy="6" r="4" /></svg>ไม่พบจุดพลาด</span>
-    {#if onpick}<span class="k how">แตะจุดเพื่อดูเทิร์นนั้น</span>{/if}
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="x" d="M2,2L10,10M10,2L2,10" /></svg>{tx('พลาดชัด', 'Clear slip')}</span>
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="tri" d="M6,1L11,10H1Z" /></svg>{tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way')}</span>
+    <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="dot" cx="6" cy="6" r="4" /></svg>{tx('ไม่พบจุดพลาด', 'No slip found')}</span>
+    {#if onpick}<span class="k how">{tx('แตะจุดเพื่อดูเทิร์นนั้น', 'Tap a point to see that turn')}</span>{/if}
   </p>
 </figure>
 
 <style>
   .chart {
-    margin: 32px 0 0;
-    padding: 16px;
+    margin: 0;
+    padding: 12px 16px;
     border: 1px solid var(--rule);
     background: var(--card-bg);
     --critical: var(--stamp);
@@ -110,11 +132,32 @@
     border-radius: var(--radius-xl);
   }
   figcaption {
-    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
     color: var(--ink-strong);
     font-size: 14px;
     line-height: 20px;
     font-weight: 500;
+  }
+  .legend {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+  }
+  .legend i {
+    display: inline-block;
+    width: 16px;
+    margin-left: 6px;
+    border-top: 2px solid var(--primary);
+  }
+  .legend i.dash {
+    border-top: 2px dashed var(--ink-soft);
   }
   .plot {
     position: relative;
@@ -123,6 +166,9 @@
     display: block;
     cursor: crosshair;
     touch-action: pan-y;
+  }
+  .band {
+    fill: color-mix(in srgb, var(--ink-strong) 8%, transparent);
   }
   .grid {
     stroke: var(--rule);
@@ -134,18 +180,27 @@
   .tick {
     fill: var(--ink-soft);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-card);
   }
   .cross {
     stroke: var(--ink-soft);
     stroke-width: 1;
   }
-  .line {
-    fill: none;
-    stroke: var(--primary);
+  .seg {
     stroke-width: 2;
-    stroke-linejoin: round;
     stroke-linecap: round;
+  }
+  .seg.mine {
+    stroke: var(--primary);
+  }
+  .seg.theirs {
+    stroke: var(--ink-soft);
+    stroke-dasharray: 3 4;
+  }
+  .start {
+    fill: var(--card-bg);
+    stroke: var(--ink-soft);
+    stroke-width: 1.5;
   }
   .dot {
     fill: var(--primary);
@@ -180,9 +235,6 @@
     stroke: var(--ink-strong);
     stroke-width: 2;
   }
-  .how {
-    margin-left: auto;
-  }
   .mark.sel .dot,
   .mark.sel .tri {
     stroke: var(--ink);
@@ -196,9 +248,11 @@
     transform: translate(-50%, calc(-100% - 12px));
     padding: 4px 8px;
     border: 1px solid var(--rule);
+    border-radius: var(--radius);
     background: var(--paper);
     color: var(--ink);
-    font-size: 0.78rem;
+    font-size: 12px;
+    line-height: 16px;
     white-space: nowrap;
     pointer-events: none;
     box-shadow: 0 4px 10px -4px #0008;
@@ -207,13 +261,27 @@
     display: block;
     color: var(--ink-soft);
   }
+  .picked {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 2px 8px;
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 16px;
+    pointer-events: none;
+  }
   .key {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 14px;
     margin: 4px 0 0;
     color: var(--ink-soft);
-    font-size: 0.78rem;
+    font-size: 12px;
+    line-height: 16px;
   }
   .k {
     display: inline-flex;
@@ -224,5 +292,17 @@
     width: 12px;
     height: 12px;
     overflow: visible;
+  }
+  .how {
+    margin-left: auto;
+  }
+  /* A phone: the marks' key is left out (the turn strip under the chart has the same marks, named). */
+  @media (max-width: 640px) {
+    .chart {
+      padding: 10px 12px;
+    }
+    .key {
+      display: none;
+    }
   }
 </style>

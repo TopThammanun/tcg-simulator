@@ -2,6 +2,7 @@
 // back a batch at a time. Only the newest position matters; reports for older ones are dropped.
 // Without Worker support the samples run in the page, in small batches between frames (threat.ts and the
 // bot's network are then loaded on first use, so they stay out of the page bundle otherwise).
+import { lang } from '../i18n';
 import { planFor } from '../bots/plans';
 import type { ThreatReport } from './threat';
 import type { FromThreat, ThreatAsk, ToThreat } from './worker';
@@ -45,7 +46,7 @@ export function threatClient(onreport: (r: ThreatReport, done: boolean, state: T
     };
   }
 
-  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: lang() });
   worker.onmessage = (e: MessageEvent<FromThreat>) => {
     const m = e.data;
     if (!current || m.id !== current.id) return;

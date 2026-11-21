@@ -1,6 +1,7 @@
 ---
 // Card text in English as printed. Used for the detail view and as the image fallback frame.
 import type { CardDef, EnergyType } from '../data/cards';
+import { langOfPath, tFor } from '../i18n';
 import { energyIcon } from '../ui/symbols';
 import EnergyText from './EnergyText.astro';
 
@@ -12,6 +13,7 @@ const { card, compact = false } = Astro.props;
 
 const STAGE: Record<string, string> = { Basic: 'Basic', Stage1: 'Stage 1', Stage2: 'Stage 2' };
 const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
+const tr = tFor(langOfPath(Astro.url.pathname));
 ---
 
 <div class:list={['card-text', { compact }]}>
@@ -25,7 +27,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
       <>
         <div class="sub">
           <span>{STAGE[card.stage]}</span>
-          {card.evolvesFrom && <span>จาก {card.evolvesFrom}</span>}
+          {card.evolvesFrom && <span>{tr(`จาก ${card.evolvesFrom}`, `from ${card.evolvesFrom}`)}</span>}
           {card.types.map((t) => (
             <span class="pip" role="img" aria-label={t} title={t} style={icon(t)} />
           ))}
@@ -106,7 +108,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
 
 <style>
   .card-text {
-    font-size: 0.85rem;
+    font-size: 14px;
     line-height: 1.45;
     color: var(--ink);
     text-align: left;
@@ -118,13 +120,13 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
     gap: 8px;
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.05em;
+    font-size: 16px;
     border-bottom: 1.5px solid var(--line);
     padding-bottom: 2px;
     margin-bottom: 4px;
   }
   .hp {
-    font-size: 0.85em;
+    font-size: 14px;
     color: var(--stamp);
     white-space: nowrap;
   }
@@ -134,12 +136,12 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
     align-items: center;
     gap: 6px;
     color: var(--ink-soft);
-    font-size: 0.85em;
+    font-size: 14px;
     margin-bottom: 6px;
   }
   .tag {
     font-family: var(--font-mono);
-    font-size: 0.8em;
+    font-size: 12px;
     padding: 0 5px;
     border: 1px solid var(--stamp);
     color: var(--stamp);
@@ -149,7 +151,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
   }
   .ability {
     font-family: var(--font-mono);
-    font-size: 0.75em;
+    font-size: 12px;
     background: var(--stamp);
     color: #fff;
     padding: 1px 4px;
@@ -167,7 +169,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
   .effect {
     display: block;
     color: var(--ink-soft);
-    font-size: 0.92em;
+    font-size: 14px;
   }
   .effect.solo {
     white-space: pre-line;
@@ -175,7 +177,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
   }
   .foot {
     margin: 6px 0 0;
-    font-size: 0.75em;
+    font-size: 12px;
     color: var(--ink-soft);
     border-top: 1px dashed var(--rule);
     padding-top: 4px;
@@ -193,7 +195,7 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
   }
   .pip.free {
     font-family: var(--font-mono);
-    font-size: 0.72em;
+    font-size: 12px;
     width: 1.35em;
     height: 1.35em;
     vertical-align: middle;
@@ -202,6 +204,6 @@ const icon = (t: EnergyType) => `background-image:url(${energyIcon(t)})`;
     box-shadow: inset 0 0 0 1px var(--rule);
   }
   .compact {
-    font-size: 0.72rem;
+    font-size: 12px;
   }
 </style>

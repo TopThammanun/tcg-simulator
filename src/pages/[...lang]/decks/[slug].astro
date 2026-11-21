@@ -1,33 +1,37 @@
 ---
 import type { GetStaticPaths } from 'astro';
-import CardText from '../../components/CardText.astro';
-import CardTile from '../../components/CardTile.astro';
-import type { DeckSection } from '../../data/decklist';
-import Base from '../../layouts/Base.astro';
-import { loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../lib/decks';
+import CardText from '../../../components/CardText.astro';
+import CardTile from '../../../components/CardTile.astro';
+import type { DeckSection } from '../../../data/decklist';
+import { langPaths, localePath, tFor, type Lang } from '../../../i18n';
+import Base from '../../../layouts/Base.astro';
+import { loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../../lib/decks';
 
 export const getStaticPaths = (async () => {
   const decks = metaDecks(await loadDecks());
-  return decks.map((deck) => ({ params: { slug: deck.slug }, props: { deck } }));
+  return langPaths().flatMap(({ params, props }) => decks.map((deck) => ({ params: { ...params, slug: deck.slug }, props: { ...props, deck } })));
 }) satisfies GetStaticPaths;
 
-const { deck } = Astro.props as { deck: DeckView };
+const { deck, lang } = Astro.props as { deck: DeckView; lang: Lang };
+const t = tFor(lang);
 const sections: DeckSection[] = ['pokemon', 'trainer', 'energy'];
 let tileIndex = 0;
 ---
 
 <Base title={deck.meta.name}>
-  <a class="back" href="/decks/">← เด็คทั้งหมด</a>
+  <a class="back" href={localePath(lang, '/decks/')}>← {t('เด็คทั้งหมด', 'All decks')}</a>
   <header class="deck-head">
-    <p class="eyebrow">อันดับ {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> ของ meta</p>
+    <p class="eyebrow">
+      {t('อันดับ', 'Rank')} {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> {t('ของ meta', 'of the meta')}
+    </p>
     <h1 class="heading-3">{deck.meta.name}</h1>
     <p class="source body-6">
       {deck.meta.listSource}
-      {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">list บน Limitless ↗</a>}
+      {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">{t('list บน Limitless ↗', 'The list on Limitless ↗')}</a>}
     </p>
     <p class="play">
-      <a class="btn primary" href={`/play/?me=${deck.slug}`}>เล่นด้วยเด็คนี้</a>
-      <a class="btn" href={`/play/?opp=${deck.slug}`}>ซ้อมกับเด็คนี้</a>
+      <a class="btn primary" href={localePath(lang, `/play/?me=${deck.slug}`)}>{t('เล่นด้วยเด็คนี้', 'Play this deck')}</a>
+      <a class="btn" href={localePath(lang, `/play/?opp=${deck.slug}`)}>{t('ซ้อมกับเด็คนี้', 'Practise against it')}</a>
     </p>
   </header>
 
@@ -57,7 +61,7 @@ let tileIndex = 0;
           </section>
         ))
       }
-      <p class="total mono">รวม {deck.lines.reduce((n, l) => n + l.entry.count, 0)} ใบ</p>
+      <p class="total mono">{t('รวม', 'Total')} {deck.lines.reduce((n, l) => n + l.entry.count, 0)} {t('ใบ', 'cards')}</p>
     </aside>
 
     <div class="cards">
@@ -78,8 +82,8 @@ let tileIndex = 0;
     </div>
   </div>
 
-  <dialog id="card-dialog" aria-label="รายละเอียดการ์ด">
-    <form method="dialog"><button class="close" aria-label="ปิด">×</button></form>
+  <dialog id="card-dialog" aria-label={t('รายละเอียดการ์ด', 'Card details')}>
+    <form method="dialog"><button class="close" aria-label={t('ปิด', 'Close')}>×</button></form>
     <div class="dialog-body"></div>
   </dialog>
 
