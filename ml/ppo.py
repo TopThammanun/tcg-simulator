@@ -275,6 +275,7 @@ def main():
     ap.add_argument("--inputs", default="all", help="version 4 inputs it may use: all, none, or some of prizes,revealed,history,sim (the rest read as zeros)")
     ap.add_argument("--pfsp", action="store_true", help="with fixed decks: opponent decks it loses to come up more often (weights 0.15 + (1 - win rate)^2, BOT-NEXT.md N3)")
     ap.add_argument("--serve-keep", type=int, default=12, help="networks the inference server keeps loaded at once (an expert set as opponents is one per deck)")
+    ap.add_argument("--patience", type=int, default=0, help="stop when the evaluation has not beaten its best for this many iterations (0 = run --iters); the best is state.json best, its weights eval-<iter>.json")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)
@@ -443,11 +444,22 @@ def main():
             pe = er.get("paired", {}).get(f"net vs {a.eval_vs}")
             if pe:
                 row["eval_se"] = round(pe["se"], 4)
+            if row[f"eval_vs_{a.eval_vs}"] > state.get("best", (-1, 0))[0]:
+                state["best"] = (row[f"eval_vs_{a.eval_vs}"], it)
         state["iter"] = it
         json.dump(state, open(state_path, "w"))
         log.write(json.dumps(row) + "\n")
         log.flush()
         print(json.dumps(row), flush=True)
+        # --patience: stop once the evaluation has not beaten its best for that many iterations.
+        if a.patience and "best" in state and it - state["best"][1] >= a.patience:
+            print(f"no better evaluation for {a.patience} iterations (best {state['best'][0]} at {state['best'][1]}): stopping", flush=True)
+            if pending:
+                try:
+                    pending[1].wait()  # the games already started (--overlap) finish before the server goes
+                except RuntimeError:
+                    pass
+            break
 
 
 if __name__ == "__main__":
