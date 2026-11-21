@@ -38,7 +38,8 @@ export type PlayerSpec =
   | { kind: 'normal'; record?: boolean }
   /** Uniformly random legal moves (random.ts): an opponent unlike any trained player. */
   | { kind: 'random'; record?: boolean }
-  | { kind: 'net'; weights: string; temperature?: number; record?: boolean; ties?: number }
+  /** sure: its recorded decisions also carry the option starting a line proved to win this turn (netbot.ts sureTarget). */
+  | { kind: 'net'; weights: string; temperature?: number; record?: boolean; ties?: number; sure?: boolean }
   /** The game's bot (src/bots/index.ts createBot: bundled network and the deck's expert); fast = without look-ahead. */
   | { kind: 'bot'; fast?: boolean; record?: boolean }
   | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>)
@@ -167,7 +168,8 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
   const oppPlan = planFor(oppSlug);
   const decks = [plan.name, oppPlan.name] as const;
   const record = spec.record && out ? (d: Parameters<ShardWriter['add']>[0]) => out.add(d) : undefined;
-  if (spec.kind === 'net') return makeNetBot(model(expertWeights(spec.weights, slug)), { decks, seed, temperature: spec.temperature ?? 0, ties: spec.ties, onDecision: record });
+  if (spec.kind === 'net')
+    return makeNetBot(model(expertWeights(spec.weights, slug)), { decks, seed, temperature: spec.temperature ?? 0, ties: spec.ties, onDecision: record, sure: spec.sure ? plan : undefined });
   const random = (): Bot => {
     const rand = makeRand(seed);
     return { act: (s) => randomAction(s, rand) };
@@ -227,7 +229,8 @@ function newGame(m: Match, games: SavedGame[]): GameState {
 
 /** The network a player spec plays `slug` from, when the inference server can play it (no look-ahead, not a recorded bot). */
 function served(spec: PlayerSpec, slug: string): Served | null {
-  if (spec.kind === 'net') return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record, ties: spec.ties };
+  if (spec.kind === 'net')
+    return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record, ties: spec.ties, sure: spec.sure ? planFor(slug) : undefined };
   if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: expertWeights(BOT_EXPERTS, slug, BOT_WEIGHTS), temperature: 0, record: false };
   if (spec.kind === 'deep') {
     const deep = { width: spec.width ?? 4, samples: spec.samples ?? 6, confident: spec.confident ?? 0.9, minPrior: spec.minPrior ?? 0.03, guards: spec.guards ?? true, switchZ: spec.switchZ ?? 0 };

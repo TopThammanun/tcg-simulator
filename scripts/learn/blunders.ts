@@ -1,8 +1,9 @@
 // Loop criterion G3 (BOT-RESEARCH.md): clear mistakes in the bot's own games. The bot (createBot, as the
 // play screen has it, or a network file with --weights) plays the hard bot on every deck pair, both seats;
 // each of its turns gets the review's check (review.ts sureLine): a line that wins, or takes more Prizes than
-// the turn took, on every re-deal of what the bot couldn't see.
-//   npx tsx scripts/learn/blunders.ts --games 240 [--weights .cache/learn/x.json]
+// the turn took, on every re-deal of what the bot couldn't see. --fast: the network alone (no look-ahead, so no
+// sureLine guard either), as the simulator and the training games play it.
+//   npx tsx scripts/learn/blunders.ts --games 240 [--weights .cache/learn/x.json] [--fast] [--threads 4]
 import { readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -11,6 +12,7 @@ import { createBot, SEARCH } from '../../src/bots/index';
 import { expertModel } from '../lib/experts';
 import { makeHardBot } from '../../src/bots/hard';
 import { loadModel } from '../../src/bots/learn/model';
+import { makeNetBot } from '../../src/bots/learn/netbot';
 import { makeSearchNetBot } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
 import type { Bot } from '../../src/bots/types';
@@ -24,6 +26,7 @@ import { runTsWorker } from '../lib/workers';
 interface Job {
   games: number[];
   weights?: string;
+  fast: boolean;
 }
 interface Found {
   turns: number;
@@ -45,9 +48,12 @@ function run(job: Job): Found {
     const me = (Math.floor(g / (slugs.length * slugs.length)) % 2) as PlayerId;
     const decks = me === 0 ? [a, b] : [b, a];
     const plans = { mine: planFor(a), theirs: planFor(b) };
+    const names = [plans.mine.name, plans.theirs.name] as const;
     const bot: Bot = model
-      ? makeSearchNetBot(model, { decks: [plans.mine.name, plans.theirs.name], seed: g, plan: plans.mine, ...SEARCH })
-      : createBot(plans.mine, g, plans.theirs, { model: expertModel(a) });
+      ? job.fast
+        ? makeNetBot(model, { decks: names, seed: g })
+        : makeSearchNetBot(model, { decks: names, seed: g, plan: plans.mine, ...SEARCH })
+      : createBot(plans.mine, g, plans.theirs, { model: expertModel(a), fast: job.fast });
     const other = makeHardBot(plans.theirs, plans.mine, { seed: g + 7 });
     const bots = me === 0 ? [bot, other] : [other, bot];
     let s: GameState = createGame({ seed: 3_000_000 + g, decks: [{ name: 'a', cards: cards.get(decks[0]!)! }, { name: 'b', cards: cards.get(decks[1]!)! }], quiet: true });
@@ -86,9 +92,9 @@ if (!isMainThread) {
     return k > 0 ? process.argv[k + 1] : undefined;
   };
   const games = Number(opt('games') ?? 240);
-  const threads = Math.max(1, cpus().length - 1);
+  const threads = Number(opt('threads') ?? Math.max(1, cpus().length - 1));
   const t0 = Date.now();
-  const jobs: Job[] = Array.from({ length: threads }, (_, t) => ({ games: Array.from({ length: games }, (_, i) => i).filter((i) => i % threads === t), weights: opt('weights') }));
+  const jobs: Job[] = Array.from({ length: threads }, (_, t) => ({ games: Array.from({ length: games }, (_, i) => i).filter((i) => i % threads === t), weights: opt('weights'), fast: process.argv.includes('--fast') }));
   const parts = await Promise.all(jobs.map((j) => runTsWorker<Found>(import.meta.url, j)));
   const turns = parts.reduce((x, p) => x + p.turns, 0);
   const win = parts.reduce((x, p) => x + p.win, 0);

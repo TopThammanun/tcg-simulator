@@ -174,7 +174,7 @@ def minibatches(data: Data, mb: int, cards: torch.Tensor | None) -> list[torch.T
 
 
 def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
-    stats = {"pg": 0.0, "v": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "aux": 0.0, "steps": 0}
+    stats = {"pg": 0.0, "v": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "aux": 0.0, "sure": 0.0, "steps": 0}
     cards = card_counts(data) if a.bucket else None
     # Minibatches of similar rows would each normalise their advantages within one kind of decision: normalise
     # once over all rows instead.
@@ -209,6 +209,14 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
 
                 al = aux_loss(aux, b)
                 loss = loss + a.aux_weight * al
+            sl = torch.zeros((), device=adv.device)
+            if a.sure > 0 and data.sure is not None:
+                # BOT-NEXT.md N5: imitate the first move of a line the engine proved wins this turn (rows that have one).
+                target = data.sure[j]
+                has = target >= 0
+                if bool(has.any()):
+                    sl = -logp_all[has].gather(1, target[has][:, None]).mean()
+                    loss = loss + a.sure * sl
             kl = torch.zeros((), device=adv.device)
             if anchor is not None and kl_coef > 0:
                 with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
@@ -226,6 +234,7 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             stats["kl"] += kl.item()
             stats["clip"] += ((ratio - 1).abs() > a.clip).float().mean().item()
             stats["aux"] += al.item()
+            stats["sure"] += sl.item()
             stats["steps"] += 1
     s = stats.pop("steps")
     return {k: round(v / max(1, s), 4) for k, v in stats.items()}
@@ -267,6 +276,7 @@ def main():
     ap.add_argument("--resign-turns", type=int, default=2)
     ap.add_argument("--keep-playing", type=float, default=0.1, help="share of games where nobody resigns (checks how often resigning was wrong)")
     ap.add_argument("--bf16", action="store_true", help="bfloat16 autocast in the update (version 3: faster, less memory)")
+    ap.add_argument("--sure", type=float, default=0.0, help="weight of imitating lines proved to win this turn (netbot.ts sureTarget; 0 = off, BOT-NEXT.md N5)")
     ap.add_argument("--aux-weight", type=float, default=0.25, help="version 3: weight of the training-only targets (opponent's hand, Prize difference)")
     ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
     ap.add_argument("--bucket", action="store_true", help="minibatches of similar-sized rows, padding cut (version 3 ~1.9x faster), advantages normalised over all rows")
@@ -342,7 +352,7 @@ def main():
     def gen_config(it: int, out: str, weights: str) -> dict:
         league = sorted(globmod.glob(os.path.join(a.dir, "league-*.json")))
         players = {
-            "net": {"kind": "net", "weights": weights, "temperature": 1, "record": True},
+            "net": {"kind": "net", "weights": weights, "temperature": 1, "record": True, **({"sure": True} if a.sure > 0 else {})},
             # With fixed decks, self-play's other side is the same network unrecorded: only the network's own decks train it.
             "selfopp": {"kind": "net", "weights": weights, "temperature": 1},
             "old": {"kind": "net", "weights": random.choice(league), "temperature": 1},
@@ -414,6 +424,11 @@ def main():
             "train_s": round(time.time() - t1),
             **({"resign": res["resign"]} if "resign" in res else {}),
         }
+        if data.sure is not None and bool((data.sure >= 0).any()):
+            # Decisions with a line proved to win this turn, and how often the sampled move was its first step.
+            has = data.sure >= 0
+            row["sure_n"] = int(has.sum())
+            row["sure_hit"] = round(float((data.chosen[has] == data.sure[has]).float().mean()), 4)
         if a.pfsp:
             wr = state.setdefault("wr", {})
             for d, (sc, n) in deck_scores(res).items():

@@ -4,7 +4,7 @@ import { suggestNet } from '../../src/bots/coach';
 import { makeBot } from '../../src/bots/core';
 import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, encode } from '../../src/bots/learn/encode';
 import { randomModel, run } from '../../src/bots/learn/model';
-import { makeNetBot, recordBot, type Decision } from '../../src/bots/learn/netbot';
+import { actionKey, makeNetBot, recordBot, sureTarget, type Decision } from '../../src/bots/learn/netbot';
 import { runStep, sureLine } from '../../src/bots/finisher';
 import { makeSearchNetBot } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
@@ -168,24 +168,41 @@ describe('the hint button with a network', () => {
   });
 });
 
+/** 20 Nov 2026, a game against a person: a sure win the bot missed (it attacked with Rapid-Fire Combo and needed two heads). */
+const cruelArrowWin = () =>
+  scenario({
+    p0: {
+      active: { card: 'mega-kangaskhan-ex', energy: ['fighting-energy', 'psychic-energy', 'psychic-energy', 'grass-energy'] },
+      bench: ['fezandipiti-ex', { card: 'mega-kangaskhan-ex', energy: ['grass-energy', 'psychic-energy', 'grass-energy'] }],
+      hand: ['energy-switch', 'energy-switch', 'energy-switch', 'lightning-energy'],
+      prizes: 2,
+    },
+    p1: { active: 'mega-kangaskhan-ex', bench: [{ card: 'latias-ex', damage: 200 }] },
+  });
+
 describe('what the bot checks before it plays', () => {
   it("finds a sure win the attack planner's patterns miss: retreat to Fezandipiti ex, power it up, Cruel Arrow the Benched Latias ex", () => {
-    // 20 Nov 2026, a game against a person: the bot attacked with Rapid-Fire Combo instead and needed two heads.
-    const s = scenario({
-      p0: {
-        active: { card: 'mega-kangaskhan-ex', energy: ['fighting-energy', 'psychic-energy', 'psychic-energy', 'grass-energy'] },
-        bench: ['fezandipiti-ex', { card: 'mega-kangaskhan-ex', energy: ['grass-energy', 'psychic-energy', 'grass-energy'] }],
-        hand: ['energy-switch', 'energy-switch', 'energy-switch', 'lightning-energy'],
-        prizes: 2,
-      },
-      p1: { active: 'mega-kangaskhan-ex', bench: [{ card: 'latias-ex', damage: 200 }] },
-    });
+    const s = cruelArrowWin();
     const plan = planFor('basic-box');
     const line = sureLine(s, 0, plan, 3);
     expect(line.wins).toBe(true);
     let st = s;
     for (const step of line.steps) st = runStep(st, step, plan);
     expect(st.winner).toBe(0);
+  });
+
+  it('training rows carry the first move of a line proved to win this turn (sureTarget), and −1 without one', () => {
+    const s = cruelArrowWin();
+    const plan = planFor('basic-box');
+    const rows: Decision[] = [];
+    makeNetBot(randomModel(1), { decks: [plan.name, plan.name], seed: 1, onDecision: (d) => rows.push(d), sure: plan }).act(s);
+    const target = rows[0]!.sure!;
+    expect(target).toBeGreaterThanOrEqual(0);
+    const ref = rows[0]!.enc.refs[target]!;
+    expect(ref.t === 'action' && actionKey(s, ref.action)).toBe(actionKey(s, sureLine(s, 0, plan, 3).steps[0]!.action));
+    // Four Prizes to go and nothing worth four on their side: no win is looked for.
+    const b = board();
+    expect(sureTarget(b, 0, planFor('player'), encode(b, { decks: DECKS }))).toBe(-1);
   });
 
   it('spreads Phantom Dive counters for every Knock Out they can make, whatever the network would pick', () => {

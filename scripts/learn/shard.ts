@@ -87,6 +87,8 @@ export class ShardWriter {
   private prizeDiff = new Grow((n) => new Int8Array(n));
   /** Training-only: both players' Prize cards and the top of both decks (netbot.ts oracleOf), for the critic that sees all. */
   private oracle = new Grow((n) => new Int16Array(n));
+  /** Training-only: the option starting a line proved to win this turn (netbot.ts sureTarget), −1 = none. */
+  private sure = new Grow((n) => new Int16Array(n));
   private open: { game: number; from: number } | null = null;
   rows = 0;
 
@@ -124,6 +126,7 @@ export class ShardWriter {
     this.prizeDiff.push(0);
     if (d.oracle) this.oracle.pushAll(d.oracle);
     else this.oracle.pushAll(new Int16Array(ORACLE));
+    this.sure.push(d.sure ?? -1);
     this.rows++;
   }
 
@@ -157,7 +160,7 @@ export class ShardWriter {
     this.slotCards.n = rows * SLOTS * 2;
     this.bags.n = rows * BAGS * VOCAB;
     this.glob.n = rows * GLOB_F;
-    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft, this.aux, this.prizeDiff]) g.n = rows;
+    for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft, this.aux, this.prizeDiff, this.sure]) g.n = rows;
     this.oppHand.n = rows * VOCAB;
     this.oracle.n = rows * ORACLE;
     this.optX.n = optFrom * OPT_F;
@@ -204,6 +207,7 @@ export class ShardWriter {
       ['aux', 'u1', [n], this.aux.view()],
       ['prizeDiff', 'i1', [n], this.prizeDiff.view()],
       ['oracle', 'i2', [n, ORACLE], this.oracle.view()],
+      ['sure', 'i2', [n], this.sure.view()],
       ...extra,
     ];
     const header: Record<string, { dtype: string; shape: number[]; offset: number }> = {};

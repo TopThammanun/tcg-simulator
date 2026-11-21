@@ -4,8 +4,9 @@
 import { actor } from '../../engine/actions';
 import { keyOf } from '../../engine/state';
 import type { Action, GameState, PlayerId } from '../../engine/types';
+import { sureLine, winPlausible } from '../finisher';
 import { makeRand } from '../random';
-import type { Bot } from '../types';
+import type { Bot, DeckPlan } from '../types';
 import { cardNumber, encode, VOCAB, type Encoded, type OptionRef } from './encode';
 import { run, softmax, type Model } from './model';
 
@@ -28,6 +29,8 @@ export interface Decision {
   oppHand?: Uint8Array;
   /** Training-only: the hidden cards the critic that sees all reads (oracleOf). */
   oracle?: Int16Array;
+  /** Training-only: the option that starts a line proved to win this turn (sureTarget); −1 or absent: none. */
+  sure?: number;
 }
 
 /** A bot that can say whether its last main-phase move came out of a search (search.ts). */
@@ -48,6 +51,8 @@ export interface NetBotOptions {
   ties?: number;
   /** Called for every decision with more than one option. */
   onDecision?: (d: Decision) => void;
+  /** Recorded decisions also get sureTarget(), with this deck's plan (training only: it costs an attack plan). */
+  sure?: DeckPlan;
 }
 
 /** Same action, treating copies of the same card as equal. */
@@ -96,6 +101,19 @@ export function oracleOf(s: GameState, me: PlayerId): Int16Array {
   return out;
 }
 
+/**
+ * Training-only (BOT-NEXT.md N5, LumenLiquidity's proved lines): the option that starts a line winning this turn on
+ * every re-deal of what `me` can't see (finisher.ts sureLine), or −1. PPO imitates it lightly (ppo.py --sure): the
+ * engine proved the line, so unlike a hand-written rule it can't be wrong.
+ */
+export function sureTarget(s: GameState, me: PlayerId, plan: DeckPlan, enc: Encoded): number {
+  if (s.phase !== 'main' || s.pending || s.current !== me || !winPlausible(s, me)) return -1;
+  const win = sureLine(s, me, plan, 3);
+  if (!win.wins) return -1;
+  const key = actionKey(s, win.steps[0]!.action);
+  return enc.refs.findIndex((r) => r.t === 'action' && actionKey(s, r.action) === key);
+}
+
 /** The option to play with temperature 0: the best, or with `ties` a random one of those within `ties` of its probability. */
 export function bestOption(logits: Float32Array, ties: number, rand: () => number): number {
   let i = 0;
@@ -131,7 +149,8 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
     }
     if (o.onDecision) {
       const p = softmax(out.logits);
-      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits, oppHand: oppHand(s, me), oracle: oracleOf(s, me) });
+      const sure = o.sure ? sureTarget(s, me, o.sure, enc) : -1;
+      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits, oppHand: oppHand(s, me), oracle: oracleOf(s, me), sure });
     }
     return i;
   };

@@ -228,7 +228,7 @@ const SURE_SEEDS = [1, 2, 3];
 const WIN_BUDGET = 2500;
 
 /** A win this turn is worth looking for: a single Knock Out, or two, could take the last Prizes, or they have nothing to promote. */
-function winPlausible(s: GameState, me: PlayerId): boolean {
+export function winPlausible(s: GameState, me: PlayerId): boolean {
   const left = s.players[me].prizes.length;
   const theirs = s.players[opp(me)];
   if (left <= 2 || theirs.bench.length === 0) return true;

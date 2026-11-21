@@ -5,7 +5,7 @@
 
 From the same expert, ppo.py trains equally long: a control (the inputs it had), one run per input group (the
 network widened, only that group's inputs on: prizes, revealed, history, sim) and one with the critic that sees
-all. Each then plays the control with the same deck on both sides (a mirror: both play what they learned),
+all, and one that imitates proved winning lines (N5, --sure). Each then plays the control with the same deck on both sides (a mirror: both play what they learned),
 --games games; a group or the critic is worth keeping at >= 53%. Arguments after "--" go to every ppo.py run;
 results are appended to data/learn/ablations.jsonl.
 """
@@ -29,6 +29,8 @@ RUNS = {
     "history": ["--widen", "--inputs", "history"],
     "sim": ["--widen", "--inputs", "sim"],
     "critic": ["--critic"],
+    # N5: imitate the first move of lines the engine proved win this turn (netbot.ts sureTarget).
+    "sure": ["--sure", "0.5"],
 }
 
 

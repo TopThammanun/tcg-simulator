@@ -6,7 +6,7 @@
 import { connect } from 'node:net';
 import { encode, type Encoded, type OptionRef } from '../../src/bots/learn/encode';
 import { softmax } from '../../src/bots/learn/model';
-import { bestOption, MAX_ACTIONS_PER_TURN, oppHand, oracleOf, turnCounter, type Decision } from '../../src/bots/learn/netbot';
+import { bestOption, MAX_ACTIONS_PER_TURN, oppHand, oracleOf, sureTarget, turnCounter, type Decision } from '../../src/bots/learn/netbot';
 import { planFor } from '../../src/bots/plans';
 import { makeRand } from '../../src/bots/random';
 import type { Bot, DeckPlan } from '../../src/bots/types';
@@ -35,6 +35,8 @@ export interface Served {
   record: boolean;
   /** With temperature 0: a random option among those within this much of the best one's probability (netbot.ts). */
   ties?: number;
+  /** Recorded decisions also get sureTarget() with this deck's plan (netbot.ts NetBotOptions.sure). */
+  sure?: DeckPlan;
   /** The look-ahead bot with its rollouts batched too (deep.ts), and the deck plan its attack planner uses. */
   deep?: DeepOptions & { plan?: DeckPlan };
 }
@@ -113,7 +115,8 @@ function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first
   }
   if (sv.record) {
     const p = softmax(out.logits);
-    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice(), oppHand: oppHand(s, me), oracle: oracleOf(s, me) });
+    const sure = sv.sure ? sureTarget(s, me, sv.sure, enc) : -1;
+    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice(), oppHand: oppHand(s, me), oracle: oracleOf(s, me), sure });
   }
   // The first network decision of each own turn counts toward resigning.
   if (resign && first && side.lowTurn !== s.turn) {

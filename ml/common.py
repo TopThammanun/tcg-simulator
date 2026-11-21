@@ -106,6 +106,8 @@ class Data:
         self.prize_diff = t(cat("prizeDiff")) if has_aux else None
         # Training-only hidden cards for the critic that sees all (netbot.ts oracleOf), in shards that have them.
         self.oracle = t(cat("oracle"), torch.long) if all("oracle" in p for p in parts) else None
+        # Training-only: the option starting a line proved to win this turn (netbot.ts sureTarget), -1 = none.
+        self.sure = t(cat("sure"), torch.long) if all("sure" in p for p in parts) else None
         assert self.slots.shape[1:] == (SLOTS, SLOT_F), self.slots.shape
         # Inputs a run leaves out (ppo.py --inputs): these bags, globals and option numbers read as zeros.
         self.off: dict[str, list[int]] = {"bags": [], "glob": [], "opt": []}
