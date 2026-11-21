@@ -1,13 +1,12 @@
-"""N4's measurements (BOT-NEXT.md): which of the new inputs and the critic make an expert stronger, each on its own.
+"""N4's measurements (BOT-NEXT.md): which of the new inputs and the critic make the network stronger, each on its own.
 
-    ml/.venv/Scripts/python ml/ablate.py --base .cache/learn/league/r2/dragapult-ex.json --deck dragapult-ex \
-        --root .cache/learn/n4 --iters 100 -- --epochs 2 --mb 4096 --lr 1e-4 --frozen .cache/learn/league/r2
+    ml/.venv/Scripts/python ml/ablate.py --base .cache/learn/l2-60.json --root .cache/learn/n4 --iters 100         -- --epochs 2 --mb 4096 --lr 1e-4 --frozen .cache/learn/l2-60.json
 
-From the same expert, ppo.py trains equally long: a control (the inputs it had), one run per input group (the
-network widened, only that group's inputs on: prizes, revealed, history, sim) and one with the critic that sees
-all, and one that imitates proved winning lines (N5, --sure). Each then plays the control with the same deck on both sides (a mirror: both play what they learned),
---games games; a group or the critic is worth keeping at >= 53%. Arguments after "--" go to every ppo.py run;
-results are appended to data/learn/ablations.jsonl.
+From the same network, ppo.py trains equally long: a control (the inputs it had), one run per input group (the
+network widened, only that group's inputs on: prizes, revealed, history, sim), one with the critic that sees all,
+and one that imitates proved winning lines (N5, --sure). Each then plays the control, --games games: on every deck
+pair, or with --deck (an expert's runs, --focus) that deck on both sides. A group is worth keeping at >= 53%.
+Arguments after "--" go to every ppo.py run; results are appended to data/learn/ablations.jsonl.
 """
 from __future__ import annotations
 
@@ -19,7 +18,6 @@ import sys
 import time
 
 from common import ROOT, run_gen
-from experts import best
 from match import paired_ci, wilson
 
 RUNS = {
@@ -40,7 +38,7 @@ def main():
     argv = argv[: argv.index("--")] if "--" in argv else argv
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True)
-    ap.add_argument("--deck", required=True)
+    ap.add_argument("--deck", default="", help="an expert's deck: its runs train with --focus and play the control in the mirror")
     ap.add_argument("--root", required=True)
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--games", type=int, default=3840)
@@ -53,7 +51,8 @@ def main():
         state = os.path.join(run, "state.json")
         done = json.load(open(state))["iter"] if os.path.exists(state) else 0
         if done < a.iters:
-            cmd = [sys.executable, os.path.join(ROOT, "ml", "ppo.py"), "--init", os.path.abspath(a.base), "--dir", run, "--focus", a.deck,
+            focus = ["--focus", a.deck] if a.deck else []
+            cmd = [sys.executable, os.path.join(ROOT, "ml", "ppo.py"), "--init", os.path.abspath(a.base), "--dir", run, *focus,
                    "--iters", str(a.iters - done), *RUNS[name], *extra]
             print(" ".join(cmd), flush=True)
             subprocess.run(cmd, cwd=ROOT, check=True)
@@ -73,14 +72,14 @@ def main():
             "base": 87_000_000,
             "threads": 12,
             "players": {"A": {"kind": "net", "weights": mine, "temperature": 0}, "B": {"kind": "net", "weights": control, "temperature": 0}},
-            "pairs": [{"a": "A", "b": "B", "share": 1, "decksA": {a.deck: 1}, "decksB": {a.deck: 1}}],
+            "pairs": [{"a": "A", "b": "B", "share": 1, **({"decksA": {a.deck: 1}, "decksB": {a.deck: 1}} if a.deck else {})}],
             "server": {"concurrent": 64, "lanes": 1},
         }
         t0 = time.time()
         r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), server)
         sc = r["scores"]["A vs B"]
         lo, hi = wilson(sc["score"], sc["n"])
-        row = {"run": name, "deck": a.deck, "base": os.path.relpath(os.path.abspath(a.base), ROOT).replace("\\", "/"), "iters": a.iters,
+        row = {"run": name, "deck": a.deck or "all", "base": os.path.relpath(os.path.abspath(a.base), ROOT).replace("\\", "/"), "iters": a.iters,
                "score": sc["score"], "n": sc["n"], "se": round(r.get("paired", {}).get("A vs B", {}).get("se", 0), 5),
                "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M")}
         with open(log, "a", encoding="utf-8") as f:
