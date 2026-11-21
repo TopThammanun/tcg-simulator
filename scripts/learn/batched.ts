@@ -6,7 +6,7 @@
 import { connect } from 'node:net';
 import { encode, type Encoded, type OptionRef } from '../../src/bots/learn/encode';
 import { softmax } from '../../src/bots/learn/model';
-import { MAX_ACTIONS_PER_TURN, oppHand, turnCounter, type Decision } from '../../src/bots/learn/netbot';
+import { MAX_ACTIONS_PER_TURN, oppHand, oracleOf, turnCounter, type Decision } from '../../src/bots/learn/netbot';
 import { planFor } from '../../src/bots/plans';
 import { makeRand } from '../../src/bots/random';
 import type { Bot } from '../../src/bots/types';
@@ -106,7 +106,7 @@ function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first
   }
   if (sv.record) {
     const p = softmax(out.logits);
-    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice(), oppHand: oppHand(s, me) });
+    rows.push({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits.slice(), oppHand: oppHand(s, me), oracle: oracleOf(s, me) });
   }
   // The first network decision of each own turn counts toward resigning.
   if (resign && first && side.lowTurn !== s.turn) {

@@ -68,6 +68,6 @@ describe('known deck top', () => {
       expect(theirs.bags[6 * VOCAB + v]).toBe(0);
       expect(theirs.bags[7 * VOCAB + v]).toBe(0);
     }
-    expect(BAGS).toBe(8);
+    expect(BAGS).toBe(11);
   });
 });

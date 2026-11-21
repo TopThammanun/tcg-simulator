@@ -68,7 +68,7 @@ def main():
     elif a.v3:
         from net3 import new_net3
 
-        net = new_net3(data.glob.shape[1], data.opt_x.shape[1], dims, a.id_drop)
+        net = new_net3(data.glob.shape[1], data.opt_x.shape[1], dims, a.id_drop, data.bags.shape[1])
     else:
         net = new_net2(data, dims, a.id_drop) if a.v2 else new_net(data, dims)
     print(f"{sum(p.numel() for p in net.parameters())} parameters, dims {net.dims}", flush=True)

@@ -20,7 +20,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from common import BAGS, SLOT_F, SLOTS
+from common import BAGS_V3, SLOT_F, SLOTS, glob_keep
 
 V3_DIMS = {"E": 64, "D": 128, "L": 3, "HEADS": 4, "FF": 256, "C": 64}
 
@@ -63,20 +63,21 @@ class Block(nn.Module):
 class Net3(nn.Module):
     version = 3
 
-    def __init__(self, feats: dict, glob_f: int, opt_f: int, dims: dict | None = None, id_drop: float = 0.0):
+    def __init__(self, feats: dict, glob_f: int, opt_f: int, dims: dict | None = None, id_drop: float = 0.0, bags: int = BAGS_V3):
         super().__init__()
         d = {**V3_DIMS, **(dims or {})}
-        self.dims, self.glob_f, self.opt_f, self.id_drop = d, glob_f, opt_f, id_drop
+        self.dims, self.glob_f, self.opt_f, self.id_drop, self.bags = d, glob_f, opt_f, id_drop, bags
         self.cards = list(feats["cards"])
         self.register_buffer("feats", feats["table"].clone())
-        self.register_buffer("glob_keep", torch.tensor(feats["globKeep"], dtype=torch.long))
+        keep = glob_keep(glob_f)
+        self.register_buffer("glob_keep", torch.tensor(keep, dtype=torch.long))
         E, D = d["E"], d["D"]
         self.id_emb = nn.Embedding(len(self.cards) + 2, E)
         nn.init.normal_(self.id_emb.weight, std=0.1)
         self.feat = nn.Linear(self.feats.shape[1], E)
-        self.glob_in = MLP(len(feats["globKeep"]) + E, D, D)
+        self.glob_in = MLP(len(keep) + E, D, D)
         self.slot_in = MLP(2 * E + SLOT_F, D, D)
-        self.card_in = MLP(E + BAGS, D, D)
+        self.card_in = MLP(E + bags, D, D)
         self.opt_in = MLP(E + opt_f + D, D, D)
         self.kind = nn.Parameter(torch.zeros(4, D))
         self.blocks = nn.ModuleList(Block(D, d["HEADS"], d["FF"]) for _ in range(d["L"]))
@@ -114,9 +115,10 @@ class Net3(nn.Module):
         slots, sc = b["slots"], b["slot_cards"]
         present = slots[:, :, 0] > 0
         slot_x = self.slot_in(torch.cat([cv[sc[:, :, 0]], cv[sc[:, :, 1]], slots], -1)) + self.kind[1]
-        # Cards with a count anywhere, in card order (stable sort puts them first), C of them.
-        bags = b["bags"]
-        has = bags.sum(1) > 0
+        # Cards with a count in the first 8 bags, in card order (stable sort puts them first), C of them; each token
+        # reads the card's counts in every bag the network reads.
+        bags = b["bags"][:, : self.bags]
+        has = b["bags"][:, :BAGS_V3].sum(1) > 0
         has[:, 0] = False
         C = min(int(b["C"]), self.dims["C"]) if "C" in b else self.dims["C"]
         order = torch.argsort(has.to(torch.int8), dim=1, descending=True, stable=True)[:, :C]
@@ -126,7 +128,7 @@ class Net3(nn.Module):
         g = self.glob_in(torch.cat([b["glob"][:, self.glob_keep], cv[b["source"]]], -1))[:, None] + self.kind[0]
         slot = b["opt_slot"]
         target = torch.gather(slot_x, 1, slot.clamp(min=0)[..., None].expand(-1, -1, slot_x.shape[-1])) * (slot >= 0)[..., None]
-        opt_x = self.opt_in(torch.cat([cv[b["opt_card"]], b["opt_x"], target], -1)) + self.kind[3]
+        opt_x = self.opt_in(torch.cat([cv[b["opt_card"]], b["opt_x"][..., : self.opt_f], target], -1)) + self.kind[3]
         x = torch.cat([g, slot_x, card_x, opt_x], 1)
         keep = torch.cat([torch.ones_like(present[:, :1]), present, card_keep, b["mask"]], 1)
         return x, keep, 1 + SLOTS + C, order, card_keep
@@ -144,31 +146,52 @@ class Net3(nn.Module):
 
     def forward_aux(self, b: dict[str, torch.Tensor]):
         """forward() plus the training-only predictions and the targets they are compared with (aux_loss)."""
-        x, keep, first_opt, order, card_keep = self.trunk(b)
-        logits, value = self.heads(x, keep, first_opt, b)
-        cards = x[:, 1 + SLOTS : first_opt]
-        aux = {
-            "hand": F.softplus(self.aux_hand(cards).squeeze(-1)),
-            "order": order,
-            "card_keep": card_keep,
-            "prize": self.aux_prize(x[:, 0]).squeeze(-1),
-        }
-        return logits, value, aux
+        out = self.forward_train(b)
+        return out["logits"], out["value"], out["aux"]
 
-    def heads(self, x: torch.Tensor, keep: torch.Tensor, first_opt: int, b: dict[str, torch.Tensor]):
+    def forward_train(self, b: dict[str, torch.Tensor], critic: bool = False) -> dict[str, torch.Tensor]:
+        """What ppo.py trains: logits, value, the training-only predictions (aux_loss), and with `critic` the value
+        logit of the critic that sees all (`self.critic`, common.Critic)."""
+        cv = self.card_vectors()
+        x, keep, first_opt, order, card_keep = self.tokens(b, cv)
+        for blk in self.blocks:
+            x = blk(x, keep)
+        x = self.norm(x)
+        logits, value, h = self.heads(x, keep, first_opt, b, full=True)
+        cards = x[:, 1 + SLOTS : first_opt]
+        out = {
+            "logits": logits,
+            "value": value,
+            "aux": {
+                "hand": F.softplus(self.aux_hand(cards).squeeze(-1)),
+                "order": order,
+                "card_keep": card_keep,
+                "prize": self.aux_prize(x[:, 0]).squeeze(-1),
+            },
+        }
+        if critic:
+            out["critic"] = self.critic(h, cv, b)
+        return out
+
+    def critic_size(self) -> tuple[int, int]:
+        """The width of what the critic reads besides the hidden cards, and of a card vector."""
+        return 2 * self.dims["D"], self.dims["E"]
+
+    def heads(self, x: torch.Tensor, keep: torch.Tensor, first_opt: int, b: dict[str, torch.Tensor], full: bool = False):
         g = x[:, 0]
         w = keep.to(x.dtype)[..., None]
         mean = (x * w).sum(1) / w.sum(1)
-        value = self.value(torch.cat([g, mean], -1)).squeeze(-1)
+        h = torch.cat([g, mean], -1)
+        value = self.value(h).squeeze(-1)
         u = gelu(self.q(g)[:, None, :] + self.k(x[:, first_opt:]))
         logits = self.score(u).squeeze(-1).masked_fill(~b["mask"], -1e9)
-        return logits, value
+        return (logits, value, h) if full else (logits, value)
 
 
-def new_net3(glob_f: int = 83, opt_f: int = 30, dims: dict | None = None, id_drop: float = 0.15) -> Net3:
+def new_net3(glob_f: int = 91, opt_f: int = 38, dims: dict | None = None, id_drop: float = 0.15, bags: int = 11) -> Net3:
     from common import DEVICE, card_features
 
-    return Net3(card_features(), glob_f, opt_f, dims, id_drop).to(DEVICE)
+    return Net3(card_features(), glob_f, opt_f, dims, id_drop, bags).to(DEVICE)
 
 
 def aux_loss(aux: dict[str, torch.Tensor], b: dict[str, torch.Tensor]) -> torch.Tensor:

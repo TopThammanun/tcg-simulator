@@ -2,7 +2,7 @@
 // positions. Its agreement with PyTorch is checked by scripts/learn/parity.ts + ml/parity.py on trained networks.
 import { describe, expect, it } from 'vitest';
 import { CARD_F } from '../../src/bots/learn/card-features';
-import { BAGS, CARD_KEYS, encode, OPT_F, SLOT_F } from '../../src/bots/learn/encode';
+import { BAGS, CARD_KEYS, encode, GLOB_F, OPT_F, SLOT_F } from '../../src/bots/learn/encode';
 import { GLOB_KEEP, loadModel, run, type ModelJson } from '../../src/bots/learn/model';
 import { planFor } from '../../src/bots/plans';
 import { makeBot } from '../../src/bots/core';
@@ -65,7 +65,7 @@ function randomV3(seed = 3): ModelJson {
   return {
     version: 3,
     cards: [...CARD_KEYS],
-    dims: { ...dims, SLOT_F, GLOB_F: 83, OPT_F, CARD_F } as unknown as ModelJson['dims'],
+    dims: { ...dims, SLOT_F, GLOB_F, OPT_F, CARD_F, BAGS } as unknown as ModelJson['dims'],
     tensors,
   };
 }

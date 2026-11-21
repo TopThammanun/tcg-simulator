@@ -23,16 +23,18 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from common import DEVICE, ROOT, Data, export, import_json, run_gen, start_gen
+from common import BAGS_V3, DEVICE, ROOT, Critic, Data, export, import_json, run_gen, start_gen, widen
 
 import glob as globmod
 
 
-def gae(data: Data, lam: float) -> tuple[torch.Tensor, torch.Tensor]:
-    """Advantages and returns per row; each (game, player) is one trajectory in row order."""
+def gae(data: Data, lam: float, values: torch.Tensor | None = None) -> tuple[torch.Tensor, torch.Tensor]:
+    """Advantages and returns per row; each (game, player) is one trajectory in row order. `values`: the baseline
+    (default: the value the playing network gave, data.value; --critic: the critic that sees all)."""
+    base = data.value if values is None else values
     game = data.game.cpu().numpy()
     player = data.player.cpu().numpy()
-    value = data.value.cpu().numpy().astype(np.float64)
+    value = base.cpu().numpy().astype(np.float64)
     outcome = data.outcome.cpu().numpy().astype(np.float64)
     key = game * 2 + player
     order = np.argsort(key, kind="stable")
@@ -54,7 +56,44 @@ def gae(data: Data, lam: float) -> tuple[torch.Tensor, torch.Tensor]:
     out = np.zeros(len(order))
     out[order] = adv
     advt = torch.from_numpy(out).float().to(data.value.device)
-    return advt, (advt + data.value).clamp(0, 1)
+    return advt, (advt + base).clamp(0, 1)
+
+
+# Version 4's inputs by group (src/bots/learn/encode.ts: bags 8-10, globals 83-90, option numbers 30-37). --inputs
+# keeps some; the others read as zeros (their weights then stay at zero: the ablations of BOT-NEXT.md N4).
+INPUT_GROUPS = {
+    "prizes": {"bags": [8], "glob": [83], "opt": []},
+    "revealed": {"bags": [9], "glob": [84, 85], "opt": []},
+    "history": {"bags": [10], "glob": [86, 87, 88, 89, 90], "opt": []},
+    "sim": {"bags": [], "glob": [], "opt": list(range(30, 38))},
+}
+
+
+def inputs_off(keep: str) -> dict[str, list[int]]:
+    """Data.off for the groups not in `keep` ("all", "none" or a comma list of INPUT_GROUPS)."""
+    on = set(INPUT_GROUPS) if keep == "all" else set() if keep == "none" else set(keep.split(","))
+    assert on <= set(INPUT_GROUPS), on - set(INPUT_GROUPS)
+    off: dict[str, list[int]] = {"bags": [], "glob": [], "opt": []}
+    for g, cols in INPUT_GROUPS.items():
+        if g not in on:
+            for k in off:
+                off[k] += cols[k]
+    return off
+
+
+def critic_values(net, data: Data, a, mb: int = 8192) -> torch.Tensor:
+    """The critic's chance to win for every row (the baseline of the advantages with --critic)."""
+    out = torch.empty(data.n, device=data.value.device)
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
+        for i in range(0, data.n, mb):
+            j = torch.arange(i, min(data.n, i + mb), device=out.device)
+            out[j] = torch.sigmoid(net.forward_train(data.batch(j), critic=True)["critic"].float())
+    return out
+
+
+def training_heads(net) -> dict[str, torch.Tensor]:
+    """The parameters the weights file leaves out (aux_*, critic): heads.pt keeps them across a resume."""
+    return {k: v for k, v in net.state_dict().items() if k.startswith(("aux_", "critic."))}
 
 
 def deck_files() -> dict[str, dict]:
@@ -88,11 +127,11 @@ def opponent_decks(extra_text: str, meta_part: float) -> dict[str, float]:
 
 
 def card_counts(data: Data) -> torch.Tensor:
-    """How many card tokens each row has (version 3: cards with a count in any bag), counted in slices."""
+    """How many card tokens each row has (version 3: cards with a count in the first 8 bags), counted in slices."""
     out = torch.empty(data.n, dtype=torch.long, device=data.bags.device)
     step = 65536
     for i in range(0, data.n, step):
-        has = data.bags[i : i + step].sum(1) > 0
+        has = data.bags[i : i + step, :BAGS_V3].sum(1) > 0
         has[:, 0] = False
         out[i : i + step] = has.sum(1)
     return out
@@ -124,13 +163,9 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             b = data.batch(j)
             if cards is not None:
                 b["C"] = int(cards[j].max())
-            aux = None
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
-                if hasattr(net, "forward_aux"):
-                    logits, value, aux = net.forward_aux(b)
-                else:
-                    logits, value = net(b)
-            logits, value = logits.float(), value.float()
+                out = net.forward_train(b, critic=a.critic)
+            logits, value, aux = out["logits"].float(), out["value"].float(), out.get("aux")
             logp_all = F.log_softmax(logits, -1)
             logp = logp_all.gather(1, data.chosen[j][:, None]).squeeze(1)
             ratio = torch.exp(logp - data.logp[j])
@@ -141,6 +176,9 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
                 A = (A - A.mean()) / (A.std() + 1e-8)
             pg = -torch.min(ratio * A, ratio.clamp(1 - a.clip, 1 + a.clip) * A).mean()
             vloss = F.binary_cross_entropy_with_logits(value, ret[j])
+            if a.critic:
+                # The critic learns the same returns; the shipped value head keeps learning them too.
+                vloss = vloss + F.binary_cross_entropy_with_logits(out["critic"].float(), ret[j])
             p = logp_all.exp() * b["mask"]
             ent = -(p * logp_all.masked_fill(~b["mask"], 0)).sum(-1).mean()
             loss = pg + a.vcoef * vloss - a.ent * ent
@@ -211,6 +249,9 @@ def main():
     ap.add_argument("--aux-weight", type=float, default=0.25, help="version 3: weight of the training-only targets (opponent's hand, Prize difference)")
     ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
     ap.add_argument("--bucket", action="store_true", help="minibatches of similar-sized rows, padding cut (version 3 ~1.9x faster), advantages normalised over all rows")
+    ap.add_argument("--critic", action="store_true", help="advantages from a critic that also sees the hidden cards (training only, BOT-NEXT.md N4)")
+    ap.add_argument("--widen", action="store_true", help="a new run's network reads every input of the encoder now (new weights at zero: the same moves at first)")
+    ap.add_argument("--inputs", default="all", help="version 4 inputs it may use: all, none, or some of prizes,revealed,history,sim (the rest read as zeros)")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)
@@ -223,10 +264,18 @@ def main():
     state = json.load(open(state_path)) if os.path.exists(state_path) else {"iter": 0}
     cur_path = os.path.join(a.dir, "current.json")
     if state["iter"] == 0 or not os.path.exists(cur_path):
-        shutil.copy(a.init, cur_path)
-        shutil.copy(a.init, os.path.join(a.dir, "league-0.json"))
+        if a.widen:
+            export(widen(import_json(a.init, id_drop=0.0)), cur_path, {"stage": "widened", "from": os.path.basename(a.init)})
+        else:
+            shutil.copy(a.init, cur_path)
+        shutil.copy(cur_path, os.path.join(a.dir, "league-0.json"))
     # No card-vector dropout here: the update compares against the move probabilities the games were played with.
     net = import_json(cur_path, id_drop=0.0)
+    heads_path = os.path.join(a.dir, "heads.pt")
+    if a.critic:
+        net.critic = Critic(*net.critic_size()).to(DEVICE)
+    if os.path.exists(heads_path) and state["iter"] > 0:
+        net.load_state_dict(torch.load(heads_path, map_location=DEVICE), strict=False)
     anchor = import_json(a.init, id_drop=0.0)
     anchor.train(False)
     for p in anchor.parameters():
@@ -308,15 +357,19 @@ def main():
         # The last iteration's rows go before these load (both at once would need twice the GPU memory).
         data = adv = ret = None
         data = Data(sorted(globmod.glob(os.path.join(out, "*.bin"))))
+        data.off = inputs_off(a.inputs)
         # The next iteration's games, played meanwhile by the weights before this update (one iteration behind;
         # PPO's ratio to the recorded move probabilities corrects for it).
         pending = start(it + 1) if a.overlap and n_iter < a.iters - 1 else None
-        adv, ret = gae(data, a.lam)
+        adv, ret = gae(data, a.lam, critic_values(net, data, a) if a.critic else None)
         kl_coef = a.kl * max(0.0, 1 - it / max(1, a.kl_iters))
         stats = ppo_update(net, anchor, data, adv, ret, opt, a, kl_coef)
         it += 1
         export(net, cur_path, {"stage": "ppo", "iter": it})
         torch.save(opt.state_dict(), opt_path)
+        heads = training_heads(net)
+        if heads:
+            torch.save(heads, heads_path)
         if it % 10 == 0:
             shutil.copy(cur_path, os.path.join(a.dir, f"league-{it}.json"))
         row = {

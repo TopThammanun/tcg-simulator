@@ -10,6 +10,7 @@ import { makeSearchNetBot } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
 import type { Bot } from '../../src/bots/types';
 import { actor, apply, createGame, legalActions } from '../../src/engine/actions';
+import { revealedHand } from '../../src/engine/state';
 import type { GameState } from '../../src/engine/types';
 import { playGame } from '../../src/sim/game';
 import { deck, DECK_SLUGS, scenario } from '../engine/helpers';
@@ -65,21 +66,28 @@ describe('encode', () => {
   });
 
   it('does not depend on where the hidden cards are', () => {
-    const s = midGame(41);
-    const me = s.current;
-    const them = me === 0 ? 1 : 0;
-    const shuffled = structuredClone(s) as GameState;
-    // Swap cards between their hand, deck and Prizes, and between my deck and Prizes.
-    const t = shuffled.players[them];
-    const pool = [...t.hand, ...t.deck, ...t.prizes].reverse();
-    t.hand = pool.splice(0, t.hand.length);
-    t.deck = pool.splice(0, t.deck.length);
-    t.prizes = pool;
-    const m = shuffled.players[me];
-    const mine = [...m.deck, ...m.prizes].reverse();
-    m.deck = mine.splice(0, m.deck.length);
-    m.prizes = mine;
-    expect(encode(shuffled, { decks: DECKS })).toEqual(encode(s, { decks: DECKS }));
+    for (const seed of [41, 42, 43]) {
+      const s = midGame(seed);
+      const me = s.current;
+      const them = me === 0 ? 1 : 0;
+      const shuffled = structuredClone(s) as GameState;
+      // Swap the cards I can't know about: between their hand (not the cards I saw go there), deck and Prizes, and
+      // between my deck and Prizes (unless I have looked through my deck since they were set).
+      const t = shuffled.players[them];
+      const seen = revealedHand(t);
+      const hidden = t.hand.filter((c) => !seen.includes(c));
+      const pool = [...hidden, ...t.deck, ...t.prizes].reverse();
+      t.hand = [...seen, ...pool.splice(0, hidden.length)];
+      t.deck = pool.splice(0, t.deck.length);
+      t.prizes = pool;
+      const m = shuffled.players[me];
+      if (!m.prizesKnown) {
+        const mine = [...m.deck, ...m.prizes].reverse();
+        m.deck = mine.splice(0, m.deck.length);
+        m.prizes = mine;
+      }
+      expect(encode(shuffled, { decks: DECKS })).toEqual(encode(s, { decks: DECKS }));
+    }
   });
 
   it('offers the picks of a pending choice and a stop once enough are picked', () => {

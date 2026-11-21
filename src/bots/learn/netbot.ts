@@ -26,6 +26,8 @@ export interface Decision {
   logits?: Float32Array;
   /** Training-only labels the player can't see: how many of each card (by number) the opponent holds now. */
   oppHand?: Uint8Array;
+  /** Training-only: the hidden cards the critic that sees all reads (oracleOf). */
+  oracle?: Int16Array;
 }
 
 /** A bot that can say whether its last main-phase move came out of a search (search.ts). */
@@ -70,6 +72,25 @@ export function oppHand(s: GameState, me: PlayerId): Uint8Array {
   return out;
 }
 
+/** Numbers in oracleOf(): 6 Prize cards each, 3 cards on top of each deck. */
+export const ORACLE = 18;
+
+/**
+ * Training-only (BOT-NEXT.md N4, the critic that sees all, PerfectDou): card numbers of `me`'s Prize cards, the
+ * opponent's, the top 3 of `me`'s deck and of theirs (0 = none). Never an input of the policy.
+ */
+export function oracleOf(s: GameState, me: PlayerId): Int16Array {
+  const out = new Int16Array(ORACLE);
+  const put = (at: number, cards: number[], n: number) => cards.slice(0, n).forEach((c, i) => (out[at + i] = cardNumber(keyOf(s, c))));
+  const mine = s.players[me];
+  const theirs = s.players[me === 0 ? 1 : 0];
+  put(0, mine.prizes, 6);
+  put(6, theirs.prizes, 6);
+  put(12, mine.deck, 3);
+  put(15, theirs.deck, 3);
+  return out;
+}
+
 export function makeNetBot(model: Model, o: NetBotOptions): Bot {
   const rand = makeRand(o.seed ?? 1);
   const temperature = o.temperature ?? 0;
@@ -94,7 +115,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
     }
     if (o.onDecision) {
       const p = softmax(out.logits);
-      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits, oppHand: oppHand(s, me) });
+      o.onDecision({ enc, player: me, chosen: i, logp: Math.log(Math.max(p[i]!, 1e-12)), value: out.value, logits: out.logits, oppHand: oppHand(s, me), oracle: oracleOf(s, me) });
     }
     return i;
   };

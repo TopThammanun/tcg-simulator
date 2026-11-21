@@ -2,7 +2,7 @@
 // header (name → dtype, shape, offset), then the arrays. Floats are stored as float16 to halve the size.
 import { writeFileSync } from 'node:fs';
 import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB } from '../../src/bots/learn/encode';
-import type { Decision } from '../../src/bots/learn/netbot';
+import { ORACLE, type Decision } from '../../src/bots/learn/netbot';
 import type { PlayerId } from '../../src/engine/types';
 
 const f32 = new Float32Array(1);
@@ -85,6 +85,8 @@ export class ShardWriter {
   private oppHand = new Grow((n) => new Uint8Array(n));
   private aux = new Grow((n) => new Uint8Array(n));
   private prizeDiff = new Grow((n) => new Int8Array(n));
+  /** Training-only: both players' Prize cards and the top of both decks (netbot.ts oracleOf), for the critic that sees all. */
+  private oracle = new Grow((n) => new Int16Array(n));
   private open: { game: number; from: number } | null = null;
   rows = 0;
 
@@ -120,6 +122,8 @@ export class ShardWriter {
     else this.oppHand.pushAll(new Uint8Array(VOCAB));
     this.aux.push(d.oppHand ? 1 : 0);
     this.prizeDiff.push(0);
+    if (d.oracle) this.oracle.pushAll(d.oracle);
+    else this.oracle.pushAll(new Int16Array(ORACLE));
     this.rows++;
   }
 
@@ -155,6 +159,7 @@ export class ShardWriter {
     this.glob.n = rows * GLOB_F;
     for (const g of [this.source, this.optStart, this.optCount, this.chosen, this.logp, this.value, this.searched, this.game, this.player, this.outcome, this.soft, this.aux, this.prizeDiff]) g.n = rows;
     this.oppHand.n = rows * VOCAB;
+    this.oracle.n = rows * ORACLE;
     this.optX.n = optFrom * OPT_F;
     this.optCard.n = optFrom;
     this.optSlot.n = optFrom;
@@ -198,6 +203,7 @@ export class ShardWriter {
       ['oppHand', 'u1', [n, VOCAB], this.oppHand.view()],
       ['aux', 'u1', [n], this.aux.view()],
       ['prizeDiff', 'i1', [n], this.prizeDiff.view()],
+      ['oracle', 'i2', [n, ORACLE], this.oracle.view()],
       ...extra,
     ];
     const header: Record<string, { dtype: string; shape: number[]; offset: number }> = {};

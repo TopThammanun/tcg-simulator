@@ -2,15 +2,21 @@
 // row per option. Pokémon in play are tokens (card + HP, Energy, damage race…); cards out of play are
 // counts per card ("bags"); the options are the legal actions, or the choices of a pending request.
 // Never reads the other hand, a deck order or a Prize pile: hidden zones only enter as the combined
-// count of what is left (for the opponent: their hand + deck + Prizes), which their list already tells.
+// count of what is left (for the opponent: their hand + deck + Prizes), which their list already tells,
+// plus what the player has come to know (engine: known Prize cards, revealed hand cards, the turn before).
+// Version 4's inputs (BOT-NEXT.md N4) come after the older ones in every block: networks read the sizes they
+// were trained with (INPUTS_V3), so older ones see exactly what they always did.
 import type { EnergyType } from '../../data/cards';
-import { legalActions } from '../../engine/actions';
+import { apply, legalActions } from '../../engine/actions';
 import { applyWR } from '../../engine/combat';
 import { CARDS, def, hasRuleBox } from '../../engine/db';
 import { attackCost, benchLimit, canPay, energyOf, hpLeft, maxHp, retreatCost } from '../../engine/rules';
-import { findSlot, keyOf, knownTopCards, opp, topDef, topKey } from '../../engine/state';
+import { findSlot, keyOf, knownTopCards, opp, revealedHand, slotsOf, topDef, topKey } from '../../engine/state';
 import type { Action, ChoiceRequest, GameState, PlayerId, Purpose, Slot } from '../../engine/types';
+import { determinize } from '../../engine/view';
+import { choosePicks } from '../choose';
 import { missingFor, roughDamage } from '../knowledge';
+import type { DeckPlan } from '../types';
 
 /** Card keys known to the network, in a fixed order (index + 1 is the card's number; 0 = none). */
 export const CARD_KEYS: readonly string[] = Object.keys(CARDS).sort();
@@ -59,13 +65,26 @@ export const SLOTS = 18;
 export const SLOT_F = 44;
 /**
  * Bags: my hand, my deck + Prizes, my discard, their hand + deck + Prizes, their discard, the Stadium, the
- * card I know is on top of my deck, the other cards I know are below it (Ciphermaniac's, Academy at Night).
+ * card I know is on top of my deck, the other cards I know are below it (Ciphermaniac's, Academy at Night);
+ * version 4: my Prize cards once I know them, the cards of their hand I saw go there, what they played in
+ * their turn before.
  */
-export const BAGS = 8;
+export const BAGS = 11;
+/** Version 4's globals (knowledge and the turn before, encode()). */
+const KNOW_F = 8;
 /** Numbers for the whole position. */
-export const GLOB_F = 2 + 2 * 19 + 2 * DECK_NAMES.length + PURPOSES.length + 7;
+export const GLOB_F = 2 + 2 * 19 + 2 * DECK_NAMES.length + PURPOSES.length + 7 + KNOW_F;
+/** Version 4's numbers per option: what the engine says the option does (outcomes()). */
+const OUT_F = 8;
 /** Numbers per option. */
-export const OPT_F = KINDS.length + 18;
+export const OPT_F = KINDS.length + 18 + OUT_F;
+/** Where outcomes() writes in an option row. */
+const OUT_AT = KINDS.length + 18;
+/**
+ * The inputs of networks before version 4: the first 8 bags, 83 globals, 30 numbers per option. A network says
+ * its own sizes (model.ts); version 3's card tokens are always the cards with a count in these 8 bags.
+ */
+export const INPUTS_V3 = { bags: 8, globF: GLOB_F - KNOW_F, optF: OPT_F - OUT_F } as const;
 export const VOCAB = CARD_KEYS.length + 1;
 
 const CARD_INDEX = new Map(CARD_KEYS.map((k, i) => [k, i + 1]));
@@ -240,6 +259,9 @@ export function encode(s: GameState, ctx: EncodeContext, picked: number[] = []):
   const known = knownTopCards(mine);
   if (known.length) bag(6, [known[0]!]);
   if (known.length > 1) bag(7, known.slice(1));
+  if (mine.prizesKnown) bag(8, mine.prizes);
+  bag(9, revealedHand(theirs));
+  bag(10, theirs.lastPlayed ?? []);
 
   const g: number[] = [clamp(s.turn / 30, 2), s.current === me ? 1 : 0];
   playerRow(s, me, g);
@@ -255,9 +277,21 @@ export function encode(s: GameState, ctx: EncodeContext, picked: number[] = []):
     req?.repeat ? 1 : 0,
     clamp((ctx.actionsThisTurn ?? 0) / 30),
   );
+  // Version 4: what I know of hidden cards, and their turn before (KNOW_F numbers).
+  g.push(
+    mine.prizesKnown ? 1 : 0,
+    clamp(knownTopCards(theirs).length / 3),
+    clamp(revealedHand(theirs).length / 10),
+    clamp((theirs.lastAttack?.damage ?? 0) / 300, 2),
+    clamp((theirs.lastPrizes ?? 0) / 3),
+    clamp((mine.lastPrizes ?? 0) / 3),
+    clamp(theirs.mulligans / 3),
+    clamp(mine.mulligans / 3),
+  );
   const glob = Float32Array.from(g);
 
   const rows = req ? pickOptions(s, me, req, picked) : actionOptions(s, me);
+  if (!req) outcomes(s, me, rows);
   const optX = new Float32Array(rows.length * OPT_F);
   const optCard = new Int32Array(rows.length);
   const optSlot = new Int32Array(rows.length);
@@ -359,6 +393,66 @@ function actionOptions(s: GameState, me: PlayerId): Row[] {
     }
   }
   return out;
+}
+
+const GENERIC: DeckPlan = { name: 'generic', attackers: [] };
+
+/** Answer the choices an option leads to with the rule-based chooser (exact Knock Out arithmetic). */
+function settle(st: GameState): GameState {
+  for (let guard = 0; st.pending && st.winner === null && guard < 20; guard++) st = apply(st, { t: 'choose', picks: choosePicks(st, st.pending.request, GENERIC) });
+  return st;
+}
+
+/**
+ * What the engine says each main-phase option does (version 4, OUT_F numbers): played out on one deal of what
+ * `me` can't see, the same deal for every option and a fixed one, so the input stays a function of what `me`
+ * knows. An attack: the HP it takes off their Active and their Bench, Knock Outs, Prize cards, a win. Bench,
+ * evolution, Energy, Tool and retreat: what my Active can then do to theirs (payable damage, a Knock Out) and
+ * theirs to mine. Quantities rather than rules (BOT-NEXT.md N4: a team gained 4 points adding such numbers).
+ */
+function outcomes(s: GameState, me: PlayerId, rows: Row[]): void {
+  const them = opp(me);
+  let dealt: GameState | null = null;
+  for (const r of rows) {
+    if (r.ref.t !== 'action') continue;
+    const a = r.ref.action;
+    if (a.t !== 'attack' && a.t !== 'bench' && a.t !== 'evolve' && a.t !== 'energy' && a.t !== 'tool' && a.t !== 'retreat') continue;
+    try {
+      const before = (dealt ??= determinize(s, me, s.steps + 1));
+      const st = settle(apply(before, a, { trusted: true }));
+      if (a.t === 'attack') {
+        const activeUid = before.players[them].active?.uid;
+        const now = new Map(slotsOf(st.players[them]).map((sl) => [sl.uid, hpLeft(st, sl)]));
+        let toActive = 0;
+        let toBench = 0;
+        let kos = 0;
+        for (const sl of slotsOf(before.players[them])) {
+          const left = now.get(sl.uid);
+          const had = hpLeft(before, sl);
+          const lost = left === undefined ? had : Math.max(0, had - Math.max(0, left));
+          if (left === undefined) kos++;
+          if (sl.uid === activeUid) toActive += lost;
+          else toBench += lost;
+        }
+        r.x[OUT_AT] = clamp(toActive / 300, 2);
+        r.x[OUT_AT + 1] = clamp(toBench / 300, 2);
+        r.x[OUT_AT + 2] = clamp(kos / 3);
+        r.x[OUT_AT + 3] = clamp((before.players[me].prizes.length - st.players[me].prizes.length) / 6);
+        r.x[OUT_AT + 4] = st.winner === me ? 1 : 0;
+      } else {
+        const mine = st.players[me].active;
+        const theirs = st.players[them].active;
+        if (mine && theirs) {
+          const t = threat(st, mine, theirs, me);
+          r.x[OUT_AT + 5] = clamp(t.now / 300, 2);
+          r.x[OUT_AT + 6] = t.now >= hpLeft(st, theirs) ? 1 : 0;
+          r.x[OUT_AT + 7] = clamp(threat(st, theirs, mine, them).any / 300, 2);
+        }
+      }
+    } catch {
+      // An option the engine can't play out on this deal keeps zeros.
+    }
+  }
 }
 
 function energyTypes(k: string): EnergyType[] {

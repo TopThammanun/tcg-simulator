@@ -2,7 +2,7 @@
 // It reads the same Encoded rows as versions 1 and 2. Only live tokens are computed: Pokémon in play, the cards
 // with a count somewhere (card order, at most C) and the options; masked tokens never change a live one.
 import { CARD_F, featureTable } from './card-features';
-import { BAGS, CARD_KEYS, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
+import { CARD_KEYS, INPUTS_V3, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
 import type { ModelJson, Output } from './model';
 import { decodeTensor } from './tensor';
 
@@ -47,12 +47,14 @@ export interface Model3 {
   cv: Float32Array;
   /** Globals the network reads. */
   keep: Int32Array;
+  /** Bags and numbers per option it reads (the first of the encoder's, model.ts). */
+  inputs: { bags: number; optF: number };
 }
 
-export function loadV3(j: ModelJson, keep: Int32Array): Model3 {
+export function loadV3(j: ModelJson, keep: Int32Array, inputs: { bags: number; optF: number }): Model3 {
   const dims = j.dims as unknown as Dims3 & { CARD_F: number; SLOT_F: number; OPT_F: number };
   if (dims.CARD_F !== CARD_F) throw new Error(`card features: model ${dims.CARD_F} ≠ ${CARD_F}`);
-  if (dims.SLOT_F !== SLOT_F || dims.OPT_F !== OPT_F) throw new Error('model was trained on other encodings');
+  if (dims.SLOT_F !== SLOT_F || dims.OPT_F > OPT_F) throw new Error('model was trained on other encodings');
   const t: Record<string, Float32Array> = {};
   for (const [name, src] of Object.entries(j.tensors)) t[name] = decodeTensor(src);
   const d: Dims3 = { E: dims.E, D: dims.D, L: dims.L, HEADS: dims.HEADS, FF: dims.FF, C: dims.C };
@@ -80,7 +82,7 @@ export function loadV3(j: ModelJson, keep: Int32Array): Model3 {
       ln2w: g('ln2.weight'), ln2b: g('ln2.bias'), ff1w: g('ff1.weight'), ff1b: g('ff1.bias'), ff2w: g('ff2.weight'), ff2b: g('ff2.bias'),
     };
   });
-  return { t, mlps, blocks, d, cv, keep };
+  return { t, mlps, blocks, d, cv, keep, inputs };
 }
 
 /** out[outOff..] = W x[xOff..] + b (W: out × in, row-major). Four running sums: about twice as fast in V8. */
@@ -216,16 +218,18 @@ export function run3(m: Model3, x: Encoded, policy = true): Output {
     if (present) live.push(slotX[s]!);
   }
 
-  // Cards with a count anywhere, in card order, at most C (their MLP runs on all of them at once).
-  const CI = E + BAGS;
+  // Cards with a count in any of the first 8 bags, in card order, at most C (their MLP runs on all of them at
+  // once); each with its counts in every bag the network reads.
+  const nBags = m.inputs.bags;
+  const CI = E + nBags;
   const cin = new Float32Array(d.C * CI);
   let cards = 0;
   for (let v = 1; v < VOCAB && cards < d.C; v++) {
     let any = false;
-    for (let b = 0; b < BAGS; b++) if (x.bags[b * VOCAB + v]! !== 0) any = true;
+    for (let b = 0; b < INPUTS_V3.bags; b++) if (x.bags[b * VOCAB + v]! !== 0) any = true;
     if (!any) continue;
     cin.set(cv.subarray(v * E, v * E + E), cards * CI);
-    for (let b = 0; b < BAGS; b++) cin[cards * CI + E + b] = x.bags[b * VOCAB + v]!;
+    for (let b = 0; b < nBags; b++) cin[cards * CI + E + b] = x.bags[b * VOCAB + v]!;
     cards++;
   }
   const cout = new Float32Array(cards * D);
@@ -238,16 +242,17 @@ export function run3(m: Model3, x: Encoded, policy = true): Output {
 
   // Options.
   const firstOpt = live.length;
-  const oin = new Float32Array(E + OPT_F + D);
+  const optF = m.inputs.optF;
+  const oin = new Float32Array(E + optF + D);
   for (let i = 0; i < nOpt; i++) {
     oin.fill(0);
     const c = x.optCard[i]!;
     oin.set(cv.subarray(c * E, c * E + E), 0);
-    oin.set(x.optX.subarray(i * OPT_F, i * OPT_F + OPT_F), E);
+    oin.set(x.optX.subarray(i * OPT_F, i * OPT_F + optF), E);
     const sl = x.optSlot[i]!;
-    if (sl >= 0) oin.set(slotX[sl] ?? slotVec(sl), E + OPT_F);
+    if (sl >= 0) oin.set(slotX[sl] ?? slotVec(sl), E + optF);
     const o = new Float32Array(D);
-    mlp(m.mlps.opt_in, E + OPT_F + D, D, oin, 0, o, 0);
+    mlp(m.mlps.opt_in, E + optF + D, D, oin, 0, o, 0);
     for (let k = 0; k < D; k++) o[k]! += kind[3 * D + k]!;
     live.push(o);
   }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_F, cardFeatures, featureTable } from '../../src/bots/learn/card-features';
-import { CARD_KEYS, encode, VOCAB } from '../../src/bots/learn/encode';
-import { GLOB_KEEP, loadModel, run, v2Shapes, type ModelJson } from '../../src/bots/learn/model';
+import { BAGS, CARD_KEYS, encode, GLOB_F, INPUTS_V3, OPT_F, VOCAB } from '../../src/bots/learn/encode';
+import { GLOB_KEEP, globKeep, loadModel, run, v2Shapes, type ModelJson } from '../../src/bots/learn/model';
 import { makeNetBot } from '../../src/bots/learn/netbot';
 import { CARDS } from '../../src/engine/db';
 import { actor, apply, createGame } from '../../src/engine/actions';
@@ -9,17 +9,19 @@ import { deck } from '../engine/helpers';
 
 const DIMS = { E: 8, SH: 12, BAGD: 4, H: 16, OH: 8 };
 
-/** A version-2 file with random weights, trained with `cards` (keys of id.emb rows 2+). */
-function randomV2(cards: string[], seed = 3): ModelJson {
+/** A version-2 file with random weights, trained with `cards` (keys of id.emb rows 2+), reading `inp` (default: every input now). */
+function randomV2(cards: string[], seed = 3, inp: { bags: number; globF: number; optF: number } = { bags: BAGS, globF: GLOB_F, optF: OPT_F }): ModelJson {
   let a = seed;
   const r = () => ((a = (Math.imul(a, 1103515245) + 12345) >>> 0) / 4294967296) * 2 - 1;
   const tensors: ModelJson['tensors'] = {};
-  for (const [name, shape] of Object.entries(v2Shapes(DIMS, cards.length))) {
+  for (const [name, shape] of Object.entries(v2Shapes(DIMS, cards.length, inp))) {
     const n = shape.reduce((x, y) => x * y, 1);
     const f = Float32Array.from({ length: n }, () => r() * 0.3);
     tensors[name] = { shape, data: Buffer.from(f.buffer).toString('base64') };
   }
-  return { version: 2, cards, dims: { ...DIMS, SLOT_F: 44, GLOB_F: 83, OPT_F: 30, CARD_F }, tensors };
+  // Files written before version 4's inputs say no BAGS (8).
+  const bags = inp.bags === INPUTS_V3.bags ? {} : { BAGS: inp.bags };
+  return { version: 2, cards, dims: { ...DIMS, SLOT_F: 44, GLOB_F: inp.globF, OPT_F: inp.optF, CARD_F, ...bags }, tensors };
 }
 
 describe('card features', () => {
@@ -41,6 +43,18 @@ describe('version 2 network', () => {
     let s = createGame({ seed: 9, decks: [deck('player'), deck('dragapult-ex')], quiet: true });
     for (let n = 0; s.winner === null && n < 3000; n++) s = apply(s, bots[actor(s)]!.act(s), { trusted: true });
     expect(s.winner).not.toBeNull();
+  });
+
+  it('a network trained on the older inputs reads only those: the version 4 inputs change nothing for it', () => {
+    const m = loadModel(randomV2([...CARD_KEYS], 5, INPUTS_V3));
+    expect(m.glob).toEqual(globKeep(INPUTS_V3.globF));
+    const s = createGame({ seed: 4, decks: [deck('player'), deck('dragapult-ex')], quiet: true });
+    const e = encode(s, { decks: ['player', 'Dragapult ex'] });
+    const noisy = { ...e, bags: e.bags.slice(), glob: e.glob.slice(), optX: e.optX.slice() };
+    for (let i = INPUTS_V3.bags * VOCAB; i < noisy.bags.length; i++) noisy.bags[i] = 1;
+    for (let i = INPUTS_V3.globF; i < GLOB_F; i++) noisy.glob[i] = 1;
+    for (let o = 0; o < e.optCard.length; o++) for (let k = INPUTS_V3.optF; k < OPT_F; k++) noisy.optX[o * OPT_F + k] = 1;
+    expect(run(m, noisy)).toEqual(run(m, e));
   });
 
   it('a card it was not trained with gets the "unknown" vector plus its own features; the rest keep theirs', () => {

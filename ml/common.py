@@ -20,8 +20,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Must match src/bots/learn/encode.ts and model.ts (checked against the shard shapes and by tests).
-SLOTS, SLOT_F, BAGS = 18, 44, 8
+SLOTS, SLOT_F = 18, 44
+# The encoder's bags; networks read the first `bags` of them (older ones 8: BAGS_V3, which also choose version 3's
+# card tokens). New globals and option numbers likewise come after the older ones (encode.ts INPUTS_V3).
+BAGS, BAGS_V3 = 11, 8
 E, SH, BAGD, H, OH = 16, 64, 16, 256, 128
+# The deck-name globals that versions 2 and 3 leave out (model.ts DECK_GLOB_AT, 2 x 8 decks).
+DECK_GLOB_AT, DECK_GLOBS = 40, 16
+
+
+def glob_keep(glob_f: int) -> list[int]:
+    """The globals a version 2 / 3 network trained on `glob_f` of them reads (model.ts globKeep)."""
+    return [i for i in range(glob_f) if i < DECK_GLOB_AT or i >= DECK_GLOB_AT + DECK_GLOBS]
 
 
 def card_keys() -> list[str]:
@@ -94,7 +104,11 @@ class Data:
         self.aux = t(cat("aux"), torch.bool) if has_aux else torch.zeros(self.n, dtype=torch.bool, device=device)
         self.opp_hand = t(cat("oppHand")) if has_aux else None
         self.prize_diff = t(cat("prizeDiff")) if has_aux else None
+        # Training-only hidden cards for the critic that sees all (netbot.ts oracleOf), in shards that have them.
+        self.oracle = t(cat("oracle"), torch.long) if all("oracle" in p for p in parts) else None
         assert self.slots.shape[1:] == (SLOTS, SLOT_F), self.slots.shape
+        # Inputs a run leaves out (ppo.py --inputs): these bags, globals and option numbers read as zeros.
+        self.off: dict[str, list[int]] = {"bags": [], "glob": [], "opt": []}
 
     def batch(self, idx: torch.Tensor) -> dict[str, torch.Tensor]:
         count = self.opt_count[idx]
@@ -114,6 +128,12 @@ class Data:
             "opt_slot": torch.where(mask, self.opt_slot[oi], torch.full_like(oi, -1)),
             "mask": mask,
         }
+        if self.off["bags"]:
+            out["bags"][:, self.off["bags"]] = 0
+        if self.off["glob"]:
+            out["glob"][:, self.off["glob"]] = 0
+        if self.off["opt"]:
+            out["opt_x"][..., self.off["opt"]] = 0
         if self.opt_logit is not None:
             # The recorded network's logits (imitation targets); rows without them have zeros (Data.soft says which).
             out["teacher"] = self.opt_logit[oi].float().masked_fill(~mask, -1e9)
@@ -121,6 +141,8 @@ class Data:
             out["opp_hand"] = self.opp_hand[idx].float()
             out["prize_diff"] = self.prize_diff[idx].float()
             out["aux"] = self.aux[idx]
+        if self.oracle is not None:
+            out["oracle"] = self.oracle[idx]
         return out
 
 
@@ -132,9 +154,9 @@ def load(dirs: list[str]) -> Data:
 
 
 class Net(nn.Module):
-    def __init__(self, vocab: int, glob_f: int, opt_f: int, dims: dict | None = None):
+    def __init__(self, vocab: int, glob_f: int, opt_f: int, dims: dict | None = None, bags: int = BAGS_V3):
         super().__init__()
-        self.vocab, self.glob_f, self.opt_f = vocab, glob_f, opt_f
+        self.vocab, self.glob_f, self.opt_f, self.bags = vocab, glob_f, opt_f, bags
         # Layer sizes (defaults = the shipped network; model.ts reads them from the JSON).
         d = {"E": E, "SH": SH, "BAGD": BAGD, "H": H, "OH": OH, **(dims or {})}
         self.dims = d
@@ -142,9 +164,9 @@ class Net(nn.Module):
         self.emb = nn.Embedding(vocab, E_)
         self.slot1 = nn.Linear(2 * E_ + SLOT_F, SH_)
         self.slot2 = nn.Linear(SH_, SH_)
-        self.bag_w = nn.Parameter(torch.randn(BAGS, vocab, BAGD_) * 0.1)
-        self.bag_b = nn.Parameter(torch.zeros(BAGS * BAGD_))
-        trunk_in = 6 * SH_ + BAGS * BAGD_ + glob_f + E_
+        self.bag_w = nn.Parameter(torch.randn(bags, vocab, BAGD_) * 0.1)
+        self.bag_b = nn.Parameter(torch.zeros(bags * BAGD_))
+        trunk_in = 6 * SH_ + bags * BAGD_ + glob_f + E_
         self.trunk1 = nn.Linear(trunk_in, H_)
         self.trunk2 = nn.Linear(H_, H_)
         self.value1 = nn.Linear(H_, 64)
@@ -169,17 +191,38 @@ class Net(nn.Module):
 
         my_mean, my_max = pool(1)
         op_mean, op_max = pool(10)
-        bags = torch.einsum("bnv,nvd->bnd", b["bags"], self.bag_w).reshape(slots.shape[0], -1) + self.bag_b
-        z = torch.cat([tok[:, 0], my_mean, my_max, tok[:, 9], op_mean, op_max, bags, b["glob"], self.emb(b["source"])], -1)
+        bags = torch.einsum("bnv,nvd->bnd", b["bags"][:, : self.bags], self.bag_w).reshape(slots.shape[0], -1) + self.bag_b
+        z = torch.cat([tok[:, 0], my_mean, my_max, tok[:, 9], op_mean, op_max, bags, b["glob"][:, : self.glob_f], self.emb(b["source"])], -1)
         h = F.relu(self.trunk2(F.relu(self.trunk1(z))))
         value = self.value2(F.relu(self.value1(h))).squeeze(-1)
 
         slot = b["opt_slot"]
         st = torch.gather(tok, 1, slot.clamp(min=0)[..., None].expand(-1, -1, tok.shape[-1])) * (slot >= 0).float()[..., None]
-        o = F.relu(self.opt1(torch.cat([self.emb(b["opt_card"]), st, b["opt_x"]], -1)))
+        o = F.relu(self.opt1(torch.cat([self.emb(b["opt_card"]), st, b["opt_x"][..., : self.opt_f]], -1)))
         u = F.relu(self.q(h)[:, None, :] + self.k(o))
         logits = self.score(u).squeeze(-1).masked_fill(~b["mask"], -1e9)
         return logits, value
+
+
+class Critic(nn.Module):
+    """Training only (BOT-NEXT.md N4, PerfectDou): a second value head that also reads the hidden cards — the
+    opponent's hand, both players' Prize cards, the top of both decks (Data: opp_hand, oracle) — for PPO's
+    advantages. Never exported: the policy and the shipped value head have no path from these inputs."""
+
+    GROUPS = ((0, 6), (6, 12), (12, 15), (15, 18))
+
+    def __init__(self, h: int, e: int):
+        super().__init__()
+        self.a = nn.Linear(h + 5 * e, 256)
+        self.b = nn.Linear(256, 1)
+
+    def forward(self, h: torch.Tensor, cv: torch.Tensor, b: dict[str, torch.Tensor]) -> torch.Tensor:
+        ids = b["oracle"]
+        known = (ids > 0).to(cv.dtype)[..., None]
+        parts = [h, b["opp_hand"].to(cv.dtype) @ cv]
+        for lo, hi in self.GROUPS:
+            parts.append((cv[ids[:, lo:hi]] * known[:, lo:hi]).sum(1))
+        return self.b(F.relu(self.a(torch.cat(parts, -1)))).squeeze(-1)
 
 
 # Version 2 (src/bots/learn/model.ts): card vectors from printed features + a learned vector per trained card,
@@ -219,23 +262,24 @@ class Net2(nn.Module):
 
     version = 2
 
-    def __init__(self, feats: dict, glob_f: int, opt_f: int, dims: dict | None = None, id_drop: float = 0.0):
+    def __init__(self, feats: dict, glob_f: int, opt_f: int, dims: dict | None = None, id_drop: float = 0.0, bags: int = BAGS_V3):
         super().__init__()
         d = {**V2_DIMS, **(dims or {})}
-        self.dims, self.glob_f, self.opt_f, self.id_drop = d, glob_f, opt_f, id_drop
+        self.dims, self.glob_f, self.opt_f, self.id_drop, self.bags = d, glob_f, opt_f, id_drop, bags
         self.cards = list(feats["cards"])
         self.register_buffer("feats", feats["table"].clone())
-        self.register_buffer("glob_keep", torch.tensor(feats["globKeep"], dtype=torch.long))
+        keep = glob_keep(glob_f)
+        self.register_buffer("glob_keep", torch.tensor(keep, dtype=torch.long))
         E_, SH_, BAGD_, H_, OH_ = d["E"], d["SH"], d["BAGD"], d["H"], d["OH"]
         cf = self.feats.shape[1]
         self.id_emb = nn.Embedding(len(self.cards) + 2, E_)
         nn.init.normal_(self.id_emb.weight, std=0.1)
         self.feat = nn.Linear(cf, E_)
-        self.bag_p = nn.Parameter(torch.randn(BAGS, BAGD_, E_) * 0.1)
-        self.bag_b = nn.Parameter(torch.zeros(BAGS * BAGD_))
+        self.bag_p = nn.Parameter(torch.randn(bags, BAGD_, E_) * 0.1)
+        self.bag_b = nn.Parameter(torch.zeros(bags * BAGD_))
         self.slot1 = nn.Linear(2 * E_ + SLOT_F, SH_)
         self.slot2 = nn.Linear(SH_, SH_)
-        trunk_in = 6 * SH_ + BAGS * BAGD_ + len(feats["globKeep"]) + E_
+        trunk_in = 6 * SH_ + bags * BAGD_ + len(keep) + E_
         self.trunk1 = nn.Linear(trunk_in, H_)
         self.trunk2 = nn.Linear(H_, H_)
         self.value1 = nn.Linear(H_, 64)
@@ -264,6 +308,18 @@ class Net2(nn.Module):
             return {"cv": cv, "bag_w": torch.einsum("nke,ve->nvk", self.bag_p, cv)}
 
     def forward(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
+        logits, value, _, _ = self.forward_full(b, frozen)
+        return logits, value
+
+    def forward_train(self, b: dict[str, torch.Tensor], critic: bool = False) -> dict[str, torch.Tensor]:
+        """What ppo.py trains: logits, value, and with `critic` the critic's value logit (`self.critic`)."""
+        logits, value, h, cv = self.forward_full(b)
+        out = {"logits": logits, "value": value}
+        if critic:
+            out["critic"] = self.critic(h, cv, b)
+        return out
+
+    def forward_full(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
         cv = frozen["cv"] if frozen else self.card_vectors()
         slots = b["slots"]
         present = (slots[:, :, 0] > 0).float()
@@ -280,7 +336,7 @@ class Net2(nn.Module):
         my_mean, my_max = pool(1)
         op_mean, op_max = pool(10)
         bag_w = frozen["bag_w"] if frozen else torch.einsum("nke,ve->nvk", self.bag_p, cv)
-        bags = torch.einsum("bnv,nvk->bnk", b["bags"], bag_w).reshape(slots.shape[0], -1) + self.bag_b
+        bags = torch.einsum("bnv,nvk->bnk", b["bags"][:, : self.bags], bag_w).reshape(slots.shape[0], -1) + self.bag_b
         glob = b["glob"][:, self.glob_keep]
         z = torch.cat([tok[:, 0], my_mean, my_max, tok[:, 9], op_mean, op_max, bags, glob, cv[b["source"]]], -1)
         h = F.relu(self.trunk2(F.relu(self.trunk1(z))))
@@ -288,10 +344,14 @@ class Net2(nn.Module):
 
         slot = b["opt_slot"]
         st = torch.gather(tok, 1, slot.clamp(min=0)[..., None].expand(-1, -1, tok.shape[-1])) * (slot >= 0).float()[..., None]
-        o = F.relu(self.opt1(torch.cat([cv[b["opt_card"]], st, b["opt_x"]], -1)))
+        o = F.relu(self.opt1(torch.cat([cv[b["opt_card"]], st, b["opt_x"][..., : self.opt_f]], -1)))
         u = F.relu(self.q(h)[:, None, :] + self.k(o))
         logits = self.score(u).squeeze(-1).masked_fill(~b["mask"], -1e9)
-        return logits, value
+        return logits, value, h, cv
+
+    def critic_size(self) -> tuple[int, int]:
+        """The width of what the critic reads besides the hidden cards, and of a card vector."""
+        return self.dims["H"], self.dims["E"]
 
 
 V2_NAMES = {
@@ -305,9 +365,11 @@ V2_NAMES = {
 
 
 def new_net2(data: Data | None = None, dims: dict | None = None, id_drop: float = 0.15) -> Net2:
-    glob_f = data.glob.shape[1] if data else 83
-    opt_f = data.opt_x.shape[1] if data else 30
-    return Net2(card_features(), glob_f, opt_f, dims, id_drop).to(DEVICE)
+    """A new version 2 network reading every input of the data (or of the encoder now)."""
+    glob_f = data.glob.shape[1] if data else 91
+    opt_f = data.opt_x.shape[1] if data else 38
+    bags = data.bags.shape[1] if data else BAGS
+    return Net2(card_features(), glob_f, opt_f, dims, id_drop, bags).to(DEVICE)
 
 
 def write_json(out: dict, path: str) -> None:
@@ -348,9 +410,10 @@ def unb64(v: dict) -> np.ndarray:
 
 def new_net(data: Data | None = None, dims: dict | None = None) -> Net:
     vocab = len(card_keys()) + 1
-    glob_f = data.glob.shape[1] if data else 83
-    opt_f = data.opt_x.shape[1] if data else 30
-    return Net(vocab, glob_f, opt_f, dims).to(DEVICE)
+    glob_f = data.glob.shape[1] if data else 91
+    opt_f = data.opt_x.shape[1] if data else 38
+    bags = data.bags.shape[1] if data else BAGS
+    return Net(vocab, glob_f, opt_f, dims, bags).to(DEVICE)
 
 
 def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
@@ -358,12 +421,12 @@ def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
     if getattr(net, "version", 1) == 3:
         from net3 import tensors3
 
-        dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1])}
+        dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1]), "BAGS": net.bags}
         tensors = {k: b64(v.detach().float().cpu().numpy()) for k, v in tensors3(net).items()}
         write_json({"version": 3, "cards": net.cards, "dims": dims, "tensors": tensors, "meta": meta or {}}, path)
         return
     if isinstance(net, Net2):
-        dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1])}
+        dims = {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "CARD_F": int(net.feats.shape[1]), "BAGS": net.bags}
         tensors = {k: b64(sd[v]) for k, v in V2_NAMES.items()}
         write_json({"version": 2, "cards": net.cards, "dims": dims, "tensors": tensors, "meta": meta or {}}, path)
         return
@@ -383,7 +446,7 @@ def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
     }
     out = {
         "cards": card_keys(),
-        "dims": {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f},
+        "dims": {**net.dims, "SLOT_F": SLOT_F, "GLOB_F": net.glob_f, "OPT_F": net.opt_f, "BAGS": net.bags},
         "tensors": {
             k: {"shape": list(v.shape), "data": base64.b64encode(np.ascontiguousarray(v, dtype="<f4").tobytes()).decode()}
             for k, v in names.items()
@@ -397,19 +460,65 @@ def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
 
 
 def upgrade_bags(t: dict, sh: int) -> dict:
-    """A network saved with fewer bags gets the new ones with zero weights, so it computes exactly what it did."""
+    """A version 1 network saved with fewer than 8 bags gets the missing ones with zero weights, so it computes exactly
+    what it did."""
     old = t["bag.w"].shape[0]
-    if old >= BAGS:
+    if old >= BAGS_V3:
         return t
     bagd = t["bag.w"].shape[2]
     t = dict(t)
-    t["bag.w"] = torch.cat([t["bag.w"], torch.zeros(BAGS - old, t["bag.w"].shape[1], bagd)])
-    t["bag.b"] = torch.cat([t["bag.b"], torch.zeros((BAGS - old) * bagd)])
+    t["bag.w"] = torch.cat([t["bag.w"], torch.zeros(BAGS_V3 - old, t["bag.w"].shape[1], bagd)])
+    t["bag.b"] = torch.cat([t["bag.b"], torch.zeros((BAGS_V3 - old) * bagd)])
     # trunk1 input: [6 pooled tokens (6*SH), bags (old*BAGD), globals, source]; new bag columns go after the old ones.
     w = t["trunk1.w"]
     at = 6 * sh + old * bagd
-    t["trunk1.w"] = torch.cat([w[:, :at], torch.zeros(w.shape[0], (BAGS - old) * bagd), w[:, at:]], 1)
+    t["trunk1.w"] = torch.cat([w[:, :at], torch.zeros(w.shape[0], (BAGS_V3 - old) * bagd), w[:, at:]], 1)
     return t
+
+
+def widen(net: nn.Module, bags: int = BAGS, glob_f: int = 91, opt_f: int = 38) -> nn.Module:
+    """The same network reading more inputs (encoder version 4, BOT-NEXT.md N4): the weights of the new bags, globals
+    and option numbers start at zero, so it computes exactly what it did until training gives them a use."""
+    from net3 import Net3
+
+    if net.bags == bags and net.glob_f == glob_f and net.opt_f == opt_f:
+        return net
+    assert net.bags <= bags and net.glob_f <= glob_f and net.opt_f <= opt_f
+    feats = card_features()
+    feats["cards"] = net.cards
+    feats["table"] = net.feats.detach().cpu()
+    old_keep, new_keep = len(glob_keep(net.glob_f)), len(glob_keep(glob_f))
+    sd = {k: v.detach().cpu() for k, v in net.state_dict().items()}
+
+    def cols(w: torch.Tensor, parts: list[tuple[int, int]]) -> torch.Tensor:
+        """Columns of `w` laid out as (old width, new width) parts in order; the added columns of a part are zero."""
+        out, at = [], 0
+        for old, new in parts:
+            out.append(w[:, at : at + old])
+            if new > old:
+                out.append(torch.zeros(w.shape[0], new - old, dtype=w.dtype))
+            at += old
+        assert at == w.shape[1], (at, w.shape)
+        return torch.cat(out, 1)
+
+    if isinstance(net, Net3):
+        D, E_ = net.dims["D"], net.dims["E"]
+        wide = Net3(feats, glob_f, opt_f, net.dims, net.id_drop, bags)
+        sd["glob_in.a.weight"] = cols(sd["glob_in.a.weight"], [(old_keep, new_keep), (E_, E_)])
+        sd["card_in.a.weight"] = cols(sd["card_in.a.weight"], [(E_, E_), (net.bags, bags)])
+        sd["opt_in.a.weight"] = cols(sd["opt_in.a.weight"], [(E_, E_), (net.opt_f, opt_f), (D, D)])
+        sd["glob_keep"] = wide.glob_keep
+    else:
+        d = net.dims
+        wide = Net2(feats, glob_f, opt_f, d, net.id_drop, bags)
+        sd["bag_p"] = torch.cat([sd["bag_p"], torch.zeros(bags - net.bags, *sd["bag_p"].shape[1:])])
+        sd["bag_b"] = torch.cat([sd["bag_b"], torch.zeros((bags - net.bags) * d["BAGD"])])
+        sd["trunk1.weight"] = cols(sd["trunk1.weight"], [(6 * d["SH"], 6 * d["SH"]), (net.bags * d["BAGD"], bags * d["BAGD"]), (old_keep, new_keep), (d["E"], d["E"])])
+        sd["opt1.weight"] = cols(sd["opt1.weight"], [(d["E"] + d["SH"], d["E"] + d["SH"]), (net.opt_f, opt_f)])
+        sd["glob_keep"] = wide.glob_keep
+    missing, unexpected = wide.load_state_dict(sd, strict=False)
+    assert not unexpected and all(k.startswith(("aux_", "critic")) for k in missing), (missing, unexpected)
+    return wide.to(next(net.parameters()).device)
 
 
 def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
@@ -424,10 +533,10 @@ def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
             old = {k: i + 2 for i, k in enumerate(j["cards"])}
             t["id_emb.weight"] = t["id_emb.weight"][[0, 1] + [old.get(k, 1) for k in feats["cards"]]]
         dims = {k: j["dims"][k] for k in ("E", "D", "L", "HEADS", "FF", "C")}
-        net3 = Net3(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop)
-        # The training-only heads (aux_*) are not in the file; they start again.
+        net3 = Net3(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop, j["dims"].get("BAGS", BAGS_V3))
+        # The training-only heads (aux_*, critic) are not in the file; they start again (ppo.py keeps them in heads.pt).
         missing, _ = net3.load_state_dict({**t, "feats": net3.feats, "glob_keep": net3.glob_keep}, strict=False)
-        assert all(k.startswith("aux_") for k in missing), missing
+        assert all(k.startswith(("aux_", "critic")) for k in missing), missing
         return net3.to(DEVICE)
     if j.get("version") == 2:
         feats = card_features()
@@ -436,13 +545,13 @@ def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
             old = {k: i + 2 for i, k in enumerate(j["cards"])}
             t["id.emb"] = t["id.emb"][[0, 1] + [old.get(k, 1) for k in feats["cards"]]]
         dims = {k: j["dims"][k] for k in ("E", "SH", "BAGD", "H", "OH")}
-        net2 = Net2(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop)
+        net2 = Net2(feats, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], dims, id_drop, j["dims"].get("BAGS", BAGS_V3))
         sd = {v: t[k] for k, v in V2_NAMES.items()}
         sd["feats"], sd["glob_keep"] = net2.feats, net2.glob_keep
         net2.load_state_dict(sd)
         return net2.to(DEVICE)
     t = upgrade_bags(t, j["dims"]["SH"] if "SH" in j["dims"] else SH)
-    net = Net(len(j["cards"]) + 1, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], {k: j["dims"][k] for k in ("E", "SH", "BAGD", "H", "OH")})
+    net = Net(len(j["cards"]) + 1, j["dims"]["GLOB_F"], j["dims"]["OPT_F"], {k: j["dims"][k] for k in ("E", "SH", "BAGD", "H", "OH")}, int(t["bag.w"].shape[0]))
     sd = {
         "emb.weight": t["emb"],
         "slot1.weight": t["slot1.w"], "slot1.bias": t["slot1.b"],
