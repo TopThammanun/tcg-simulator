@@ -41,6 +41,11 @@ export interface NetBotOptions {
   seed?: number;
   /** 0 = always the best option; otherwise sample from softmax(logits / temperature). */
   temperature?: number;
+  /**
+   * With temperature 0: pick at random among the options whose probability is within this much of the best one
+   * (BOT-NEXT.md N6: a player who replays the same game should not meet the same moves every time). 0 = never.
+   */
+  ties?: number;
   /** Called for every decision with more than one option. */
   onDecision?: (d: Decision) => void;
 }
@@ -91,6 +96,17 @@ export function oracleOf(s: GameState, me: PlayerId): Int16Array {
   return out;
 }
 
+/** The option to play with temperature 0: the best, or with `ties` a random one of those within `ties` of its probability. */
+export function bestOption(logits: Float32Array, ties: number, rand: () => number): number {
+  let i = 0;
+  for (let k = 1; k < logits.length; k++) if (logits[k]! > logits[i]!) i = k;
+  if (ties <= 0) return i;
+  const p = softmax(logits);
+  const near = [];
+  for (let k = 0; k < p.length; k++) if (p[k]! >= p[i]! - ties) near.push(k);
+  return near.length > 1 ? near[Math.floor(rand() * near.length)]! : i;
+}
+
 export function makeNetBot(model: Model, o: NetBotOptions): Bot {
   const rand = makeRand(o.seed ?? 1);
   const temperature = o.temperature ?? 0;
@@ -100,7 +116,7 @@ export function makeNetBot(model: Model, o: NetBotOptions): Bot {
     const out = run(model, enc);
     let i = 0;
     if (temperature <= 0) {
-      for (let k = 1; k < out.logits.length; k++) if (out.logits[k]! > out.logits[i]!) i = k;
+      i = bestOption(out.logits, o.ties ?? 0, rand);
     } else {
       const p = softmax(out.logits, temperature);
       let r = rand();

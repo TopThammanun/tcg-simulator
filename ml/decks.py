@@ -29,6 +29,7 @@ def main():
     ap.add_argument("--base", type=int, default=83_000_000)
     ap.add_argument("--threads", type=int, default=15)
     ap.add_argument("--server", action="store_true", help="network players without look-ahead run batched on the GPU")
+    ap.add_argument("--b-offmeta", action="store_true", help="B plays the held-out off-meta lists (.cache/meta/offmeta.json, BOT-NEXT.md N6) instead of the deck files")
     ap.add_argument("--note", default="")
     a = ap.parse_args()
     folder = os.path.join(ROOT, "src", "content", "decks")
@@ -48,6 +49,7 @@ def main():
             "threads": a.threads,
             "players": {"A": spec(a.a), "B": spec(a.b)},
             "pairs": [{"a": "A", "b": "B", "share": 1, "decksA": {d: 1}}],
+            **({"offmeta": {"path": os.path.join(ROOT, ".cache", "meta", "offmeta.json"), "share": 1, "heldOut": True}} if a.b_offmeta else {}),
             **({"server": {"concurrent": 128, "lanes": 1}} if server else {}),
         }
         t0 = time.time()
@@ -55,7 +57,7 @@ def main():
         sc = r["scores"]["A vs B"]
         lo, hi = wilson(sc["score"], sc["n"])
         pe = r.get("paired", {}).get("A vs B", {})
-        row = {"a": a.a, "b": a.b, "deck": d, "score": sc["score"], "n": sc["n"], "se": round(pe.get("se", 0), 5), "base": a.base,
+        row = {"a": a.a, "b": a.b + (" (held-out off-meta lists)" if a.b_offmeta else ""), "deck": d, "score": sc["score"], "n": sc["n"], "se": round(pe.get("se", 0), 5), "base": a.base,
                "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M"), "note": a.note}
         rows.append(row)
         os.makedirs(os.path.dirname(LOG), exist_ok=True)

@@ -44,6 +44,11 @@ export interface NetSearchOptions {
    * each rollout ends (AlphaGo's rollout policy): for a network too slow to play hundreds of moves a decision.
    */
   rollout?: Model;
+  /**
+   * Near ties (BOT-NEXT.md N6): an unsearched move is a random one of the options within this much of the best
+   * one's probability, a searched one a random one of the options whose score is within this much of the best. 0 = never.
+   */
+  ties?: number;
 }
 
 const MAX_ROLLOUT_ACTIONS = 200;
@@ -194,7 +199,11 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
         }
       }
       const sure = p[order[0]!]! >= confident && !(urgent && tactic >= 0 && tactic !== order[0]);
-      if (sure || cands.length === 1) return action(order[0]!);
+      if (sure || cands.length === 1) {
+        if (!o.ties) return action(order[0]!);
+        const near = order.filter((i) => p[i]! >= p[order[0]!]! - o.ties!);
+        return action(near[Math.floor(rand() * near.length)]!);
+      }
       const stepOf = (i: number): Step => ({ action: action(i), picks: i === tactic ? tacticPicks : undefined });
       bot.lastSearched = true;
       const total = cands.map(() => 0);
@@ -224,6 +233,10 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
       const score = (k: number) => total[k]! / n + 0.02 * p[cands[k]!]!;
       let best = 0;
       for (let k = 1; k < cands.length; k++) if (score(k) > score(best)) best = k;
+      if (o.ties) {
+        const near = cands.map((_, k) => k).filter((k) => score(k) >= score(best) - o.ties!);
+        best = near[Math.floor(rand() * near.length)]!;
+      }
       queue = stepOf(cands[best]!).picks?.slice() ?? [];
       return action(cands[best]!);
     },

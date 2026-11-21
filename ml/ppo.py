@@ -275,6 +275,7 @@ def main():
     ap.add_argument("--inputs", default="all", help="version 4 inputs it may use: all, none, or some of prizes,revealed,history,sim (the rest read as zeros)")
     ap.add_argument("--pfsp", action="store_true", help="with fixed decks: opponent decks it loses to come up more often (weights 0.15 + (1 - win rate)^2, BOT-NEXT.md N3)")
     ap.add_argument("--serve-keep", type=int, default=12, help="networks the inference server keeps loaded at once (an expert set as opponents is one per deck)")
+    ap.add_argument("--offmeta", type=float, default=0.0, help="share of games whose opponent plays an off-meta list (.cache/meta/offmeta.json train, scripts/meta/variants.ts; BOT-NEXT.md N6)")
     ap.add_argument("--patience", type=int, default=0, help="stop when the evaluation has not beaten its best for this many iterations (0 = run --iters); the best is state.json best, its weights eval-<iter>.json")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
@@ -361,6 +362,8 @@ def main():
                 variants["variants"]["shareA"] = a.variants_a
         if a.starts:
             variants["starts"] = {"path": os.path.abspath(a.starts), "share": a.starts_share}
+        if a.offmeta > 0:
+            variants["offmeta"] = {"path": os.path.join(ROOT, ".cache", "meta", "offmeta.json"), "share": a.offmeta}
         cfg = {"out": out, "games": a.games, "base": 10_000_000 + it * 100_000, "threads": a.threads, "players": players, "pairs": pairs, **variants}
         if server:
             cfg["server"] = {**batched, **({"resign": resign} if resign else {})}

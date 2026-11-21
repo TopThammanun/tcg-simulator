@@ -18,6 +18,16 @@ from common import ROOT, run_gen
 
 
 def spec(s: str) -> dict:
+    """A player from its name; options after a "|" (e.g. net:w.json|ties=0.02) go into the spec as numbers."""
+    s, *opts = s.split("|")
+    out = _spec(s)
+    for o in opts:
+        k, _, v = o.partition("=")
+        out[k] = float(v)
+    return out
+
+
+def _spec(s: str) -> dict:
     kind, *rest = s.split(":", 1)
     if kind in ("normal", "hard", "random"):
         return {"kind": kind}

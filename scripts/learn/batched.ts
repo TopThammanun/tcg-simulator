@@ -6,7 +6,7 @@
 import { connect } from 'node:net';
 import { encode, type Encoded, type OptionRef } from '../../src/bots/learn/encode';
 import { softmax } from '../../src/bots/learn/model';
-import { MAX_ACTIONS_PER_TURN, oppHand, oracleOf, turnCounter, type Decision } from '../../src/bots/learn/netbot';
+import { bestOption, MAX_ACTIONS_PER_TURN, oppHand, oracleOf, turnCounter, type Decision } from '../../src/bots/learn/netbot';
 import { planFor } from '../../src/bots/plans';
 import { makeRand } from '../../src/bots/random';
 import type { Bot } from '../../src/bots/types';
@@ -32,6 +32,8 @@ export interface Served {
   model: string;
   temperature: number;
   record: boolean;
+  /** With temperature 0: a random option among those within this much of the best one's probability (netbot.ts). */
+  ties?: number;
 }
 
 /**
@@ -91,7 +93,7 @@ function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first
   const out: Answer = yield { enc, model: sv.model };
   let i = 0;
   if (sv.temperature <= 0) {
-    for (let k = 1; k < out.logits.length; k++) if (out.logits[k]! > out.logits[i]!) i = k;
+    i = bestOption(out.logits, sv.ties ?? 0, side.rand);
   } else {
     const p = softmax(out.logits, sv.temperature);
     let r = side.rand();

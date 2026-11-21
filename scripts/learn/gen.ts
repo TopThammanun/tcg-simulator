@@ -38,7 +38,7 @@ export type PlayerSpec =
   | { kind: 'normal'; record?: boolean }
   /** Uniformly random legal moves (random.ts): an opponent unlike any trained player. */
   | { kind: 'random'; record?: boolean }
-  | { kind: 'net'; weights: string; temperature?: number; record?: boolean }
+  | { kind: 'net'; weights: string; temperature?: number; record?: boolean; ties?: number }
   /** The game's bot (src/bots/index.ts createBot: bundled network and the deck's expert); fast = without look-ahead. */
   | { kind: 'bot'; fast?: boolean; record?: boolean }
   | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>);
@@ -57,6 +57,12 @@ export interface GenConfig {
    * more often than its opponents do).
    */
   variants?: { path: string; share: number; shareA?: number };
+  /**
+   * Off-meta lists (scripts/meta/variants.ts offmeta.json: archetypes no deck file covers, BOT-NEXT.md N6): with
+   * chance `share` the second side of a game plays one of them instead (its deck then reads "off:<archetype>");
+   * `heldOut` takes the held-out lists (measuring) instead of the training ones.
+   */
+  offmeta?: { path: string; share: number; heldOut?: boolean };
   /**
    * Positions from games people played against the bot (the review page's games file): this share of the games
    * starts from one of them (a turn's first free position, Prizes and deck orders dealt again) instead of
@@ -156,7 +162,7 @@ function makePlayer(spec: PlayerSpec, slug: string, oppSlug: string, seed: numbe
   const oppPlan = planFor(oppSlug);
   const decks = [plan.name, oppPlan.name] as const;
   const record = spec.record && out ? (d: Parameters<ShardWriter['add']>[0]) => out.add(d) : undefined;
-  if (spec.kind === 'net') return makeNetBot(model(expertWeights(spec.weights, slug)), { decks, seed, temperature: spec.temperature ?? 0, onDecision: record });
+  if (spec.kind === 'net') return makeNetBot(model(expertWeights(spec.weights, slug)), { decks, seed, temperature: spec.temperature ?? 0, ties: spec.ties, onDecision: record });
   const random = (): Bot => {
     const rand = makeRand(seed);
     return { act: (s) => randomAction(s, rand) };
@@ -216,7 +222,7 @@ function newGame(m: Match, games: SavedGame[]): GameState {
 
 /** The network a player spec plays `slug` from, when the inference server can play it (no look-ahead, not a recorded bot). */
 function served(spec: PlayerSpec, slug: string): Served | null {
-  if (spec.kind === 'net') return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record };
+  if (spec.kind === 'net') return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record, ties: spec.ties };
   if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: expertWeights(BOT_EXPERTS, slug, BOT_WEIGHTS), temperature: 0, record: false };
   return null;
 }
@@ -259,7 +265,7 @@ export function startPositions(c: Pick<GenConfig, 'starts'>): { games: SavedGame
 }
 
 /** Matches for a config: each pairing gets its share of the games, every deck pair, both seats. */
-export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants' | 'starts'>): Match[] {
+export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants' | 'starts' | 'offmeta'>): Match[] {
   const out: Match[] = [];
   const starts = startPositions(c);
   const pool = starts.at.flatMap((list, g) => list.map((at) => ({ g, at })));
@@ -270,6 +276,14 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
     return (h % 10_000) / 10_000 < c.starts.share ? pool[(h >>> 9) % pool.length]! : null;
   };
   const variants = c.variants ? (JSON.parse(readFileSync(c.variants.path, 'utf8')) as Record<string, string[][]>) : {};
+  const offFile = c.offmeta ? (JSON.parse(readFileSync(c.offmeta.path, 'utf8')) as Record<'train' | 'heldOut', { archetype: string; cards: string[] }[]>) : null;
+  const offLists = offFile ? (c.offmeta!.heldOut ? offFile.heldOut : offFile.train) : [];
+  // An off-meta list for the second side of game k, with chance `share` (a hash of the game).
+  const offFor = (k: number) => {
+    if (!offLists.length) return null;
+    const h = Math.imul(k + 13, 0x7feb352d) >>> 0;
+    return (h % 10_000) / 10_000 < c.offmeta!.share ? offLists[(h >>> 11) % offLists.length]! : null;
+  };
   // A list for one side of game k: a variant with chance `share` (decided by a hash of the game and side); side 0
   // of a pairing with fixed decks is player a's, which may have its own chance (shareA).
   const listFor = (slug: string, k: number, side: number, fixed: boolean): string[] | null => {
@@ -293,7 +307,7 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
     const draw = (list: string[], salt: number) => list[((Math.imul(k + 1, 0x9e3779b1) ^ salt) >>> 0) % list.length]!;
     for (let i = 0; i < n; i++, k++) {
       const x = fixed ? draw(da, 0x5bd1e995) : da[k % da.length]!;
-      const y = fixed ? draw(db, 0x1b873593) : db[Math.floor(k / da.length) % db.length]!;
+      let y = fixed ? draw(db, 0x1b873593) : db[Math.floor(k / da.length) % db.length]!;
       const seed = c.base + k;
       const st = startFor(k);
       if (st) {
@@ -305,7 +319,12 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
         continue;
       }
       const lx = listFor(x, k, 0, fixed);
-      const ly = listFor(y, k, 1, fixed);
+      let ly = listFor(y, k, 1, fixed);
+      const off = offFor(k);
+      if (off) {
+        y = `off:${off.archetype}`;
+        ly = off.cards;
+      }
       const lists = (a: string[] | null, b: string[] | null): Match['lists'] => (a || b ? [a, b] : undefined);
       out.push({ id: out.length, seed, decks: [x, y], names: [pair.a, pair.b], lists: lists(lx, ly) });
       if (!mirror) out.push({ id: out.length, seed, decks: fixed ? [y, x] : [x, y], names: [pair.b, pair.a], lists: fixed ? lists(ly, lx) : lists(lx, ly) });
