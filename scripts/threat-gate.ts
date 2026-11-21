@@ -17,6 +17,7 @@ import { collectKOs, threats, type Deal } from '../src/analysis/threat';
 import { makeBot } from '../src/bots/core';
 import { makeHardBot } from '../src/bots/hard';
 import { createBot } from '../src/bots/index';
+import { expertModel } from './lib/experts';
 import { planFor } from '../src/bots/plans';
 import { actor, apply, createGame } from '../src/engine/actions';
 import { deckKeys } from '../src/engine/db';
@@ -82,7 +83,7 @@ function run(job: Job): Result {
     const bots = [
       makeBot(plans.mine, { seed: seed + 1 }),
       job.vs === 'bot'
-        ? createBot(plans.theirs, seed + 2, plans.mine)
+        ? createBot(plans.theirs, seed + 2, plans.mine, { model: expertModel(oppSlug) })
         : job.vs === 'hard'
           ? makeHardBot(plans.theirs, plans.mine, { seed: seed + 2 })
           : makeBot(plans.theirs, { seed: seed + 2 }),

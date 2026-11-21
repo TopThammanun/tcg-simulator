@@ -12,12 +12,13 @@ import { EXPERIMENTS, type PlayerConfig } from '../src/sim/experiments';
 import { runBatch, seedsFor, type BatchJob } from '../src/sim/runner';
 import { metaWeighted, pairedDiff, summarize, toCsv, type GameRecord, type Matchup } from '../src/sim/stats';
 import { loadDeckFiles } from './lib/decks';
+import { expertModel } from './lib/experts';
 import { runTsWorker } from './lib/workers';
 
 if (!isMainThread) {
   const job = workerData as BatchJob;
   try {
-    parentPort!.postMessage({ ok: true, games: runBatch(job) });
+    parentPort!.postMessage({ ok: true, games: runBatch(job, undefined, expertModel) });
   } catch (e) {
     parentPort!.postMessage({ ok: false, error: String((e as Error).stack ?? e) });
   }

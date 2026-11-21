@@ -107,7 +107,10 @@ class Net3(nn.Module):
             return {"cv": self.card_vectors()}
 
     def tokens(self, b: dict[str, torch.Tensor], cv: torch.Tensor):
-        """All tokens [B, T, D], which are live [B, T], where the options start, and the card tokens' cards [B, C]."""
+        """All tokens [B, T, D], which are live [B, T], where the options start, and the card tokens' cards [B, C].
+
+        C is dims["C"], or b["C"] when the batch needs fewer card tokens (ppo.py: the most cards any of its rows
+        has); the tokens cut off would all be masked, so the result is the same."""
         slots, sc = b["slots"], b["slot_cards"]
         present = slots[:, :, 0] > 0
         slot_x = self.slot_in(torch.cat([cv[sc[:, :, 0]], cv[sc[:, :, 1]], slots], -1)) + self.kind[1]
@@ -115,7 +118,8 @@ class Net3(nn.Module):
         bags = b["bags"]
         has = bags.sum(1) > 0
         has[:, 0] = False
-        order = torch.argsort(has.to(torch.int8), dim=1, descending=True, stable=True)[:, : self.dims["C"]]
+        C = min(int(b["C"]), self.dims["C"]) if "C" in b else self.dims["C"]
+        order = torch.argsort(has.to(torch.int8), dim=1, descending=True, stable=True)[:, :C]
         card_keep = torch.gather(has, 1, order)
         counts = torch.gather(bags, 2, order[:, None, :].expand(-1, bags.shape[1], -1)).transpose(1, 2)
         card_x = self.card_in(torch.cat([cv[order], counts], -1)) + self.kind[2]
@@ -125,7 +129,7 @@ class Net3(nn.Module):
         opt_x = self.opt_in(torch.cat([cv[b["opt_card"]], b["opt_x"], target], -1)) + self.kind[3]
         x = torch.cat([g, slot_x, card_x, opt_x], 1)
         keep = torch.cat([torch.ones_like(present[:, :1]), present, card_keep, b["mask"]], 1)
-        return x, keep, 1 + SLOTS + self.dims["C"], order, card_keep
+        return x, keep, 1 + SLOTS + C, order, card_keep
 
     def trunk(self, b: dict[str, torch.Tensor], frozen: dict[str, torch.Tensor] | None = None):
         cv = frozen["cv"] if frozen else self.card_vectors()

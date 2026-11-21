@@ -12,6 +12,7 @@ import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { reviewTurn, winOf, type Verdict } from '../src/analysis/review';
 import { makeBot } from '../src/bots/core';
 import { createBot } from '../src/bots/index';
+import { expertModel } from './lib/experts';
 import { DEFAULT_POLICY, planFor } from '../src/bots/plans';
 import { deckKeys } from '../src/engine/db';
 import { replay, turnsOf, type SavedGame } from '../src/review/record';
@@ -52,7 +53,7 @@ function run(job: Job): Result {
     const seed = job.base + i;
     const plans = { mine: planFor(mine), theirs: planFor(opp) };
     const me = side === 'net' ? createBot(plans.mine, seed + 1, plans.theirs, { fast: true }) : makeBot(plans.mine, { seed: seed + 1 });
-    const r = playGame({ seed, decks: [spec(mine), spec(opp)], bots: [me, createBot(plans.theirs, seed + 2, plans.mine, { fast: true })], record: true });
+    const r = playGame({ seed, decks: [spec(mine), spec(opp)], bots: [me, createBot(plans.theirs, seed + 2, plans.mine, { fast: true, model: expertModel(opp) })], record: true });
     const game: SavedGame = {
       savedAt: 0,
       seed,

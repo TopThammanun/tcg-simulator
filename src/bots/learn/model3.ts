@@ -4,6 +4,7 @@
 import { CARD_F, featureTable } from './card-features';
 import { BAGS, CARD_KEYS, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
 import type { ModelJson, Output } from './model';
+import { decodeTensor } from './tensor';
 
 export interface Dims3 {
   E: number;
@@ -48,19 +49,12 @@ export interface Model3 {
   keep: Int32Array;
 }
 
-function decode(b64: string): Float32Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Float32Array(bytes.buffer);
-}
-
 export function loadV3(j: ModelJson, keep: Int32Array): Model3 {
   const dims = j.dims as unknown as Dims3 & { CARD_F: number; SLOT_F: number; OPT_F: number };
   if (dims.CARD_F !== CARD_F) throw new Error(`card features: model ${dims.CARD_F} ≠ ${CARD_F}`);
   if (dims.SLOT_F !== SLOT_F || dims.OPT_F !== OPT_F) throw new Error('model was trained on other encodings');
   const t: Record<string, Float32Array> = {};
-  for (const [name, src] of Object.entries(j.tensors)) t[name] = decode(src.data);
+  for (const [name, src] of Object.entries(j.tensors)) t[name] = decodeTensor(src);
   const d: Dims3 = { E: dims.E, D: dims.D, L: dims.L, HEADS: dims.HEADS, FF: dims.FF, C: dims.C };
   // Card vectors (as Net3.card_vectors without dropout): id_emb[the card's row, or "unknown"] + feat · features.
   const row = new Map(j.cards.map((k, i) => [k, i + 2]));

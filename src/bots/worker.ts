@@ -1,4 +1,5 @@
 // Web Worker: the play screen's bot thinks here, so its search never freezes the page.
+import { expertFor } from './experts';
 import { createBot } from './index';
 import { planFor, type PlayerPolicy } from './plans';
 import type { Bot } from './types';
@@ -16,18 +17,20 @@ export interface BotSetup {
 export type ToBot = { type: 'init'; setup: BotSetup } | { type: 'act'; id: number; state: GameState };
 export type FromBot = { type: 'action'; id: number; action: Action } | { type: 'error'; id: number; message: string };
 
-let bot: Bot | null = null;
+/** The bot, once its deck's expert (if it has one) has loaded. */
+let bot: Promise<Bot> | null = null;
 
-self.onmessage = (e: MessageEvent<ToBot>) => {
+self.onmessage = async (e: MessageEvent<ToBot>) => {
   const msg = e.data;
   if (msg.type === 'init') {
     const { slug, oppSlug, seed, policy, fast } = msg.setup;
-    bot = createBot(planFor(slug), seed, planFor(oppSlug, policy), { fast });
+    bot = expertFor(slug).then((model) => createBot(planFor(slug), seed, planFor(oppSlug, policy), { fast, model }));
     return;
   }
   try {
     if (!bot) throw new Error('bot not set up');
-    (self as unknown as Worker).postMessage({ type: 'action', id: msg.id, action: bot.act(msg.state) } satisfies FromBot);
+    const action = (await bot).act(msg.state);
+    (self as unknown as Worker).postMessage({ type: 'action', id: msg.id, action } satisfies FromBot);
   } catch (err) {
     (self as unknown as Worker).postMessage({ type: 'error', id: msg.id, message: String((err as Error).message ?? err) } satisfies FromBot);
   }

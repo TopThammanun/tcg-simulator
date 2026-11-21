@@ -87,14 +87,43 @@ def opponent_decks(extra_text: str, meta_part: float) -> dict[str, float]:
     return {d: round(even + meta_part * share.get(d, 0) / total + extra.get(d, 0), 4) for d in decks}
 
 
-def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
+def card_counts(data: Data) -> torch.Tensor:
+    """How many card tokens each row has (version 3: cards with a count in any bag), counted in slices."""
+    out = torch.empty(data.n, dtype=torch.long, device=data.bags.device)
+    step = 65536
+    for i in range(0, data.n, step):
+        has = data.bags[i : i + step].sum(1) > 0
+        has[:, 0] = False
+        out[i : i + step] = has.sum(1)
+    return out
+
+
+def minibatches(data: Data, mb: int, cards: torch.Tensor | None) -> list[torch.Tensor]:
+    """One epoch's minibatches (row indices). Random, or with `cards` (--bucket) rows of a similar size (option-count
+    class, then card count) together, the minibatches in random order: a batch then pads to little more than its
+    rows need (version 3 spent over half of its tokens on padding, BOT-NEXT.md)."""
     n = data.n
+    dev = data.opt_count.device
+    if cards is None:
+        perm = torch.randperm(n, device=dev)
+        return [perm[i : i + mb] for i in range(0, n - mb // 2, mb)]
+    cls = torch.bucketize(data.opt_count, torch.tensor([4, 8, 16, 32], device=dev))
+    order = torch.argsort(cls.float() * 1000 + cards.float() + torch.rand(n, device=dev))
+    chunks = [order[i : i + mb] for i in range(0, n - mb // 2, mb)]
+    return [chunks[k] for k in torch.randperm(len(chunks)).tolist()]
+
+
+def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
     stats = {"pg": 0.0, "v": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "aux": 0.0, "steps": 0}
+    cards = card_counts(data) if a.bucket else None
+    # Minibatches of similar rows would each normalise their advantages within one kind of decision: normalise
+    # once over all rows instead.
+    adv_all = (adv - adv.mean()) / (adv.std() + 1e-8) if a.bucket else None
     for _ in range(a.epochs):
-        perm = torch.randperm(n, device=adv.device)
-        for i in range(0, n - a.mb // 2, a.mb):
-            j = perm[i : i + a.mb]
+        for j in minibatches(data, a.mb, cards):
             b = data.batch(j)
+            if cards is not None:
+                b["C"] = int(cards[j].max())
             aux = None
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=a.bf16):
                 if hasattr(net, "forward_aux"):
@@ -105,8 +134,11 @@ def ppo_update(net, anchor, data: Data, adv, ret, opt, a, kl_coef: float):
             logp_all = F.log_softmax(logits, -1)
             logp = logp_all.gather(1, data.chosen[j][:, None]).squeeze(1)
             ratio = torch.exp(logp - data.logp[j])
-            A = adv[j]
-            A = (A - A.mean()) / (A.std() + 1e-8)
+            if adv_all is not None:
+                A = adv_all[j]
+            else:
+                A = adv[j]
+                A = (A - A.mean()) / (A.std() + 1e-8)
             pg = -torch.min(ratio * A, ratio.clamp(1 - a.clip, 1 + a.clip) * A).mean()
             vloss = F.binary_cross_entropy_with_logits(value, ret[j])
             p = logp_all.exp() * b["mask"]
@@ -178,6 +210,7 @@ def main():
     ap.add_argument("--bf16", action="store_true", help="bfloat16 autocast in the update (version 3: faster, less memory)")
     ap.add_argument("--aux-weight", type=float, default=0.25, help="version 3: weight of the training-only targets (opponent's hand, Prize difference)")
     ap.add_argument("--overlap", action="store_true", help="play the next iteration's games while this one trains (games one iteration behind)")
+    ap.add_argument("--bucket", action="store_true", help="minibatches of similar-sized rows, padding cut (version 3 ~1.9x faster), advantages normalised over all rows")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)

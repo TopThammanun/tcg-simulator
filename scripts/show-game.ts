@@ -1,6 +1,7 @@
 // Print one bot-vs-bot game log: npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [fromTurn] [toTurn] [--net]
-// --net: the game's bot (network and specialists, without look-ahead) instead of the rule-based bot.
+// --net: the game's bot (each deck's expert or the bundled network, without look-ahead) instead of the rule-based bot.
 import { createBot } from '../src/bots';
+import { expertModel } from './lib/experts';
 import { makeBot } from '../src/bots/core';
 import { planFor } from '../src/bots/plans';
 import { deckKeys } from '../src/engine/db';
@@ -15,7 +16,7 @@ const r = playGame({
   seed: Number(seed),
   decks: [spec(a), spec(b)],
   bots: net
-    ? [createBot(planFor(a), 1, planFor(b), { fast: true }), createBot(planFor(b), 2, planFor(a), { fast: true })]
+    ? [createBot(planFor(a), 1, planFor(b), { fast: true, model: expertModel(a) }), createBot(planFor(b), 2, planFor(a), { fast: true, model: expertModel(b) })]
     : [makeBot(planFor(a), { seed: 1 }), makeBot(planFor(b), { seed: 2 })],
   record: true,
 });

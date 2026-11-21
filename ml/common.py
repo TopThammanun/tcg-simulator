@@ -317,8 +317,18 @@ def write_json(out: dict, path: str) -> None:
     os.replace(tmp, path)
 
 
-def b64(v) -> dict:
-    return {"shape": list(v.shape), "data": base64.b64encode(np.ascontiguousarray(v, dtype="<f4").tobytes()).decode()}
+def b64(v, half: bool = False) -> dict:
+    """A tensor for a weights file: base64 float32, or float16 with dtype "f2" (src/bots/learn/tensor.ts)."""
+    out = {"shape": list(v.shape), "data": base64.b64encode(np.ascontiguousarray(v, dtype="<f2" if half else "<f4").tobytes()).decode()}
+    if half:
+        out["dtype"] = "f2"
+    return out
+
+
+def unb64(v: dict) -> np.ndarray:
+    """A weights file's tensor as float32 (stored as float32, or float16 when its dtype says "f2")."""
+    raw = base64.b64decode(v["data"])
+    return np.frombuffer(raw, dtype="<f2" if v.get("dtype") == "f2" else "<f4").astype(np.float32).reshape(v["shape"])
 
 
 def new_net(data: Data | None = None, dims: dict | None = None) -> Net:
@@ -390,7 +400,7 @@ def upgrade_bags(t: dict, sh: int) -> dict:
 def import_json(path: str, id_drop: float = 0.15) -> Net | Net2:
     with open(path) as f:
         j = json.load(f)
-    t = {k: torch.from_numpy(np.frombuffer(base64.b64decode(v["data"]), dtype="<f4").reshape(v["shape"]).copy()) for k, v in j["tensors"].items()}
+    t = {k: torch.from_numpy(unb64(v).copy()) for k, v in j["tensors"].items()}
     if j.get("version") == 3:
         from net3 import Net3
 

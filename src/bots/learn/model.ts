@@ -13,6 +13,7 @@
 import { CARD_F, featureTable } from './card-features';
 import { BAGS, CARD_KEYS, DECK_NAMES, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, type Encoded } from './encode';
 import { loadV3, run3, type Model3 } from './model3';
+import { decodeTensor, type TensorJson } from './tensor';
 
 export const E = 16;
 export const SH = 64;
@@ -27,7 +28,8 @@ export interface ModelJson {
   /** Version 1: card keys in embedding order (index + 1), must match CARD_KEYS. Version 2: the keys of id.emb rows 2+ (row 0 = no card, 1 = unknown). */
   cards: string[];
   dims: { E: number; SH: number; BAGD: number; H: number; OH: number; SLOT_F: number; GLOB_F: number; OPT_F: number; CARD_F?: number };
-  tensors: Record<string, { shape: number[]; data: string }>;
+  /** float32 by default, float16 (half the size) when a tensor says so (tensor.ts). */
+  tensors: Record<string, TensorJson>;
   /** Free-form training notes (generation, games…). */
   meta?: Record<string, unknown>;
 }
@@ -104,13 +106,6 @@ const NAMES: Record<string, number[]> = {
   'score.b': [1],
 };
 
-function decode(b64: string): Float32Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Float32Array(bytes.buffer);
-}
-
 export function loadModel(j: ModelJson): Model {
   if (j.version === 3) return { t: {}, meta: j.meta ?? {}, dims: V1_DIMS, glob: GLOB_KEEP, v3: loadV3(j, GLOB_KEEP) };
   if (j.version === 2) return loadV2(j);
@@ -122,7 +117,7 @@ export function loadModel(j: ModelJson): Model {
     const want = name === 'emb' ? [saved, E] : name === 'bag.w' ? [BAGS, saved, BAGD] : shape;
     if (!src) throw new Error(`model is missing ${name}`);
     if (src.shape.join() !== want.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${want}`);
-    t[name] = decode(src.data);
+    t[name] = decodeTensor(src);
   }
   if (j.cards.join() !== CARD_KEYS.join()) Object.assign(t, remapV1(t, j.cards));
   return { t, meta: j.meta ?? {}, dims: V1_DIMS, glob: null };
@@ -155,7 +150,7 @@ function loadV2(j: ModelJson): Model {
     const src = j.tensors[name];
     if (!src) throw new Error(`model is missing ${name}`);
     if (src.shape.join() !== shape.join()) throw new Error(`${name}: shape ${src.shape} ≠ ${shape}`);
-    t[name] = decode(src.data);
+    t[name] = decodeTensor(src);
   }
   return { t: { ...t, ...cardTables(t, d, j.cards) }, meta: j.meta ?? {}, dims: d, glob: GLOB_KEEP };
 }

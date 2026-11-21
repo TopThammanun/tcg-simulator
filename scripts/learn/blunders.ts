@@ -8,6 +8,7 @@ import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { sureLine } from '../../src/analysis/review';
 import { createBot, SEARCH } from '../../src/bots/index';
+import { expertModel } from '../lib/experts';
 import { makeHardBot } from '../../src/bots/hard';
 import { loadModel } from '../../src/bots/learn/model';
 import { makeSearchNetBot } from '../../src/bots/learn/search';
@@ -46,7 +47,7 @@ function run(job: Job): Found {
     const plans = { mine: planFor(a), theirs: planFor(b) };
     const bot: Bot = model
       ? makeSearchNetBot(model, { decks: [plans.mine.name, plans.theirs.name], seed: g, plan: plans.mine, ...SEARCH })
-      : createBot(plans.mine, g, plans.theirs);
+      : createBot(plans.mine, g, plans.theirs, { model: expertModel(a) });
     const other = makeHardBot(plans.theirs, plans.mine, { seed: g + 7 });
     const bots = me === 0 ? [bot, other] : [other, bot];
     let s: GameState = createGame({ seed: 3_000_000 + g, decks: [{ name: 'a', cards: cards.get(decks[0]!)! }, { name: 'b', cards: cards.get(decks[1]!)! }], quiet: true });

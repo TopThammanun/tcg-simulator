@@ -7,11 +7,10 @@
 // Every pairing is played over all deck pairs (mirrors too) from both seats with the same deal.
 // Prints one JSON line: games, rows, and each player's score per pairing.
 // A network's `weights` is a weights file or an expert set: a folder of <deck slug>.json files, default.json for
-// the other decks (expertWeights).
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+// the other decks (scripts/lib/experts.ts expertWeights).
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { makeBot } from '../../src/bots/core';
 import { createBot, MODEL } from '../../src/bots';
@@ -29,6 +28,7 @@ import { readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review
 import { deckKeys } from '../../src/engine/db';
 import type { GameState } from '../../src/engine/types';
 import { loadDeckFiles } from '../lib/decks';
+import { BOT_EXPERTS, BOT_WEIGHTS, expertWeights } from '../lib/experts';
 import { runTsWorker } from '../lib/workers';
 import { playBatched, serverClient, type GameDeps, type ResignSpec, type Served } from './batched';
 import { ShardWriter } from './shard';
@@ -143,27 +143,6 @@ function model(path: string): Model {
     models.set(path, m);
   }
   return m;
-}
-
-const BOT_WEIGHTS = fileURLToPath(new URL('../../src/bots/learn/weights.json', import.meta.url));
-/** The game's expert set (src/bots/experts.ts): the bundled network plays the decks without one. */
-const BOT_EXPERTS = fileURLToPath(new URL('../../src/bots/learn/experts', import.meta.url));
-
-const resolved = new Map<string, string>();
-/** The weights file a deck plays from: `path` itself, or in an expert set its <slug>.json, else default.json, else `fallback`. */
-export function expertWeights(path: string, slug: string, fallback?: string): string {
-  const key = `${path}|${slug}`;
-  let w = resolved.get(key);
-  if (w === undefined) {
-    if (existsSync(path) && statSync(path).isDirectory()) {
-      const own = join(path, `${slug}.json`);
-      const other = join(path, 'default.json');
-      w = existsSync(own) ? own : existsSync(other) ? other : fallback;
-      if (!w) throw new Error(`expert set ${path} has neither ${slug}.json nor default.json`);
-    } else w = path;
-    resolved.set(key, resolve(w));
-  }
-  return resolved.get(key)!;
 }
 
 /** The game's network for a deck: its expert when it has one, else the bundled network (null: none bundled). */

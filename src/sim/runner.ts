@@ -4,6 +4,7 @@
 // the game seed exactly as the play page's watch mode does, so any game can be replayed from its seed.
 import { makeBot } from '../bots/core';
 import { createBot } from '../bots/index';
+import type { Model } from '../bots/learn/model';
 import { planFor } from '../bots/plans';
 import type { DeckSpec, Rules } from '../engine/types';
 import { applyEdit, type PlayerConfig } from './experiments';
@@ -23,7 +24,8 @@ export interface BatchJob {
 export const PLAYER_BOT_SALT = 0x1b873593;
 export const OPP_BOT_SALT = 0x2545f491;
 
-export function runBatch(job: BatchJob, onGame?: (g: GameRecord) => void): GameRecord[] {
+/** `modelFor`: the network the bot deck plays from (Node: scripts/lib/experts.ts), the bundled one by default. */
+export function runBatch(job: BatchJob, onGame?: (g: GameRecord) => void, modelFor?: (slug: string) => Model | null): GameRecord[] {
   const me: DeckSpec = { name: 'คุณ', cards: applyEdit(job.playerCards, job.config.edit) };
   const them: DeckSpec = { name: 'บอท', cards: job.opp.cards };
   const out: GameRecord[] = [];
@@ -33,7 +35,7 @@ export function runBatch(job: BatchJob, onGame?: (g: GameRecord) => void): GameR
       decks: [me, them],
       bots: [
         makeBot(planFor('player', job.config.policy), { seed: seed ^ PLAYER_BOT_SALT }),
-        createBot(planFor(job.opp.slug), seed ^ OPP_BOT_SALT, planFor('player', job.config.policy), { fast: true }),
+        createBot(planFor(job.opp.slug), seed ^ OPP_BOT_SALT, planFor('player', job.config.policy), { fast: true, model: modelFor?.(job.opp.slug) }),
       ],
       rules: job.rules,
       checkInvariants: job.checkInvariants,

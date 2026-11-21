@@ -12,7 +12,9 @@ export interface RemoteBot {
 export function remoteBot(setup: BotSetup): RemoteBot {
   if (typeof Worker === 'undefined') {
     // Loaded only here, so the network's weights stay out of the page bundle.
-    const made = import('./index').then(({ createBot }) => createBot(planFor(setup.slug), setup.seed, planFor(setup.oppSlug, setup.policy), { fast: setup.fast }));
+    const made = Promise.all([import('./index'), import('./experts').then((x) => x.expertFor(setup.slug))]).then(([{ createBot }, model]) =>
+      createBot(planFor(setup.slug), setup.seed, planFor(setup.oppSlug, setup.policy), { fast: setup.fast, model }),
+    );
     return { act: async (s) => (await made).act(s), dispose() {} };
   }
   const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
