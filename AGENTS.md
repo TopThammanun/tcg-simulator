@@ -42,7 +42,7 @@ ml/.venv/Scripts/python ml/serve_check.py <net.json>   # the GPU server gives mo
 npx tsx scripts/learn/parity.ts <net.json> <dir> && ml/.venv/Scripts/python ml/parity.py <net.json> <dir>   # TS = PyTorch
 npx tsx scripts/show-game.ts <deckA> <deckB> [seed] [--net]   # read one bot game's log (--net: the game's bot)
 npx tsx scripts/meta/limitless.ts [--days 30]   # real tournaments (Limitless): data/meta/limitless.json + .cache/meta/lists.json
-npx tsx scripts/meta/compare.ts [--games 4000]   # the bots' matchups next to real players' -> data/meta/compare.md
+npx tsx scripts/meta/compare.ts [--games 4000] [--weights <net or expert set> --out <md>]   # the bots' matchups next to real players' -> data/meta/compare.md
 npx tsx scripts/meta/variants.ts   # real lists our engine can play, per deck -> .cache/meta/variants.json (gen.ts `variants`, ppo.py --variants)
 npx tsx scripts/meta/pick-lists.ts [--write --only a,b]   # each bot deck's most typical recent top list that the engine can play
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md

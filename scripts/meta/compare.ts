@@ -2,8 +2,9 @@
 // each other, next to the same archetypes' results in real tournaments (data/meta/limitless.json, from
 // scripts/meta/limitless.ts). A matchup far from the real one points at a deck the bot plays badly (or a
 // card that works differently).
-//   npx tsx scripts/meta/compare.ts [--games 4000] [--search] [--base 31000000]
-// Writes data/meta/compare.md.
+//   npx tsx scripts/meta/compare.ts [--games 4000] [--search] [--base 31000000] [--weights <file or expert set> --out <md>]
+// Writes data/meta/compare.md (--out: elsewhere). --weights: that network (an expert set: each deck its own) instead
+// of the game's bot, for a candidate before it ships.
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { loadDeckFiles } from '../lib/decks';
@@ -16,6 +17,17 @@ const arg = (name: string, d: number) => {
 const GAMES = arg('games', 4000);
 const BASE = arg('base', 31_000_000);
 const SEARCH = process.argv.includes('--search');
+const opt = (name: string) => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i > 0 ? process.argv[i + 1] : undefined;
+};
+const WEIGHTS = opt('weights');
+const OUT = opt('out') ?? 'data/meta/compare.md';
+const player = !WEIGHTS
+  ? { kind: 'bot', fast: !SEARCH }
+  : SEARCH
+    ? { kind: 'search', weights: WEIGHTS, tactics: true, guards: true, deadlineMs: 2500 }
+    : { kind: 'net', weights: WEIGHTS, temperature: 0 };
 
 const meta = JSON.parse(readFileSync('data/meta/limitless.json', 'utf8')) as MetaData;
 const decks = loadDeckFiles('src/content/decks').filter((d) => d.meta.limitless);
@@ -28,7 +40,7 @@ writeFileSync(
     out: `.cache/learn/compare-${process.pid}`,
     games: GAMES,
     base: BASE,
-    players: { A: { kind: 'bot', fast: !SEARCH }, B: { kind: 'bot', fast: !SEARCH } },
+    players: { A: player, B: player },
     pairs: [{ a: 'A', b: 'B', share: 1 }],
   }),
 );
@@ -87,7 +99,7 @@ const rms = Math.sqrt(gaps.reduce((t, g) => t + (g.sim - g.real) ** 2, 0) / Math
 gaps.sort((a, b) => Math.abs(b.sim - b.real) - Math.abs(a.sim - a.real));
 const md = `# The bots against real results
 
-Bots: the game's bot ${SEARCH ? 'with look-ahead' : 'without look-ahead (as the simulator plays)'}, ${GAMES} games over every deck pair (seed ${BASE}).
+Bots: ${WEIGHTS ? `the network ${WEIGHTS}` : "the game's bot"} ${SEARCH ? 'with look-ahead' : 'without look-ahead (as the simulator plays)'}, ${GAMES} games over every deck pair (seed ${BASE}).
 Real: ${meta.tournaments} Limitless tournaments with ${meta.minPlayers}+ players in the ${meta.days} days to ${meta.fetched.slice(0, 10)} (${meta.players} players).
 Real players are not the bot: a matchup's real result also depends on the lists people brought, which differ from ours.
 
@@ -111,5 +123,5 @@ ${gaps.slice(0, 12).map((g) => `| ${g.x} | ${g.y} | ${pct(g.real)} | ${pct(g.sim
 |---|---|---|---|---|
 ${rows.join('\n')}
 `;
-writeFileSync('data/meta/compare.md', md);
+writeFileSync(OUT, md);
 console.log(md.split('## Every matchup')[0]);
