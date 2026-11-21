@@ -1,18 +1,15 @@
 <script lang="ts">
   // ประวัติเกม + ทบทวนเกม: your saved games and your record against each deck; for one game, every turn of
   // yours reviewed on Web Workers (src/analysis/review.ts): win% before and after it, clear mistakes, the
-  // bot's turn from the same position and where it parts from yours, the board at the start and end of the
-  // turn with every hidden card shown, and a link to play on from that turn. The turns worth a look come
+  // bot's turn from the same position and where it parts from yours, a replay of the turn on the table (yours
+  // or the bot's, ReplayViewer.svelte), and a link to play on from that turn. The turns worth a look come
   // first. Reviews are stored with the game, so opening it again is instant.
   import type { TurnReview, Verdict } from '../../analysis/review';
   import { reviewGame, type ReviewRun } from '../../analysis/review-remote';
-  import { keyOf } from '../../engine/state';
   import type { GameState } from '../../engine/types';
   import { gamesFile, readGamesFile, replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
   import { deleteGame, getGame, getReview, listGames, persistent, saveGame, saveReview } from '../../review/store';
-  import Board from '../game/Board.svelte';
-  import CardFace from '../game/CardFace.svelte';
-  import CardInfo from '../game/CardInfo.svelte';
+  import ReplayViewer, { type LineKind } from './ReplayViewer.svelte';
   import WinChart from './WinChart.svelte';
 
   const params = new URLSearchParams(location.search);
@@ -26,8 +23,8 @@
   let done = $state(false);
   let error = $state('');
   let selected = $state<number | null>(null);
-  let at = $state<'start' | 'end'>('start');
-  let zoom = $state<string | null>(null);
+  /** The turn being replayed on the table, and whose way. */
+  let replaying = $state<{ turn: number; line: LineKind; autoplay: boolean } | null>(null);
   let run: ReviewRun | null = null;
   $effect(() => () => run?.cancel());
 
@@ -137,17 +134,10 @@
     games = (games ?? []).filter((x) => x.id !== g.id);
   }
 
-  function show(t: TurnReview) {
-    selected = selected === t.turn ? null : t.turn;
-    at = 'start';
+  function watch(t: TurnReview, line: LineKind) {
+    selected = t.turn;
+    replaying = { turn: t.turn, line, autoplay: line === 'bot' };
   }
-
-  const pick = $derived(selected === null ? null : (sorted.find((t) => t.turn === selected) ?? null));
-  /** The board at the start or end of the picked turn, every card shown. */
-  const shown = $derived(pick ? states[at === 'start' ? pick.span.start : pick.span.end] : null);
-  const cards = (s: GameState, ids: number[]) => ids.map((c) => keyOf(s, c));
-  const NONE = new Set<number>();
-  const EMPTY = new Map<number, never>();
 </script>
 
 {#snippet moves(list: string[], split: number | null)}
@@ -181,7 +171,10 @@
     <p class="muted">บอทก็เล่นแบบเดียวกัน</p>
   {/if}
   <div class="buttons">
-    <button type="button" onclick={() => show(t)}>{selected === t.turn ? 'ซ่อนสนาม' : 'ดูสนาม'}</button>
+    {#if t.alt?.actions}
+      <button type="button" class="main" onclick={() => watch(t, 'bot')}>▶ ดูบอทเล่นเทิร์นนี้</button>
+    {/if}
+    <button type="button" onclick={() => watch(t, 'mine')}>ดูรีเพลย์ที่คุณเล่น</button>
     <a class="button" href={`/play/?resume=${game!.id}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้</a>
   </div>
 {/snippet}
@@ -275,45 +268,29 @@
 
   {#if sorted.length}<WinChart turns={sorted} {selected} />{/if}
 
-  <div class="layout">
-    <section>
-      <h2>ทุกเทิร์นของคุณ</h2>
-      <ol class="turns">
-        {#each sorted as t (t.turn)}
-          <li class:sel={selected === t.turn}>{@render turnBody(t)}</li>
-        {/each}
-      </ol>
-    </section>
+  <section class="all">
+    <h2>ทุกเทิร์นของคุณ</h2>
+    <ol class="turns">
+      {#each sorted as t (t.turn)}
+        <li class:sel={selected === t.turn}>{@render turnBody(t)}</li>
+      {/each}
+    </ol>
+  </section>
 
-    {#if pick && shown}
-      <section class="viewer" aria-label={`สนามเทิร์น ${pick.turn}`}>
-        <div class="seg">
-          <button type="button" class:on={at === 'start'} onclick={() => (at = 'start')}>ต้นเทิร์น {pick.turn}</button>
-          <button type="button" class:on={at === 'end'} onclick={() => (at = 'end')}>จบเทิร์น</button>
-        </div>
-        <div class="table">
-          <Board
-            s={shown}
-            targets={NONE}
-            picks={EMPTY}
-            abilities={EMPTY}
-            onslot={() => {}}
-            onzoom={(k) => (zoom = k)}
-            ondiscard={() => {}}
-          />
-        </div>
-        <p class="muted">การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด</p>
-        {#each [['มือบอท', shown.players[1].hand], ['Prize ของบอท', shown.players[1].prizes], ['มือคุณ', shown.players[0].hand], ['Prize ของคุณ', shown.players[0].prizes]] as [label, ids] (label)}
-          <h4>{label} ({(ids as number[]).length})</h4>
-          <div class="cards">
-            {#each cards(shown, ids as number[]) as k, i (i)}
-              <button type="button" onclick={() => (zoom = k)}><CardFace cardKey={k} /></button>
-            {/each}
-          </div>
-        {/each}
-      </section>
-    {/if}
-  </div>
+  {#if replaying}
+    {#key replaying}
+      <ReplayViewer
+        {states}
+        actions={game.actions}
+        turns={sorted}
+        turn={replaying.turn}
+        line={replaying.line}
+        autoplay={replaying.autoplay}
+        onturn={(n) => (selected = n)}
+        onclose={() => (replaying = null)}
+      />
+    {/key}
+  {/if}
 
   <p class="note">
     win% = โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน
@@ -322,8 +299,6 @@
     เป็นค่าประมาณ ให้ใช้เป็นจุดที่ควรลองดูซ้ำ
   </p>
 {/if}
-
-{#if zoom}<CardInfo cardKey={zoom} onclose={() => (zoom = null)} />{/if}
 
 <style>
   .muted {
@@ -605,21 +580,8 @@
     font-size: 14px;
     line-height: 20px;
   }
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-  }
-  @media (min-width: 1100px) {
-    .layout:has(.viewer) {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-      align-items: start;
-    }
-    .viewer {
-      position: sticky;
-      top: 80px;
-      margin-top: 48px;
-    }
+  .all {
+    max-width: 860px;
   }
   .turns {
     margin: 0;
@@ -738,8 +700,7 @@
     margin-top: 16px;
   }
   .buttons button,
-  .button,
-  .seg button {
+  .button {
     padding: 4px 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -756,14 +717,23 @@
       transform 0.3s var(--ease);
   }
   .buttons button:hover,
-  .button:hover,
-  .seg button:hover {
+  .button:hover {
     background: #313131;
   }
   .buttons button:active,
-  .button:active,
-  .seg button:active {
+  .button:active {
     transform: scale(0.98);
+  }
+  /* Watching the bot's turn is the main thing a turn card offers. */
+  .buttons button.main {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
+    font-weight: 600;
+  }
+  .buttons button.main:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   .games .button {
     border-color: var(--primary);
@@ -774,48 +744,6 @@
   .games .button:hover {
     border-color: var(--press);
     background: var(--press);
-  }
-  .seg {
-    display: inline-flex;
-    gap: 4px;
-    margin-bottom: 12px;
-    padding: 4px;
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-lg);
-    background: var(--card-bg);
-  }
-  .seg button {
-    border-color: transparent;
-    background: none;
-    color: var(--ink-soft);
-  }
-  .seg button.on {
-    background: var(--control);
-    color: var(--ink-strong);
-  }
-  /* Board.svelte sizes its cards from this box (container query units). */
-  .table {
-    position: relative;
-    height: min(620px, 80vh);
-    container-type: size;
-  }
-  .viewer h4 {
-    margin: 16px 0 8px;
-    color: var(--ink-soft);
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-    gap: 8px;
-  }
-  .cards button {
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: zoom-in;
   }
   .note {
     margin-top: 32px;

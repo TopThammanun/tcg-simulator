@@ -43,6 +43,8 @@ export interface TurnReview {
   /** The bot's turn from the same start, when it played differently. */
   alt?: {
     played: string[];
+    /** Every action of its turn from the start state (the opponent's answers too), to replay it on the board. */
+    actions: Action[];
     win: { p: number; se: number };
     /** Its win% minus yours, on the same re-deals. */
     diff: number;
@@ -156,7 +158,7 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
         ? explainEnd(bot.states[at.at]!, me).why
         : explainAction(bot.states[at.at]!, me, { action: bot.actions[at.at]! }, plans.mine).why
       : '';
-    alt = { played: its.map((m) => m.label), win: { p: theirs.p, se: theirs.se }, diff: theirs.p - win.p, split, why };
+    alt = { played: its.map((m) => m.label), actions: bot.actions, win: { p: theirs.p, se: theirs.se }, diff: theirs.p - win.p, split, why };
   }
 
   const verdict: Verdict = missed ? (missed.kind === 'win' ? 'missed-win' : 'missed-ko') : alt && alt.diff >= BETTER_BY ? 'better' : 'ok';

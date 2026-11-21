@@ -437,12 +437,27 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await expect(page.locator('figure.chart svg path.line')).toBeVisible();
   await expect(turns.first().locator('.badge')).toBeVisible();
 
-  // The board of a turn with every hidden card shown.
-  await turns.first().getByRole('button', { name: 'ดูสนาม' }).click();
-  const viewer = page.locator('.viewer');
+  // A turn replayed on the table, full screen, with every hidden card shown; stepping on names each move.
+  await turns.first().getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
+  const viewer = page.getByRole('dialog', { name: /รีเพลย์เทิร์น/ });
   await expect(viewer.locator('.board')).toBeVisible();
   await expect(viewer.locator('h4', { hasText: 'Prize ของบอท' })).toBeVisible();
   expect(await viewer.locator('.cards').nth(1).locator('button').count()).toBeGreaterThan(0);
+  await expect(viewer.locator('.caption')).toContainText('ต้นเทิร์น');
+  await viewer.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();
+  await expect(viewer.locator('.caption')).toContainText('คุณ:');
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
+
+  // The bot's turn from the same start plays on its own.
+  const botTurn = page.getByRole('button', { name: /ดูบอทเล่นเทิร์นนี้/ }).first();
+  if (await botTurn.count()) {
+    await botTurn.click();
+    await expect(viewer.getByRole('tab', { name: /บอทจะเล่น/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(viewer.locator('.caption')).toContainText('บอท:', { timeout: 10_000 });
+    await viewer.getByRole('button', { name: 'ปิด' }).click();
+    await expect(viewer).toHaveCount(0);
+  }
 
   // Reopening the review is instant (stored with the game).
   await page.reload();

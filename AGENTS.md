@@ -100,6 +100,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   replay), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
   game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
+  `ReplayViewer.svelte` replays one turn full screen (a `<dialog>`) with the play screen's Board, hand and animations,
+  step by step or playing on its own: your turn, or the bot's from the same start (`TurnReview.alt.actions`);
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.
 - `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
   its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,

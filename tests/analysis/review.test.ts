@@ -3,11 +3,12 @@ import { reviewTurn, sureLine } from '../../src/analysis/review';
 import { estimateWin, merge, pairedDiff, summarize } from '../../src/analysis/winrate';
 import { makeBot } from '../../src/bots/core';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
-import { apply } from '../../src/engine/actions';
+import { actor, apply } from '../../src/engine/actions';
 import { DEFAULT_RULES } from '../../src/engine/state';
 import type { Action, GameState } from '../../src/engine/types';
 import { gamesFile, isFree, readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review/record';
 import { playGame } from '../../src/sim/game';
+import { describeAction } from '../../src/ui/play';
 import { deck, scenario } from '../engine/helpers';
 
 const plans = { mine: planFor('player'), theirs: planFor('dragapult-ex') };
@@ -66,6 +67,20 @@ describe('clear mistakes (พลาดชัด)', () => {
     expect(r.missed).toBeUndefined();
     expect(r.verdict === 'ok' || r.verdict === 'better').toBe(true);
     expect(r.played).toEqual(['โจมตี Jet Headbutt']);
+  });
+
+  it("the bot's turn keeps its actions: replayed from the start they are the moves it lists (the replay viewer)", () => {
+    const { states, actions } = played(position([]), [{ t: 'end' }]);
+    const r = reviewTurn(states, actions, turnsOf(states)[0]!, plans, FAST);
+    expect(r.alt).toBeDefined();
+    let st = states[r.span.start]!;
+    const labels: string[] = [];
+    for (const a of r.alt!.actions) {
+      if (actor(st) === 0 && a.t !== 'choose') labels.push(describeAction(st, a));
+      st = apply(st, a, { trusted: true });
+    }
+    expect(labels).toEqual(r.alt!.played);
+    expect(st.winner === 0 || (st.current === 1 && !st.pending)).toBe(true);
   });
 
   it('a line counts only if it works on every re-deal, and the answer does not change between runs', () => {
