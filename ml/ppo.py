@@ -330,13 +330,16 @@ def main():
             **({"resign": res["resign"]} if "resign" in res else {}),
         }
         if it % a.eval_every == 0:
+            # A copy plays (the server keeps reading the files it serves; current.json is rewritten every iteration).
+            eval_path = os.path.join(a.dir, f"eval-{it}.json")
+            shutil.copy(cur_path, eval_path)
             ecfg = {
                 "out": os.path.join(a.dir, "eval"),
                 "games": a.eval_games,
                 "base": 90_000_000,
                 "threads": a.threads,
                 "players": {
-                    "net": {"kind": "net", "weights": cur_path, "temperature": 0},
+                    "net": {"kind": "net", "weights": eval_path, "temperature": 0},
                     "hard": {"kind": "hard"},
                     "bot": {"kind": "bot", "fast": True},
                     **({"frozen": {"kind": "net", "weights": a.frozen, "temperature": 0}} if a.frozen else {}),
@@ -352,7 +355,6 @@ def main():
             pe = er.get("paired", {}).get(f"net vs {a.eval_vs}")
             if pe:
                 row["eval_se"] = round(pe["se"], 4)
-            shutil.copy(cur_path, os.path.join(a.dir, f"eval-{it}.json"))
         state["iter"] = it
         json.dump(state, open(state_path, "w"))
         log.write(json.dumps(row) + "\n")

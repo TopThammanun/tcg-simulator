@@ -314,7 +314,22 @@ def write_json(out: dict, path: str) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(out, f)
-    os.replace(tmp, path)
+    replace(tmp, path)
+
+
+def replace(src: str, dst: str, tries: int = 50) -> None:
+    """os.replace, waiting out a reader that has `dst` open: Windows refuses to replace an open file (it once stopped
+    a training run when another process was reading the weights at that moment)."""
+    import time
+
+    for i in range(tries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.1 * (i + 1))
 
 
 def b64(v, half: bool = False) -> dict:
@@ -378,7 +393,7 @@ def export(net: Net | Net2, path: str, meta: dict | None = None) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(out, f)
-    os.replace(tmp, path)
+    replace(tmp, path)
 
 
 def upgrade_bags(t: dict, sh: int) -> dict:
