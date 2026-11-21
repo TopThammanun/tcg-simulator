@@ -457,6 +457,8 @@ def main():
         # --patience: stop once the evaluation has not beaten its best for that many iterations.
         if a.patience and "best" in state and it - state["best"][1] >= a.patience:
             print(f"no better evaluation for {a.patience} iterations (best {state['best'][0]} at {state['best'][1]}): stopping", flush=True)
+            state["stopped"] = True
+            json.dump(state, open(state_path, "w"))
             if pending:
                 try:
                     pending[1].wait()  # the games already started (--overlap) finish before the server goes
