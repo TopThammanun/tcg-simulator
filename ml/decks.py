@@ -20,6 +20,34 @@ from match import paired_ci, spec, wilson
 LOG = os.path.join(ROOT, "data", "learn", "decks.jsonl")
 
 
+def measure(a: str, b: str, deck: str, games: int, base: int, threads: int, server, note: str, offmeta: bool = False) -> dict:
+    """A playing `deck` against B on every deck evenly (with `offmeta`, B on the held-out off-meta lists): the row,
+    also appended to LOG."""
+    tag = f"decks-{os.getpid()}"
+    cfg = {
+        "out": os.path.join(ROOT, ".cache", "learn", tag),
+        "games": games,
+        "base": base,
+        "threads": threads,
+        "players": {"A": spec(a), "B": spec(b)},
+        "pairs": [{"a": "A", "b": "B", "share": 1, "decksA": {deck: 1}}],
+        **({"offmeta": {"path": os.path.join(ROOT, ".cache", "meta", "offmeta.json"), "share": 1, "heldOut": True}} if offmeta else {}),
+        **({"server": {"concurrent": 128, "lanes": 1}} if server else {}),
+    }
+    t0 = time.time()
+    r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), server)
+    sc = r["scores"]["A vs B"]
+    lo, hi = wilson(sc["score"], sc["n"])
+    pe = r.get("paired", {}).get("A vs B", {})
+    row = {"a": a, "b": b + (" (held-out off-meta lists)" if offmeta else ""), "deck": deck, "score": sc["score"], "n": sc["n"], "se": round(pe.get("se", 0), 5), "base": base,
+           "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M"), "note": note}
+    os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row) + "\n")
+    print(f"  {deck:<24} {sc['score'] / sc['n'] * 100:5.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}{paired_ci(r)})  {row['seconds']}s", flush=True)
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--a", required=True)
@@ -39,31 +67,7 @@ def main():
         from serve import Server
 
         server = Server().start()
-    rows = []
-    for d in decks:
-        tag = f"decks-{os.getpid()}"
-        cfg = {
-            "out": os.path.join(ROOT, ".cache", "learn", tag),
-            "games": a.games,
-            "base": a.base,
-            "threads": a.threads,
-            "players": {"A": spec(a.a), "B": spec(a.b)},
-            "pairs": [{"a": "A", "b": "B", "share": 1, "decksA": {d: 1}}],
-            **({"offmeta": {"path": os.path.join(ROOT, ".cache", "meta", "offmeta.json"), "share": 1, "heldOut": True}} if a.b_offmeta else {}),
-            **({"server": {"concurrent": 128, "lanes": 1}} if server else {}),
-        }
-        t0 = time.time()
-        r = run_gen(cfg, os.path.join(ROOT, ".cache", "learn", f"{tag}.json"), server)
-        sc = r["scores"]["A vs B"]
-        lo, hi = wilson(sc["score"], sc["n"])
-        pe = r.get("paired", {}).get("A vs B", {})
-        row = {"a": a.a, "b": a.b + (" (held-out off-meta lists)" if a.b_offmeta else ""), "deck": d, "score": sc["score"], "n": sc["n"], "se": round(pe.get("se", 0), 5), "base": a.base,
-               "seconds": round(time.time() - t0), "date": time.strftime("%Y-%m-%d %H:%M"), "note": a.note}
-        rows.append(row)
-        os.makedirs(os.path.dirname(LOG), exist_ok=True)
-        with open(LOG, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row) + "\n")
-        print(f"  {d:<24} {sc['score'] / sc['n'] * 100:5.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}{paired_ci(r)})  {row['seconds']}s", flush=True)
+    rows = [measure(a.a, a.b, d, a.games, a.base, a.threads, server, a.note, a.b_offmeta) for d in decks]
     mean = sum(r["score"] / r["n"] for r in rows) / len(rows)
     print(f"mean over {len(rows)} decks: {mean * 100:.1f}%")
 

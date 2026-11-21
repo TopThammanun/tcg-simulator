@@ -34,6 +34,7 @@ ml/.venv/Scripts/python ml/ladder.py play <A> <B> [--a-decks <deck>]   # one mat
 ml/.venv/Scripts/python ml/decks.py --a net:<expert> --b net:<W> --decks <deck>   # A plays that deck vs B on every deck (the expert gates) -> data/learn/decks.jsonl
 ml/.venv/Scripts/python ml/experts.py assemble|best|ship   # deck experts: an expert set (folder of <deck>.json + default.json), a run's best eval, float16 into src/bots/learn/experts/
 ml/.venv/Scripts/python ml/league.py --start <set> --root <dir> -- <ppo.py args>   # the experts' league: each deck's expert vs the previous round's set
+ml/.venv/Scripts/python ml/refresh.py --set <set> --decks <changed> --out <new set> [--ship]   # a deck's list or rules changed: its expert trains on, the better one goes into a new set
 ml/.venv/Scripts/python ml/ablate.py --base <expert> --deck <deck> --root <dir>   # each new input group / the critic / --sure vs a control trained as long
 npx tsx scripts/learn/blunders.ts --games 240 [--fast]   # sure wins and Knock Outs the bot misses (--fast: the network alone)
 npx tsx scripts/learn/deck-skills.ts [--weights <file or set>]   # how each deck is piloted: attacks and Prizes per turn, Slowking's combo
