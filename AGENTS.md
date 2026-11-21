@@ -99,9 +99,16 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `RULES_VERSION`) is raised by a fix that changes how games play out, the old behaviour kept for older games so they
   replay), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
-  game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
-  `ReplayViewer.svelte` replays one turn full screen (a `<dialog>`) with the play screen's Board, hand and animations,
-  step by step or playing on its own: your turn, or the bot's from the same start (`TurnReview.alt.actions`);
+  game; `/review/` exports them all as one file (`gamesFile`) and imports such files. `components/review/`:
+  `Review.svelte` routes to `GameList.svelte` (your record with a link to practise the matchup lost most, the games
+  filtered by deck / opponent / result, each with what its review found, `listReviews()`) or `GameReview.svelte`
+  (one game: the result and one sentence on what mattered most, a button going through the turns worth a look,
+  `summary.ts` `keyTurns` / `reviewSummary`; `WinChart.svelte`, two points per turn of yours, your turns solid and
+  the bot's dashed, `winPoints`; a strip of the turns; `TurnDetail.svelte`, the turn's verdict, the moves played
+  alike folded, the two ways from there as cards, `turnLines`). On a computer the turn is on the table beside it
+  (`ReplayStage.svelte`: Board, hand, step controls, animations; your way or the bot's); on a phone
+  `ReplayViewer.svelte` shows it full screen (a `<dialog>` around ReplayStage) with the moves and the hidden cards:
+  your turn, or the bot's from the same start (`TurnReview.alt.actions`);
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point. `current.ts`: the game being played,
   kept in localStorage after every move (the same record, so `replay()` rebuilds the very same position); the match
   sheet offers "เล่นต่อเกมที่ค้างไว้"; cleared when the game ends or is left.

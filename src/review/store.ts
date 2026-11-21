@@ -115,6 +115,13 @@ export async function getReview(id: number): Promise<StoredReview | undefined> {
   return r && r.version === REVIEW_VERSION ? r : undefined;
 }
 
+/** Every stored review made by this version of the analysis, by game id (the game list's badges). */
+export async function listReviews(): Promise<Map<number, StoredReview>> {
+  const d = await db();
+  const all = d ? await run<StoredReview[]>(d, REVIEWS, 'readonly', (s) => s.getAll()) : [...memory.reviews.values()];
+  return new Map(all.filter((r) => r.version === REVIEW_VERSION).map((r) => [r.id, r]));
+}
+
 export async function saveReview(id: number, turns: TurnReview[]): Promise<void> {
   const r: StoredReview = { id, version: REVIEW_VERSION, turns: structuredClone(turns) };
   const d = await db();

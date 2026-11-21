@@ -40,8 +40,11 @@
       <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? 'เลือกเด็คใหม่' : 'เกมใหม่'}</button>
       <button type="button" onclick={onclose}>ดูสนาม</button>
     </div>
-    {#if reviewHref}<a class="review" href={reviewHref}>ทบทวนเกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}
-    <a href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
+    {#if reviewHref}
+      <a class="review" href={reviewHref}>ทบทวนเกมนี้</a>
+      <span class="what">เทิร์นไหนพลาด · win% ทั้งเกม · บอทจะเล่นต่างตรงไหน</span>
+    {/if}
+    <a class="list" href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
   </div>
 </div>
 
@@ -119,15 +122,40 @@
     border-color: var(--press);
     background: var(--press);
   }
-  a {
-    font-size: 0.85rem;
-    color: var(--primary);
+  /* The review: a button of its own under the others, with what it shows. */
+  a.review {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 240px;
+    margin-top: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--ink-soft);
+    border-radius: var(--radius);
+    color: var(--ink-strong);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.3s var(--ease);
+  }
+  a.review:hover {
+    background: var(--control);
+  }
+  .what {
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  a.list {
+    margin-top: 4px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
     text-underline-offset: 3px;
   }
-  a.review {
-    display: block;
-    margin: 6px 0 4px;
-    font-size: 0.95rem;
-    font-weight: 600;
+  @media (pointer: coarse) {
+    button,
+    a.review {
+      min-height: 44px;
+    }
   }
 </style>

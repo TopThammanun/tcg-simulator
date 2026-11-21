@@ -558,38 +558,43 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   // Every turn of yours reviewed on the workers.
   await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 30_000 });
   const seconds = (Date.now() - started) / 1000;
-  console.log(`review of a ${await page.locator('.turns > li').count()}-turn game: ${seconds.toFixed(1)} s`);
+  const chips = page.locator('.strip .turn-chip');
+  console.log(`review of a ${await chips.count()}-turn game: ${seconds.toFixed(1)} s`);
   expect(seconds).toBeLessThan(30);
-  const turns = page.locator('.turns > li');
-  expect(await turns.count()).toBeGreaterThan(2);
-  await expect(page.locator('figure.chart svg path.line')).toBeVisible();
-  await expect(turns.first().locator('.badge')).toBeVisible();
-  // A point on the chart picks its turn in the list.
+  expect(await chips.count()).toBeGreaterThan(2);
+  // One sentence sums it up; the chart has your turns (solid) and the bot's between them (dashed).
+  await expect(page.locator('.sentence')).not.toBeEmpty();
+  await expect(page.locator('figure.chart svg line.seg.mine').first()).toBeVisible();
+  await expect(page.locator('figure.chart svg line.seg.theirs').first()).toBeVisible();
+  await expect(page.locator('.turn-detail .badge')).toBeVisible();
+  // A point on the chart picks its turn: the detail and the strip follow.
   const point = page.locator('figure.chart g.mark').nth(1);
   const picked = Number((await point.getAttribute('aria-label'))!.match(/เทิร์น (\d+)/)![1]);
   await point.click();
-  await expect(page.locator('.turns > li.sel')).toHaveAttribute('id', `turn-${picked}`);
+  await expect(page.locator('.turn-detail h2')).toHaveText(`เทิร์น ${picked}`);
+  await expect(chips.nth(1)).toHaveAttribute('aria-pressed', 'true');
 
-  // A turn replayed on the table, full screen, with every hidden card shown; stepping on names each move.
-  await turns.first().getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
-  const viewer = page.getByRole('dialog', { name: /รีเพลย์เทิร์น/ });
-  await expect(viewer.locator('.board')).toBeVisible();
-  await expect(viewer.locator('h4', { hasText: 'Prize ของบอท' })).toBeVisible();
-  expect(await viewer.locator('.cards').nth(1).locator('button').count()).toBeGreaterThan(0);
-  await expect(viewer.locator('.caption')).toContainText('ต้นเทิร์น');
-  await viewer.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();
-  await expect(viewer.locator('.caption')).toContainText('คุณ:');
-  await page.keyboard.press('Escape');
-  await expect(viewer).toHaveCount(0);
+  // A computer: the turn on the table beside its detail; stepping on names each move.
+  const stage = page.locator('.stage-card');
+  await expect(stage.locator('.board')).toBeVisible();
+  await expect(stage.locator('.caption')).toContainText('ต้นเทิร์น');
+  await stage.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();
+  await expect(stage.locator('.caption')).toContainText('คุณ:');
+  // The cards hidden then, shown.
+  await page.locator('.hidden-cards summary').click();
+  await expect(page.locator('.hidden-cards h4', { hasText: 'Prize ของบอท' })).toBeVisible();
+  expect(await page.locator('.hidden-cards .cards').nth(1).locator('button').count()).toBeGreaterThan(0);
 
-  // The bot's turn from the same start plays on its own.
-  const botTurn = page.getByRole('button', { name: /ดูบอทเล่นเทิร์นนี้/ }).first();
-  if (await botTurn.count()) {
-    await botTurn.click();
-    await expect(viewer.getByRole('tab', { name: /บอทจะเล่น/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(viewer.locator('.caption')).toContainText('บอท:', { timeout: 10_000 });
-    await viewer.getByRole('button', { name: 'ปิด' }).click();
-    await expect(viewer).toHaveCount(0);
+  // The bot's way from the same start, on the same table, for a turn where it plays otherwise.
+  for (let i = 0; i < (await chips.count()); i++) {
+    await chips.nth(i).click();
+    const botTab = stage.getByRole('tab', { name: /บอทจะเล่น/ });
+    if (!(await botTab.count())) continue;
+    await botTab.click();
+    await expect(botTab).toHaveAttribute('aria-selected', 'true');
+    await stage.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();
+    await expect(stage.locator('.caption')).toContainText('บอท:');
+    break;
   }
 
   // Reopening the review is instant (stored with the game).
@@ -597,9 +602,9 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 3_000 });
 
   // Play on from the second turn of yours: the same position, and it is your move.
-  const second = page.locator('.turns > li').nth(1);
-  const turnNo = Number((await second.locator('strong').first().innerText()).replace(/\D/g, ''));
-  const href = await second.getByRole('link', { name: /ลองเล่นใหม่จากตรงนี้/ }).getAttribute('href');
+  await chips.nth(1).click();
+  const turnNo = Number(await chips.nth(1).locator('.n').innerText());
+  const href = await page.locator('.turn-detail').getByRole('link', { name: /ลองเล่นใหม่จากตรงนี้/ }).getAttribute('href');
   await page.goto(`${href}&test=1`);
   await expect(page.locator('.status')).toContainText('เล่นต่อจากเกมที่บันทึกไว้');
   await expect(page.locator('.status')).toContainText('ตาคุณ');
@@ -623,8 +628,43 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 3_000 });
 });
 
+/** A seeded game (your deck played by the bot) saved like one of yours; its review opened, the review finished. */
+async function reviewedGame(page: Page, me = 'basic-box', opp = 'dragapult-ex') {
+  await page.goto(`/play/?watch=1&test=1&speed=0&seed=7&me=${me}&opp=${opp}&save=1`);
+  await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
+  await page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /ทบทวนเกมนี้/ }).click();
+  await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 30_000 });
+}
+
+test.describe('a review on a computer screen', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the first screen has the summary, the chart and the table of the turn worth a look', async ({ page }) => {
+    await reviewedGame(page);
+    const bottom = (sel: string) => page.locator(sel).first().evaluate((e) => e.getBoundingClientRect().bottom);
+    for (const sel of ['.sentence', 'figure.chart', '.stage-card .board', '.stage-card .controls']) {
+      expect(await bottom(sel), `${sel} is below the first screen`).toBeLessThanOrEqual(900);
+    }
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+  });
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('a review is short and opens a turn on the table full screen', async ({ page }) => {
+    // UI-PLAN.md's gate: the seed 7 game it measured at 3,794px.
+    await reviewedGame(page, 'dragapult-ex', 'basic-box');
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1600);
+    await expect(page.locator('.stage-card')).toHaveCount(0);
+    await page.locator('.turn-detail').getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
+    const viewer = page.getByRole('dialog', { name: /รีเพลย์เทิร์น/ });
+    await expect(viewer.locator('.board')).toBeVisible();
+    await viewer.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();
+    await expect(viewer.locator('.caption')).toContainText('คุณ:');
+    await viewer.getByRole('button', { name: 'ปิด' }).first().click();
+    await expect(viewer).toHaveCount(0);
+  });
 
   test('the game fits the screen with every card in hand showing; swipe one up onto a Pokémon', async ({ page }) => {
     await startGame(page, 101);
