@@ -81,6 +81,27 @@ def inputs_off(keep: str) -> dict[str, list[int]]:
     return off
 
 
+def pfsp(base: dict[str, float], wr: dict[str, float]) -> dict[str, float]:
+    """Opponent deck weights that favour the decks the network still loses to (AlphaStar's prioritised fictitious
+    self-play; the weighting of a top Kaggle team: 0.15 + (1 - win rate)^2), times the base weights."""
+    w = {d: b * (0.15 + (1 - wr.get(d, 0.5)) ** 2) for d, b in base.items()}
+    total = sum(w.values()) or 1.0
+    return {d: round(x / total, 4) for d, x in w.items()}
+
+
+def deck_scores(res: dict, me: str = "net") -> dict[str, tuple[float, int]]:
+    """The network's score and games against each opponent deck, over every pairing (gen.ts byDeck)."""
+    out: dict[str, list[float]] = {}
+    for key, v in res.get("byDeck", {}).items():
+        if not key.startswith(me + " "):
+            continue
+        opp = key.split(" vs ")[-1]
+        o = out.setdefault(opp, [0.0, 0])
+        o[0] += v["score"]
+        o[1] += v["n"]
+    return {d: (sc, n) for d, (sc, n) in out.items()}
+
+
 def critic_values(net, data: Data, a, mb: int = 8192) -> torch.Tensor:
     """The critic's chance to win for every row (the baseline of the advantages with --critic)."""
     out = torch.empty(data.n, device=data.value.device)
@@ -252,6 +273,8 @@ def main():
     ap.add_argument("--critic", action="store_true", help="advantages from a critic that also sees the hidden cards (training only, BOT-NEXT.md N4)")
     ap.add_argument("--widen", action="store_true", help="a new run's network reads every input of the encoder now (new weights at zero: the same moves at first)")
     ap.add_argument("--inputs", default="all", help="version 4 inputs it may use: all, none, or some of prizes,revealed,history,sim (the rest read as zeros)")
+    ap.add_argument("--pfsp", action="store_true", help="with fixed decks: opponent decks it loses to come up more often (weights 0.15 + (1 - win rate)^2, BOT-NEXT.md N3)")
+    ap.add_argument("--serve-keep", type=int, default=12, help="networks the inference server keeps loaded at once (an expert set as opponents is one per deck)")
     a = ap.parse_args()
     # gen.ts runs from the repo root, so every path it gets is absolute.
     a.dir = os.path.abspath(a.dir)
@@ -305,8 +328,13 @@ def main():
     if a.server:
         from serve import Server
 
-        server = Server().start()
+        server = Server(keep=a.serve_keep).start()
     batched = {"concurrent": a.concurrent, "lanes": 1}
+    # --pfsp: each opponent deck's running win rate (state.json keeps it), and the weights it started from.
+    base_b = dict(focus.get("decksB", {}))
+    if a.pfsp:
+        assert base_b, "--pfsp needs fixed opponent decks (--focus or --decks-b)"
+        focus["decksB"] = pfsp(base_b, state.get("wr", {}))
     resign = {"below": a.resign, "turns": a.resign_turns, "keepPlaying": a.keep_playing} if a.resign > 0 else None
 
     def gen_config(it: int, out: str, weights: str) -> dict:
@@ -382,6 +410,13 @@ def main():
             "train_s": round(time.time() - t1),
             **({"resign": res["resign"]} if "resign" in res else {}),
         }
+        if a.pfsp:
+            wr = state.setdefault("wr", {})
+            for d, (sc, n) in deck_scores(res).items():
+                if d in base_b and n:
+                    wr[d] = round(0.8 * wr.get(d, sc / n) + 0.2 * sc / n, 4)
+            focus["decksB"] = pfsp(base_b, wr)
+            row["pfsp"] = focus["decksB"]
         if it % a.eval_every == 0:
             # A copy plays (the server keeps reading the files it serves; current.json is rewritten every iteration).
             eval_path = os.path.join(a.dir, f"eval-{it}.json")
