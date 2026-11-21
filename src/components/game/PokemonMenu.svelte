@@ -170,12 +170,12 @@
     padding: 10px 12px 12px;
     border: 1px solid #ffffff24;
     border-radius: var(--radius-lg);
-    background: #1f1f1ff5;
-    color: #eceef1;
+    background: color-mix(in srgb, var(--raised) 96%, transparent);
+    color: var(--ink);
     box-shadow:
       0 0 0 1px #0006,
       0 24px 50px -16px #000e;
-    font-size: 0.85rem;
+    font-size: 14px;
     overscroll-behavior: contain;
   }
   .pmenu.sheet {
@@ -205,10 +205,10 @@
   }
   .state .chip {
     padding: 0 7px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: var(--c, #ffffff22);
     color: #fff;
-    font-size: 0.72rem;
+    font-size: 12px;
     font-weight: 600;
   }
   .state .chip.energy {
@@ -221,7 +221,7 @@
     background: #ffffff2e;
   }
   .state .chip.cond {
-    background: #c3352b;
+    background: var(--stamp);
   }
   .title {
     display: flex;
@@ -231,20 +231,20 @@
   }
   .title strong {
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 16px;
     line-height: 1.2;
   }
   .hp {
-    color: #9fd6ac;
-    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--hp-ok) 55%, var(--ink-strong));
+    font-size: 12px;
   }
   .x {
     align-self: flex-start;
     padding: 2px 8px;
     border: 0;
     background: none;
-    color: #eef3ef;
-    font-size: 1rem;
+    color: var(--ink);
+    font-size: 16px;
     cursor: pointer;
   }
   .row {
@@ -255,16 +255,16 @@
   }
   .tag {
     padding: 0 6px;
-    border-radius: 3px;
-    background: #c3352b;
+    border-radius: var(--radius-sm);
+    background: var(--stamp);
     color: #fff;
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
     font-weight: 700;
   }
   .text {
     margin: 0;
-    color: #c9d4cf;
-    font-size: 0.76rem;
+    color: var(--ink-soft);
+    font-size: 12px;
     line-height: 1.4;
   }
   .ability {
@@ -272,7 +272,7 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: #ffffff0a;
   }
   /* Using an Ability, retreating: ordinary buttons (the attack is the main one). */
@@ -289,7 +289,7 @@
     transition: background-color 0.3s var(--ease);
   }
   .use:hover:not(:disabled) {
-    background: #313131;
+    background: var(--control-hover);
   }
   .use.wide {
     margin: 0;
@@ -297,8 +297,8 @@
   }
   .auto {
     margin-left: auto;
-    color: #9aa7a2;
-    font-size: 0.72rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .attacks {
     display: flex;
@@ -319,7 +319,7 @@
   .attack.off {
     border-color: #ffffff1c;
     background: #ffffff06;
-    color: #9aa7a2;
+    color: var(--ink-soft);
   }
   /* The attack itself: its own button, so reading the text never attacks. */
   .attack .go {
@@ -366,20 +366,20 @@
     border: 1.5px solid #ffffff44;
     border-radius: 50%;
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: var(--fs-card);
     font-style: normal;
     font-weight: 700;
   }
   .aname {
     flex: 1;
-    font-size: 1rem;
+    font-size: 16px;
     font-weight: 600;
   }
   .dmg {
     font-family: var(--font-mono);
-    font-size: 1.05rem;
+    font-size: 16px;
     font-weight: 600;
-    color: #f0d48a;
+    color: var(--accent);
   }
   .attack.off .dmg {
     color: inherit;
@@ -388,15 +388,15 @@
   .pv {
     align-self: flex-start;
     padding: 2px 8px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: #ffffff1a;
-    color: #cfe0ff;
-    font-size: 0.74rem;
+    color: var(--ink);
+    font-size: 12px;
     font-weight: 600;
   }
   .pv.ko {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
-    color: #ffe08a;
+    color: var(--accent);
   }
   .pv.sure {
     background: var(--accent);
@@ -404,8 +404,8 @@
   }
   .why {
     margin: 0;
-    color: #ff9a8f;
-    font-size: 0.74rem;
+    color: color-mix(in srgb, var(--stamp) 70%, var(--ink-strong));
+    font-size: 12px;
   }
   .retreat {
     display: flex;
@@ -416,13 +416,13 @@
   }
   .rcost {
     margin-left: auto;
-    color: #c9d4cf;
-    font-size: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .hint {
     margin: 0;
-    color: #c9d4cf;
-    font-size: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 12px;
   }
   .bench {
     display: flex;
@@ -438,9 +438,9 @@
     padding: 0;
     border: 0;
     background: none;
-    color: #eef3ef;
+    color: var(--ink);
     font: inherit;
-    font-size: 0.62rem;
+    font-size: var(--fs-card);
     line-height: 1.2;
     text-align: center;
     cursor: pointer;

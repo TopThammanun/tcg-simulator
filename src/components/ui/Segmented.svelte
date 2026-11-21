@@ -47,7 +47,7 @@
     place-items: center;
     min-height: 32px;
     padding: 4px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     color: var(--ink-soft);
     font-size: 14px;
     line-height: 20px;

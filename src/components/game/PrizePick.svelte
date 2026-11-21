@@ -88,8 +88,8 @@
     justify-content: center;
     gap: 22px;
     padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-    background: #0d1014f0;
-    color: #eceef1;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    color: var(--ink);
     text-align: center;
     overflow-y: auto;
   }
@@ -99,19 +99,19 @@
   .kicker {
     margin: 0 0 4px;
     color: var(--accent);
-    font-size: 0.85rem;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.02em;
   }
   h2 {
     margin: 0 0 6px;
     color: #fff;
-    font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+    font-size: 30px;
   }
   .how {
     margin: 0;
-    color: #b8bec8;
-    font-size: 0.95rem;
+    color: var(--ink-soft);
+    font-size: 16px;
   }
   /* Three by two on a wide screen, two by three when it stands up; the card size fits both ways. */
   .grid {
@@ -170,10 +170,10 @@
     top: 6px;
     min-width: 22px;
     padding: 0 5px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #000b;
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 12px;
   }
   .tick {
     position: absolute;
@@ -187,7 +187,7 @@
     border-radius: 50%;
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 1.4rem;
+    font-size: 24px;
     font-weight: 700;
   }
   .gap {
@@ -203,8 +203,8 @@
   }
   .hint {
     margin: 0;
-    color: #b8bec8;
-    font-size: 0.9rem;
+    color: var(--ink-soft);
+    font-size: 14px;
   }
   /* No keyboard on a touch screen. */
   @media (hover: none) {
@@ -228,7 +228,7 @@
   .ghost {
     border: 1px solid #ffffff40;
     background: transparent;
-    color: #eceef1;
+    color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;

@@ -86,7 +86,7 @@
   .fx-layer :global(.fx-stage-label) {
     transform: translateX(-50%);
     padding: 4px 14px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #15181de6;
     color: #fff;
     font-family: var(--font-display);
@@ -112,7 +112,7 @@
 
   .fx-layer :global(.fx-ring) {
     border: 3px solid var(--accent);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow:
       0 0 18px var(--accent),
       inset 0 0 12px color-mix(in srgb, var(--accent) 53%, transparent);
@@ -125,7 +125,7 @@
   }
   .fx-layer :global(.fx-tag) {
     padding: 3px 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     font-family: var(--font-display);
     font-size: 0.8rem;
     font-weight: 700;
@@ -170,7 +170,7 @@
     left: 50%;
     top: calc(100% + 8px);
     padding: 2px 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #15181de6;
     color: #fff;
     font-size: 0.8rem;
@@ -190,7 +190,7 @@
     top: 50%;
     width: 6px;
     height: 34%;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: linear-gradient(#fff, var(--c));
     transform-origin: 50% 0;
     transform: rotate(var(--a)) translateY(18%);
@@ -212,7 +212,7 @@
   }
 
   .fx-layer :global(.fx-ko-flash) {
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: radial-gradient(circle, #ff8a7a, #e2574b 55%, #c3352b00 80%);
     mix-blend-mode: hard-light;
   }
@@ -220,7 +220,7 @@
   .fx-layer :global(.fx-stamp) {
     padding: 0 12px;
     border: 5px solid #e2574b;
-    border-radius: 8px;
+    border-radius: var(--radius);
     color: #e2574b;
     font-family: var(--font-display);
     font-size: clamp(1.8rem, 5vw, 2.8rem);
@@ -232,7 +232,7 @@
     box-shadow: 0 0 0 2px #0004;
   }
   .fx-layer :global(.fx-evolve) {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: radial-gradient(circle, #fff 0 25%, #fffbe8cc 45%, color-mix(in srgb, var(--accent) 0%, transparent) 72%);
     box-shadow: 0 0 40px 10px #fff8;
   }

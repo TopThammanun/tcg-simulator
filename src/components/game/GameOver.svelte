@@ -108,7 +108,7 @@
       transform 0.3s var(--ease);
   }
   button:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   button:active {
     transform: scale(0.98);

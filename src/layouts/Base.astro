@@ -14,6 +14,8 @@ const nav = [
 const current = (href: string) => path === href || (href !== '/' && path.startsWith(href));
 const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
 const fullTitle = `${title} · สนามซ้อม Matchup`;
+// The picture a shared link shows: absolute once `site` is set in astro.config (crawlers want a full URL).
+const ogImage = Astro.site ? new URL('/home/board.jpg', Astro.site).href : '/home/board.jpg';
 ---
 
 <!doctype html>
@@ -26,6 +28,10 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1440" />
+    <meta property="og:image:height" content="900" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -146,6 +152,22 @@ const fullTitle = `${title} · สนามซ้อม Matchup`;
     --radius: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
+    --radius-sm: 4px;
+    /* The one size under the text scale: numbers and labels drawn on a card (HP, a Tool's name). */
+    --fs-card: 11px;
+    --control-hover: #313131;
+    --line-strong: #4a4a4a;
+    --stamp-press: #c93c41;
+    /* By meaning: what can be played or picked, your side, the bot's side, HP left. */
+    --can: var(--accent);
+    --mine: #ffffff;
+    --theirs: var(--stamp);
+    --hp-ok: #3f9b5a;
+    --hp-hurt: #c8941f;
+    --hp-low: #c3352b;
+    /* A card's own paper (a Tool's tab peeking out of a Pokémon in play). */
+    --card-paper: #e4ddcc;
+    --card-paper-ink: #2a261e;
     --shadow: 0 1px 2px #0009;
     --shadow-lg: 0 24px 48px -16px #000;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);

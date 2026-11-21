@@ -179,7 +179,7 @@
   .tick {
     fill: var(--ink-soft);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-card);
   }
   .cross {
     stroke: var(--ink-soft);

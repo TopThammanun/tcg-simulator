@@ -66,7 +66,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: #0d1014b3;
+    background: color-mix(in srgb, var(--paper) 70%, transparent);
   }
   .howto {
     position: fixed;
@@ -85,7 +85,7 @@
   }
   h2 {
     margin: 0 0 12px;
-    font-size: 1.8rem;
+    font-size: 30px;
   }
   ol {
     list-style: none;
@@ -102,7 +102,7 @@
   .n {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 14px;
     line-height: 1.6;
     color: var(--ink-soft);
   }
@@ -112,7 +112,7 @@
   p {
     margin: 2px 0 0;
     color: var(--ink-soft);
-    font-size: 0.9rem;
+    font-size: 14px;
   }
   .primary {
     width: 100%;
@@ -121,7 +121,7 @@
     background: var(--primary);
     color: var(--primary-ink);
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 16px;
     cursor: pointer;
     border-radius: var(--radius);
   }

@@ -149,7 +149,7 @@
   }
   .badge {
     padding: 2px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     font-size: 12px;
     line-height: 16px;
     font-weight: 500;
@@ -262,7 +262,7 @@
   .thumb.none {
     aspect-ratio: 63 / 88;
     border: 1px dashed var(--line);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
   }
   /* The first move of each way, where they part. */
   .way .moves li:first-child > span:last-child {
@@ -316,7 +316,7 @@
   }
   .buttons button:hover,
   .button:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .buttons button.main {
     border-color: var(--primary);

@@ -270,7 +270,7 @@
     }
   }
   .board {
-    --mat-ink: #ededed;
+    --mat-ink: var(--ink);
     --line: #ffffff1f;
     --pad: 14px;
     --row-gap: 14px;
@@ -300,9 +300,9 @@
     row-gap: var(--row-gap);
     padding: 0 var(--pad) 20px;
     border-radius: var(--radius-lg);
-    background: #181818;
+    background: var(--card-bg);
     color: var(--mat-ink);
-    box-shadow: inset 0 0 0 1px #272727;
+    box-shadow: inset 0 0 0 1px var(--rule);
     overflow: hidden;
     transition: box-shadow 0.3s var(--ease);
   }
@@ -319,11 +319,11 @@
     top: 6px;
     transform: translateX(-50%);
     padding: 6px 14px;
-    border-radius: 3px;
-    background: #0d1014dd;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--paper) 87%, transparent);
     color: var(--accent);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 14px;
     white-space: nowrap;
     pointer-events: none;
     z-index: 5;
@@ -380,9 +380,9 @@
     transform: translate(-50%, -50%);
     border: 1px solid #ffffff40;
     border-radius: 50%;
-    background: #181818;
+    background: var(--card-bg);
     color: var(--stamp);
-    font-size: 10px;
+    font-size: var(--fs-card);
   }
 
   .side {
@@ -429,12 +429,12 @@
     gap: 5px;
     padding: 6px;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .prize-slot {
     width: var(--prize-w);
     aspect-ratio: 63 / 88;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     outline: 1px dashed #ffffff2a;
     outline-offset: -1px;
   }
@@ -443,13 +443,13 @@
     gap: 5px;
     align-items: baseline;
     padding: 0 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #0005;
-    font-size: 0.72rem;
+    font-size: 12px;
   }
   .count .n {
     color: var(--accent);
-    font-size: 0.95rem;
+    font-size: 16px;
     font-weight: 700;
   }
 
@@ -499,15 +499,15 @@
     transform: translateX(-50%);
     min-width: 26px;
     padding: 0 6px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #000c;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 12px;
     font-weight: 600;
     text-align: center;
   }
   .lbl {
-    font-size: 0.66rem;
+    font-size: var(--fs-card);
     letter-spacing: 0.04em;
     opacity: 0.75;
   }
@@ -516,14 +516,14 @@
   .active-spot {
     position: relative;
     width: var(--active-w);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
   }
   .active-spot::before {
     content: '';
     position: absolute;
     inset: -6px;
     border: 1.5px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     pointer-events: none;
   }
   .theirs .active-spot {
@@ -538,8 +538,8 @@
     width: 100%;
     aspect-ratio: 63 / 88;
     padding: 4px;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: var(--radius);
+    font-size: 12px;
     text-align: center;
     opacity: 0.55;
   }
@@ -557,19 +557,19 @@
     justify-content: center;
     align-items: start;
     gap: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .bench-slot {
     display: grid;
     place-items: center;
     aspect-ratio: 63 / 88;
     border: 1.5px dashed #ffffff26;
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
   .bench-drop {
     border: 2px dashed var(--accent);
     color: var(--accent);
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 600;
     transition:
       background 0.12s ease,
@@ -587,7 +587,7 @@
     opacity: 0.85;
     outline: 2px dashed var(--accent);
     outline-offset: 2px;
-    border-radius: 7px;
+    border-radius: var(--radius);
     cursor: pointer;
     animation: ghost-in 0.22s ease-out;
   }
@@ -627,7 +627,7 @@
   }
   .hand-count {
     align-self: center;
-    font-size: 0.7rem;
+    font-size: var(--fs-card);
     opacity: 0.75;
   }
 
@@ -653,11 +653,11 @@
   }
   .stadium-card {
     width: var(--stadium-w);
-    border-radius: 6px;
-    box-shadow: 0 0 0 2px #e2574b;
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 2px var(--theirs);
   }
   .stadium.yours .stadium-card {
-    box-shadow: 0 0 0 2px #4fb3aa;
+    box-shadow: 0 0 0 2px var(--mine);
   }
   .stadium.usable .stadium-card {
     outline: 3px solid var(--accent);
@@ -670,12 +670,12 @@
     }
   }
   .stadium-name {
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
     line-height: 1.2;
     text-align: center;
   }
   .owner {
-    font-size: 0.6rem;
+    font-size: var(--fs-card);
     opacity: 0.7;
   }
   .stadium-empty {
@@ -684,8 +684,8 @@
     width: var(--stadium-w);
     aspect-ratio: 63 / 88;
     border: 1.5px dashed #ffffff22;
-    border-radius: 6px;
-    font-size: 0.62rem;
+    border-radius: var(--radius);
+    font-size: var(--fs-card);
     opacity: 0.5;
   }
 
@@ -704,9 +704,9 @@
   .whose {
     padding: 4px 14px;
     border: 1px solid #ffffff30;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: #0005;
-    font-size: 0.88rem;
+    font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -741,7 +741,7 @@
         'mbench mbench  mbench  mbench mbench';
       column-gap: 6px;
       padding-bottom: 14px;
-      border-radius: 10px;
+      border-radius: var(--radius-lg);
     }
     .bench {
       gap: 6px;
@@ -752,10 +752,10 @@
     .prize-grid {
       gap: 3px;
       padding: 3px;
-      border-radius: 5px;
+      border-radius: var(--radius-sm);
     }
     .prize-slot {
-      border-radius: 2px;
+      border-radius: var(--radius-sm);
     }
     .count {
       padding: 0 6px;
@@ -764,7 +764,7 @@
       display: none;
     }
     .count .n {
-      font-size: 0.8rem;
+      font-size: 12px;
     }
     .piles {
       gap: 6px;
@@ -776,14 +776,14 @@
       bottom: 3px;
       min-width: 0;
       padding: 0 4px;
-      font-size: 0.62rem;
+      font-size: var(--fs-card);
     }
     .active-spot::before {
       inset: -4px;
-      border-radius: 9px;
+      border-radius: var(--radius);
     }
     .empty {
-      font-size: 0.65rem;
+      font-size: var(--fs-card);
     }
     .stadium {
       max-width: 80px;
@@ -794,17 +794,17 @@
       line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      font-size: 0.56rem;
+      font-size: var(--fs-card);
     }
     .owner {
-      font-size: 0.54rem;
+      font-size: var(--fs-card);
     }
     .whose {
       padding: 3px 8px;
-      font-size: 0.72rem;
+      font-size: 12px;
     }
     .hand-count {
-      font-size: 0.62rem;
+      font-size: var(--fs-card);
     }
   }
 </style>

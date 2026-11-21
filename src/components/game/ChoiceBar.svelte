@@ -96,7 +96,7 @@
   }
   .chip {
     padding: 0 8px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--accent) 22%, transparent);
     font-size: 12px;
     line-height: 18px;

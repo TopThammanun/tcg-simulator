@@ -46,7 +46,7 @@
       transform 0.3s var(--ease);
   }
   .ui-btn:hover:not(:disabled) {
-    background: #313131;
+    background: var(--control-hover);
   }
   .ui-btn:active:not(:disabled) {
     transform: scale(0.98);
@@ -70,8 +70,8 @@
     color: #fff;
   }
   .danger:hover:not(:disabled) {
-    border-color: #c93c41;
-    background: #c93c41;
+    border-color: var(--stamp-press);
+    background: var(--stamp-press);
   }
   .ghost {
     border-color: transparent;

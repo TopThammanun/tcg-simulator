@@ -162,7 +162,7 @@
       transform 0.3s var(--ease);
   }
   button:hover:not(:disabled) {
-    background: #313131;
+    background: var(--control-hover);
   }
   button:active:not(:disabled) {
     transform: scale(0.98);

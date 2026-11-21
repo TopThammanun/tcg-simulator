@@ -65,15 +65,15 @@
   }
   .sub {
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
   }
   .tag {
     padding: 0 5px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--stamp);
     color: #fff;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 12px;
   }
   .cost {
     display: inline-flex;
@@ -87,10 +87,10 @@
     width: 1.2em;
     height: 1.2em;
     border-radius: 50%;
-    background: #bbb;
+    background: var(--t-colorless);
     color: #fff;
     font-style: normal;
-    font-size: 0.72em;
+    font-size: 12px;
     font-weight: 700;
   }
   .dmg {

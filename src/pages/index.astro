@@ -82,7 +82,7 @@ const faq = [
     <figure class="shot">
       <img
         src="/home/board.jpg"
-        alt="หน้าจอเกม: สนามของคุณด้านล่าง สนามของบอทด้านบน การ์ดในมือ และ log ด้านขวา"
+        alt="หน้าจอเกม: สนามของคุณด้านล่าง สนามของบอทด้านบน การ์ดในมือ แถบคำสั่งใต้สนาม และช่องอ่านการ์ดกับ log ด้านขวา"
         width="1440"
         height="900"
         fetchpriority="high"
@@ -129,6 +129,26 @@ const faq = [
         ))
       }
     </ol>
+  </section>
+
+  <section class="section after" aria-labelledby="after-title">
+    <div class="after-text reveal">
+      <h2 id="after-title" class="heading-3">หลังเกม ดูว่าเทิร์นไหนเกมพลิก</h2>
+      <p class="body-3 muted">
+        ทุกเทิร์นของคุณถูกวิเคราะห์ในเบราว์เซอร์ บอกในประโยคเดียวว่าจุดไหนสำคัญที่สุด กราฟ win% แยกตาคุณกับตาบอท
+        แล้วเปิดเทิร์นนั้นบนสนาม เทียบทางที่คุณเล่นกับทางที่บอทจะเล่นทีละการ์ด
+      </p>
+      <a class="btn" href="/review/">ดูประวัติเกม</a>
+    </div>
+    <figure class="shot after-shot reveal">
+      <img
+        src="/home/review.jpg"
+        alt="หน้าทบทวนเกม: ประโยคสรุป สนามของเทิร์นที่ควรดู กราฟ win% และทางที่คุณเล่นเทียบกับทางที่บอทจะเล่น"
+        width="1216"
+        height="760"
+        loading="lazy"
+      />
+    </figure>
   </section>
 
   <section class="tagline-wrap" aria-label="สิ่งที่คุณได้">
@@ -270,6 +290,22 @@ const faq = [
   .section {
     padding-top: 96px;
   }
+  /* After the game: what the review shows, beside a picture of it. */
+  .after {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 48px;
+    align-items: center;
+  }
+  .after-text h2 {
+    margin: 0 0 16px;
+  }
+  .after-text p {
+    margin: 0 0 24px;
+  }
+  .after-shot {
+    margin: 0;
+  }
   .section-head {
     display: flex;
     flex-wrap: wrap;
@@ -407,6 +443,10 @@ const faq = [
     margin: 0 0 24px;
   }
   @media (max-width: 900px) {
+    .after {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
     .decks {
       grid-template-columns: repeat(2, 1fr);
     }

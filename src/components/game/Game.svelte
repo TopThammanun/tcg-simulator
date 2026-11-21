@@ -1411,7 +1411,7 @@
     bottom: 0;
     left: calc(50% - 3.3rem + var(--o) * 3.6rem);
     width: 6.6rem;
-    border-radius: 6px;
+    border-radius: var(--radius);
     box-shadow:
       0 0 0 1px #ffffff14,
       -8px 0 16px -8px #000;
@@ -1546,7 +1546,7 @@
     transition: border-color 0.3s var(--ease);
   }
   .corner select:hover {
-    border-color: #4a4a4a;
+    border-color: var(--line-strong);
   }
   button {
     padding: 4px 12px;
@@ -1565,7 +1565,7 @@
       transform 0.3s var(--ease);
   }
   button:hover:not(:disabled) {
-    background: #313131;
+    background: var(--control-hover);
   }
   button:active:not(:disabled) {
     transform: scale(0.98);
@@ -1715,7 +1715,7 @@
     top: 0;
     transform: translate(-50%, 56px);
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     background: #000000e6;
     color: #fff;
     font-size: 12px;

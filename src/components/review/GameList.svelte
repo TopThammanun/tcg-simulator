@@ -306,7 +306,7 @@
     position: relative;
     height: 4px;
     overflow: hidden;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--stamp) 55%, var(--control));
   }
   .vs .bar::before {
@@ -343,7 +343,7 @@
     width: 4.5rem;
     padding: 2px 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius);
     color: var(--ink-soft);
     font-size: 12px;
     line-height: 16px;
@@ -374,7 +374,7 @@
   }
   .vs-word {
     color: var(--ink-soft);
-    font-size: 0.75em;
+    font-size: 12px;
     font-weight: 400;
   }
   .act {
@@ -439,7 +439,7 @@
       transform 0.3s var(--ease);
   }
   .button:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .button:active {
     transform: scale(0.98);

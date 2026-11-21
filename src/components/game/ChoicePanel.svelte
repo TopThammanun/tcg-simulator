@@ -192,7 +192,7 @@
   }
   .pile,
   .need {
-    font-size: 0.8rem;
+    font-size: 12px;
     color: var(--ink-soft);
     font-family: var(--font-mono);
   }
@@ -217,7 +217,7 @@
     border: 0;
     background: none;
     cursor: pointer;
-    border-radius: 7px;
+    border-radius: var(--radius);
     transition:
       transform 0.12s ease,
       opacity 0.12s ease;
@@ -267,7 +267,7 @@
     padding: 0 5px;
     background: var(--accent);
     color: var(--accent-ink);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 20px;
@@ -275,7 +275,7 @@
   }
   .hint {
     margin: 0 0 6px;
-    font-size: 0.85rem;
+    font-size: 14px;
     color: var(--ink-soft);
   }
   .labels {
@@ -294,7 +294,7 @@
     transition: background-color 0.3s var(--ease);
   }
   .lbl:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .lbl.big {
     padding: 8px 16px;

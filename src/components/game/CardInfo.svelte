@@ -41,7 +41,7 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: color-mix(in srgb, #15181d 60%, transparent);
+    background: color-mix(in srgb, var(--paper) 60%, transparent);
   }
   .info {
     position: relative;
@@ -64,7 +64,7 @@
     border: 0;
     background: none;
     color: var(--ink);
-    font-size: 1.6rem;
+    font-size: 24px;
     cursor: pointer;
   }
   .text {

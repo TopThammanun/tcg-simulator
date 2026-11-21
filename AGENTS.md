@@ -167,13 +167,20 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   Theme: one dark, flat theme, tokens on `:root` in `layouts/Base.astro` (black page, `--card-bg` #181818 /
   `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` / `--rule` hairlines; `--primary` white for the one
   main action, `--accent` amber for what can be played or picked, `--stamp` red for danger and the opponent;
-  `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve). One type family: Geist
+  `--radius-sm` 4px, `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve; by meaning
+  `--can`, `--mine`, `--theirs`, `--hp-ok` / `--hp-hurt` / `--hp-low`, `--control-hover`, `--line-strong`,
+  `--stamp-press`, `--card-paper`). One type family: Geist
   for Latin and figures with Noto Sans Thai for Thai (`--font-body`), Geist Mono for numbers; named text styles
-  (`.heading-1` … `.caption-5`) on a 12/14/16/18/20/24/30/36/48/60 scale, spacing on 4/8/12/16/24/32/40/48/64/80/96.
+  (`.heading-1` … `.caption-5`) on a 12/14/16/18/20/24/30/36/48/60 scale (`--fs-card` 11px only for what is drawn on
+  a card), spacing on 4/8/12/16/24/32/40/48/64/80/96. `tests/ui/design-tokens.test.ts` fails on a component's text
+  size off the scale, a colour that isn't a token (black and white shades aside) or a token that isn't defined; the
+  drawn cards (`FxLayer`, `CardBack`, `CardFace`) are its exceptions.
   No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. Header: a floating bar,
   a full-height menu on phones. Home: hero with a real game screenshot (`public/home/board.jpg`, retake it after
-  restyling the play screen), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
-  `headlines()` in `lib/decks.ts`), steps, a tagline lit word by word on scroll, FAQ (facts only). The playmat is
+  restyling the play screen; it is also the shared link's `og:image`, an absolute URL once `site` is set in
+  astro.config), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
+  `headlines()` in `lib/decks.ts`), steps, the review beside its screenshot (`public/home/review.jpg`, retake it after
+  restyling the review), a tagline lit word by word on scroll, FAQ (facts only). The playmat is
   flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
   site's own design; the game pieces on the table (card images and back, Energy symbols, the coin) are the real ones.
 

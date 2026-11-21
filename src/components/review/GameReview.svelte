@@ -317,7 +317,7 @@
   .res {
     padding: 4px 12px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius);
     color: var(--ink-soft);
     font-size: 14px;
     line-height: 20px;
@@ -335,7 +335,7 @@
   }
   .vs-word {
     color: var(--ink-soft);
-    font-size: 0.75em;
+    font-size: 20px;
     font-weight: 400;
   }
   .primary {

@@ -146,7 +146,7 @@
   }
   .none {
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
     align-self: center;
   }
   @media (max-width: 700px) {

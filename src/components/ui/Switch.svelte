@@ -34,7 +34,7 @@
     width: 40px;
     height: 24px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--control);
     transition: background-color 0.3s var(--ease);
   }

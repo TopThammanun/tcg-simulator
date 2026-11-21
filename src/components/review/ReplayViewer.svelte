@@ -281,7 +281,7 @@
   }
   .badge {
     padding: 2px 8px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     font-size: 12px;
     line-height: 16px;
     font-weight: 500;
@@ -319,7 +319,7 @@
     transition: background-color 0.3s var(--ease);
   }
   .ghost:not(:disabled):hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .icon {
     display: grid;
@@ -336,7 +336,7 @@
       transform 0.3s var(--ease);
   }
   .icon:not(:disabled):hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .icon:not(:disabled):active {
     transform: scale(0.96);

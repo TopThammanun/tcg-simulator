@@ -96,7 +96,7 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     font-size: 12px;
     line-height: 16px;
     text-align: center;
-    border-radius: 6px;
+    border-radius: var(--radius);
   }
   .note {
     position: absolute;
@@ -106,6 +106,6 @@ const note = !src ? 'ไม่มีรูป' : print.image.altOf ? 'รูป�
     background: color-mix(in srgb, var(--paper) 88%, transparent);
     border: 1px solid var(--stamp);
     color: var(--stamp);
-    font-size: 0.68rem;
+    font-size: var(--fs-card);
   }
 </style>

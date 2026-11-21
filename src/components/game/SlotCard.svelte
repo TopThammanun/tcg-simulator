@@ -178,7 +178,7 @@
     border: 0;
     background: none;
     cursor: pointer;
-    border-radius: 7px;
+    border-radius: var(--radius);
     container-type: inline-size;
     transition: transform 0.12s ease;
     -webkit-touch-callout: none;
@@ -227,13 +227,13 @@
     max-height: 17px;
     display: grid;
     place-items: center;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     border: 1px solid #0009;
-    background: #111111cc;
+    background: color-mix(in srgb, var(--card-bg) 80%, transparent);
     color: #fff;
     isolation: isolate;
     overflow: hidden;
-    font-size: 11px;
+    font-size: var(--fs-card);
     font-weight: 600;
     line-height: 1;
     text-shadow: 0 1px 1px #000c;
@@ -249,13 +249,13 @@
     background: var(--fill);
   }
   .hp.ok {
-    --fill: #3f9b5a;
+    --fill: var(--hp-ok);
   }
   .hp.hurt {
-    --fill: #c8941f;
+    --fill: var(--hp-hurt);
   }
   .hp.low {
-    --fill: #c3352b;
+    --fill: var(--hp-low);
   }
   .dmg {
     position: absolute;
@@ -264,11 +264,11 @@
     min-width: 28px;
     padding: 2px 6px;
     border: 1.5px solid #fff;
-    border-radius: 3px;
-    background: #c3352b;
+    border-radius: var(--radius-sm);
+    background: var(--stamp);
     color: #fff;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 16px;
     text-align: center;
     box-shadow: 0 2px 5px #000a;
@@ -280,10 +280,10 @@
     max-width: 84%;
     padding: 1px 6px;
     border: 1px solid #0007;
-    border-radius: 4px 4px 2px 2px;
-    background: #e4ddcc;
-    color: #2a261e;
-    font-size: 11px;
+    border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) var(--radius-sm);
+    background: var(--card-paper);
+    color: var(--card-paper-ink);
+    font-size: var(--fs-card);
     font-weight: 600;
     line-height: 14px;
     white-space: nowrap;
@@ -298,7 +298,7 @@
     padding: 1px 6px;
     background: var(--stamp);
     color: #fff;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     line-height: 16px;
   }
@@ -307,11 +307,11 @@
     top: 14%;
     left: 4px;
     padding: 1px 5px;
-    background: #6b2f8a;
+    background: var(--t-psychic);
     color: #fff;
-    font-size: 11px;
+    font-size: var(--fs-card);
     line-height: 14px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     box-shadow: 0 1px 2px #0008;
   }
   /* Attached Energy peeks out from under the card. */
@@ -337,7 +337,7 @@
     height: 18px;
     flex: 0 0 auto;
     border-radius: 50%;
-    background: #555 center / cover no-repeat;
+    background: var(--control) center / cover no-repeat;
     box-shadow:
       0 0 0 1px #000a,
       0 1px 3px #000c;
@@ -364,10 +364,10 @@
     z-index: 3;
     padding: 1px 6px;
     border: 1px solid #0006;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 11px;
+    font-size: var(--fs-card);
     line-height: 14px;
     font-weight: 600;
     white-space: nowrap;
@@ -422,10 +422,10 @@
     z-index: 4;
     transform: translateX(-50%);
     padding: 1px 10px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 11px;
+    font-size: var(--fs-card);
     line-height: 16px;
     font-weight: 700;
     box-shadow: 0 2px 6px #000a;
@@ -442,7 +442,7 @@
     .dmg {
       min-width: 22px;
       padding: 1px 4px;
-      font-size: 11px;
+      font-size: var(--fs-card);
       line-height: 14px;
     }
     .pip {

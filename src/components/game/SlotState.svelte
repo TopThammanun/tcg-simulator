@@ -44,10 +44,10 @@
   }
   .where {
     color: var(--ink-soft);
-    font-size: 0.85rem;
+    font-size: 14px;
   }
   .hp {
-    font-size: 1rem;
+    font-size: 16px;
   }
   .hp.low {
     color: var(--stamp);
@@ -55,21 +55,21 @@
   .hpbar {
     height: 6px;
     margin: 6px 0 10px;
-    border-radius: 1px;
+    border-radius: var(--radius-sm);
     background: color-mix(in srgb, var(--ink) 15%, transparent);
     overflow: hidden;
   }
   .hpbar span {
     display: block;
     height: 100%;
-    background: #3fae5a;
+    background: var(--hp-ok);
   }
   dl {
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: 6px 12px;
     margin: 0;
-    font-size: 0.86rem;
+    font-size: 14px;
   }
   dt {
     color: var(--ink-soft);
@@ -86,10 +86,10 @@
   }
   .chip {
     padding: 0 7px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     background: var(--c, var(--primary));
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 12px;
     font-weight: 600;
   }
   .chip.tool {

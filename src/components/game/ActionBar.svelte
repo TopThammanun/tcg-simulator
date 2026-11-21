@@ -124,7 +124,7 @@
   .use {
     padding: 1px 8px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius);
     color: var(--ink-strong);
     font-size: 12px;
     line-height: 16px;
