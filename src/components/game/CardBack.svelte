@@ -1,16 +1,24 @@
 <script lang="ts">
   // The back of a card: Prize cards, the deck, the bot's hand. The real card back (src/ui/card-back.ts),
-  // or a drawn one if it can't load.
+  // or a drawn one while it loads or if it can't.
   import { CARD_BACK } from '../../ui/card-back';
+  import { isLoaded, markLoaded } from '../../ui/images';
 
   let failed = $state(false);
+  let loaded = $state(isLoaded(CARD_BACK));
+
+  function onload() {
+    markLoaded(CARD_BACK);
+    loaded = true;
+  }
 </script>
 
-<span class="back" class:drawn={failed} aria-hidden="true">
-  {#if failed}
+<span class="back" class:drawn={!loaded || failed} aria-hidden="true">
+  {#if !loaded || failed}
     <span class="mark">◆</span>
-  {:else}
-    <img src={CARD_BACK} alt="" draggable="false" onerror={() => (failed = true)} />
+  {/if}
+  {#if !failed}
+    <img src={CARD_BACK} alt="" draggable="false" {onload} onerror={() => (failed = true)} />
   {/if}
 </span>
 
@@ -28,6 +36,8 @@
     container-type: inline-size;
   }
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;

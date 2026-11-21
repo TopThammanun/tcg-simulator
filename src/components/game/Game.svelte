@@ -19,6 +19,7 @@
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
+  import { preloadDecks } from '../../ui/images';
   import { trackPress } from '../../ui/press';
   import { slotMenu } from '../../ui/menu';
   import { previewAttack } from '../../ui/preview';
@@ -96,6 +97,8 @@
   let mineId = $state<string>([params.get('me'), saved.mine].find(usable) ?? meta[0]!.slug);
   const mineChoice = $derived(choices.find((c) => c.id === mineId)!);
   const oppChoice = $derived(decks.find((d) => d.slug === opponent));
+  // The picked decks' pictures load while the match sheet is open (a slow connection has them by the first hand).
+  $effect(() => preloadDecks(mineChoice.cards ?? [], oppChoice?.cards ?? []));
   /** Your deck's plan (a meta deck slug) and its name. */
   let minePlan = $state('');
   let mineName = $state('');
@@ -384,6 +387,7 @@
     history = [];
     const myCards = mineChoice.cards!;
     gameDecks = [myCards, pick.cards];
+    preloadDecks(myCards, pick.cards);
     states = [
       createGame({
         seed,
@@ -423,6 +427,7 @@
     minePlan = g.mine ?? 'player';
     mineName = g.mineName ?? 'list ของคุณ';
     gameDecks = g.decks;
+    preloadDecks(...g.decks);
     savedId = null;
     showOver = false;
     error = '';

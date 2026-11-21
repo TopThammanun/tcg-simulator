@@ -108,7 +108,10 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   managed by `MyDecks.svelte` on `/decks/`; `decklist.ts` checks them and names unsupported cards),
   `play.ts` (labels, hand actions), `drag.ts` (drop zones: `data-drop` =
   `slot:<uid>` / `active` / `bench` / `play`), `press.ts` (pointer drag / long press for mouse and touch),
-  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back if it fails), `symbols.ts` (the real
+  `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back while it loads or if it fails),
+  `images.ts` (card pictures fetched ahead at low priority: the card back and the picked decks' small pictures on
+  the match sheet, both lists at the start; `CardFace.svelte` shows its text frame until the picture loads, a zoomed
+  card the small picture until the large one has), `symbols.ts` (the real
   Energy symbols and coin, PokéWiki's pictures cut to webp circles in `public/energy/` and `public/coin/`; drawn by
   `components/game/Energy.svelte`, card text with {G}… by `EffectText.svelte`, the coin by `fx.ts`), `menu.ts`
   (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
