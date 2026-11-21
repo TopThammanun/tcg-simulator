@@ -132,9 +132,12 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
-  Theme: tokens on `:root` in `layouts/Base.astro` (sky-blue page, deep blue header band, `--primary` blue pill buttons
-  with a `--press` edge, `--accent` yellow, `--stamp` red, `--line` / `--radius` for panels; Mitr for headings);
-  the playmat is blue (`.table` in Board.svelte). Original styling only: no official logos or game trade dress.
+  Theme: formal and quiet, tokens on `:root` in `layouts/Base.astro` (neutral paper page, white header with a hairline
+  and the current page underlined, `--primary` navy for actions with `--press` its hover, square buttons (`--radius`
+  4px), `--stamp` crimson only for emphasis, `--accent` ochre for what can be played or picked, `--line` / `--rule`
+  hairlines; Noto Serif Thai for headings (`--font-heading`), IBM Plex Sans Thai for text and controls, IBM Plex Mono
+  for figures). No pill buttons, sticker labels, tilted cards or confetti; the playmat is slate (`.board` in
+  Board.svelte). Original styling only: no official logos or game trade dress.
 
 ## Versions
 

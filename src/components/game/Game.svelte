@@ -844,7 +844,7 @@
           <option value="off">ปิด</option>
         </select>
       </label>
-      <button type="button" class="primary start" onclick={() => start()}>เริ่มเกม →</button>
+      <button type="button" class="primary start" onclick={() => start()}>เริ่มเกม</button>
     </div>
   </section>
 {:else if shown}
@@ -1141,9 +1141,9 @@
   .setup {
     max-width: 920px;
     margin: 8px auto 0;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow);
     border-radius: var(--radius);
   }
   .sheet-head {
@@ -1151,8 +1151,8 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
-    padding: 18px 20px 14px;
-    border-bottom: 2px solid var(--line);
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid var(--line);
   }
   .sheet-head h1 {
     margin: 0;
@@ -1171,26 +1171,20 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 16px 20px 18px;
-  }
-  .corner.you {
-    background: color-mix(in srgb, var(--stamp) 6%, transparent);
-  }
-  .corner.them {
-    background: color-mix(in srgb, var(--teal) 7%, transparent);
+    padding: 18px 24px 20px;
   }
   .who {
     align-self: flex-start;
-    padding: 1px 10px;
-    font-family: var(--font-display);
-    font-weight: 700;
-    color: var(--paper);
-    background: var(--stamp);
-    transform: rotate(-3deg);
+    padding-left: 8px;
+    border-left: 3px solid var(--primary);
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
   }
   .them .who {
-    background: var(--teal);
-    transform: rotate(3deg);
+    border-left-color: var(--stamp);
   }
   .fan {
     position: relative;
@@ -1203,13 +1197,9 @@
     left: calc(50% - 3.3rem + var(--o) * 3.6rem);
     width: 6.6rem;
     border-radius: 6px;
-    box-shadow: var(--shadow);
-    transform: rotate(calc(var(--o) * 9deg)) translateY(calc(var(--o) * var(--o) * 6px));
-    transform-origin: bottom center;
-    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  .corner:hover .fc {
-    transform: rotate(calc(var(--o) * 13deg)) translateY(calc(var(--o) * var(--o) * 8px - 4px));
+    box-shadow:
+      0 0 0 1px #15181d1a,
+      0 6px 14px -8px #15181d80;
   }
   .fc :global(.back) {
     display: block;
@@ -1222,53 +1212,45 @@
     translate: -50% -50%;
     display: grid;
     place-items: center;
-    width: 3.4rem;
-    height: 3.4rem;
+    width: 3rem;
+    height: 3rem;
     border-radius: 50%;
-    background: var(--stamp);
-    color: #fff;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 2.1rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.6rem;
     line-height: 1;
-    box-shadow: 0 0 0 4px var(--card-bg), 3px 5px 0 4px var(--ink);
-    transform: rotate(-8deg);
+    box-shadow: 0 0 0 3px var(--card-bg);
   }
   .more {
     align-self: flex-start;
     font-size: 0.85rem;
     color: var(--ink-soft);
+    text-underline-offset: 3px;
   }
   .more:hover {
-    color: var(--stamp);
+    color: var(--primary);
   }
   .vs {
     display: grid;
     place-items: center;
-    background: repeating-linear-gradient(-45deg, transparent 0 7px, color-mix(in srgb, var(--ink) 6%, transparent) 7px 8px);
     border-left: 1px solid var(--rule);
     border-right: 1px solid var(--rule);
   }
   .vs span {
-    display: grid;
-    place-items: center;
-    width: 3.2rem;
-    height: 3.2rem;
-    border-radius: 50%;
-    background: var(--primary);
-    color: var(--primary-ink);
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
-    transform: rotate(-8deg);
-    box-shadow: var(--shadow-lg);
+    color: var(--ink-soft);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.05rem;
   }
   .prefs {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 12px 16px;
-    padding: 14px 20px 18px;
+    padding: 16px 24px 20px;
+    background: var(--paper);
   }
   .prefs label {
     font-size: 0.85rem;
@@ -1276,14 +1258,8 @@
   }
   .start {
     margin-left: auto;
-    padding: 10px 26px;
-    font-size: 1.1rem;
-    box-shadow: 0 4px 0 var(--press);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .start:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 0 var(--press);
+    padding: 10px 32px;
+    font-size: 1.02rem;
   }
   .chip {
     padding: 0 8px;
@@ -1309,8 +1285,6 @@
       border-bottom: 1px solid var(--rule);
     }
     .vs span {
-      width: 2.6rem;
-      height: 2.6rem;
       font-size: 0.95rem;
     }
     .start {
@@ -1325,31 +1299,38 @@
   }
   select {
     padding: 6px 8px;
-    border: 1.5px solid var(--line);
-    background: var(--paper);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
     color: var(--ink);
     font: inherit;
-    border-radius: 10px;
+    border-radius: var(--radius);
   }
   button {
     padding: 6px 14px;
-    border: 1.5px solid var(--primary);
-    background: var(--paper);
-    color: var(--primary);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    color: var(--ink);
     font: inherit;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;
     cursor: default;
   }
   .primary {
+    border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    font-family: var(--font-display);
     font-weight: 600;
-    border-radius: 999px;
+  }
+  .primary:hover:not(:disabled) {
+    border-color: var(--press);
+    background: var(--press);
   }
   .ghost {
     background: transparent;
@@ -1409,8 +1390,8 @@
     display: grid;
     place-items: center;
     padding: 12px;
-    border-radius: 14px;
-    background: #0b0a0799;
+    border-radius: 6px;
+    background: #0d1014a6;
   }
   .choice-layer :global(.choice) {
     width: min(780px, 100%);
@@ -1429,9 +1410,9 @@
     z-index: 5;
     width: min(340px, calc(100% - 20px));
     padding: 10px 12px;
-    border-radius: 14px;
-    border-left: 4px solid var(--stamp);
-    background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--stamp);
+    background: color-mix(in srgb, var(--card-bg) 96%, transparent);
     color: var(--ink);
     box-shadow: 0 10px 26px #0006;
     font-size: 0.8rem;
@@ -1470,7 +1451,7 @@
     padding: 3px 12px;
     border: 0;
     border-left: 3px solid var(--stamp);
-    border-radius: 999px;
+    border-radius: var(--radius);
     background: color-mix(in srgb, var(--card-bg) 92%, transparent);
     color: var(--ink);
     font-size: 0.76rem;
@@ -1513,8 +1494,9 @@
     border: 0;
     padding: 0;
     background: none;
-    color: var(--teal);
+    color: var(--primary);
     text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .bar {
     display: flex;
@@ -1529,9 +1511,9 @@
     gap: 4px;
   }
   .use {
-    padding: 1px 9px;
-    border: 1.5px solid var(--primary);
-    border-radius: 999px;
+    padding: 1px 8px;
+    border: 1px solid var(--primary);
+    border-radius: 2px;
     color: var(--primary);
     font-size: 0.74rem;
     font-weight: 600;
@@ -1550,9 +1532,10 @@
   /* Ending the turn while an attack is still there: asked in the dock, the attack first. */
   .end-warn {
     padding: 8px 10px;
-    border: 2px solid var(--accent);
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--accent) 16%, var(--card-bg));
+    border: 1px solid var(--accent);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
   }
   .warn-text {
     flex: 1 1 260px;
@@ -1563,17 +1546,15 @@
   }
   /* Ending the turn: the one big button, as on a game screen. */
   .bar .end {
-    padding: 8px 22px;
-    border: 0;
-    border-radius: 999px;
-    background: linear-gradient(#ff6b4a, #d8391c);
+    padding: 8px 24px;
+    border: 1px solid var(--stamp);
+    background: var(--stamp);
     color: #fff;
-    font-family: var(--font-display);
     font-weight: 600;
-    box-shadow: 0 4px 0 #8f2410;
   }
   .bar .end:hover {
-    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--stamp) 80%, #000);
+    background: color-mix(in srgb, var(--stamp) 80%, #000);
   }
   .hint {
     margin: 0;
@@ -1624,8 +1605,8 @@
     top: 0;
     transform: translate(-50%, 56px);
     padding: 3px 10px;
-    border-radius: 999px;
-    background: #1a150ce6;
+    border-radius: 3px;
+    background: #15181de6;
     color: #fff;
     font-size: 0.78rem;
     white-space: nowrap;
@@ -1634,8 +1615,8 @@
     transform: translate(-50%, 18px);
   }
   .drag-ghost.ok .ghost-label {
-    background: #f2c94c;
-    color: #1a150c;
+    background: var(--accent);
+    color: var(--accent-ink);
     font-weight: 600;
   }
   .error {
@@ -1666,11 +1647,11 @@
     position: fixed;
     inset: 0;
     z-index: 35;
-    background: #0b0a0780;
+    background: #0d101480;
   }
   .panel {
     padding: 10px 12px;
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
     font-size: 0.85rem;
     border-radius: var(--radius);
@@ -1700,7 +1681,6 @@
   }
   .anim-pick select {
     padding: 4px 6px;
-    border-radius: 10px;
   }
   .backdrop {
     position: fixed;
@@ -1709,14 +1689,14 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: color-mix(in srgb, #1a150c 55%, transparent);
+    background: color-mix(in srgb, #15181d 60%, transparent);
   }
   .discard {
     width: min(860px, 100%);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     padding: 16px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
     border-radius: var(--radius);
   }

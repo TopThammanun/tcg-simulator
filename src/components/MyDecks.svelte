@@ -104,7 +104,7 @@
             {/if}
           </span>
           <span class="acts">
-            {#if r.cards}<a class="button" href={`/play/?me=my:${d.id}`}>เล่น →</a>{/if}
+            {#if r.cards}<a class="button" href={`/play/?me=my:${d.id}`}>เล่น</a>{/if}
             <button type="button" onclick={() => (editing = { id: d.id, name: d.name, text: d.text })}>แก้</button>
             <button type="button" class="link" onclick={() => remove(d)}>ลบ</button>
           </span>
@@ -126,8 +126,8 @@
 
 <style>
   .mine {
-    margin-top: 40px;
-    border-top: 2px solid var(--line);
+    margin-top: 56px;
+    border-top: 2px solid var(--ink);
   }
   header {
     display: flex;
@@ -146,13 +146,17 @@
   button,
   .button {
     padding: 6px 14px;
-    border: 1.5px solid var(--primary);
-    background: var(--paper);
-    color: var(--primary);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    color: var(--ink);
     font: inherit;
     text-decoration: none;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;
@@ -160,11 +164,15 @@
   }
   .primary,
   .button {
+    border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    font-family: var(--font-display);
     font-weight: 600;
-    border-radius: 999px;
+  }
+  .primary:hover:not(:disabled),
+  .button:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   .link {
     padding: 0;
@@ -179,9 +187,9 @@
     gap: 10px;
     padding: 16px;
     margin-bottom: 16px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow);
     border-radius: var(--radius);
   }
   label {
@@ -193,16 +201,15 @@
   input,
   textarea {
     padding: 8px;
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--paper);
     color: var(--ink);
     font: inherit;
-    border-radius: 10px;
+    border-radius: var(--radius);
   }
   textarea {
     font-family: var(--font-mono);
     font-size: 0.8rem;
-    border-radius: 10px;
   }
   .starts {
     display: flex;
@@ -258,8 +265,6 @@
     top: 0;
     left: calc(var(--j) * 1.3rem);
     width: 3.3rem;
-    transform: rotate(calc((var(--j) - 1) * 7deg));
-    transform-origin: bottom center;
   }
   .info {
     display: flex;
@@ -267,8 +272,8 @@
     min-width: 0;
   }
   .info strong {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-weight: 600;
+    font-size: 1.08rem;
   }
   .muted {
     color: var(--ink-soft);
@@ -286,7 +291,7 @@
   .empty {
     margin: 0;
     padding: 18px;
-    border: 1.5px dashed var(--rule);
+    border: 1px dashed var(--line);
     color: var(--ink-soft);
   }
   .cards {

@@ -170,7 +170,7 @@
 <style>
   .choice {
     padding: 12px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
     box-shadow: var(--shadow-lg);
     border-radius: var(--radius);
@@ -188,8 +188,7 @@
     border: 0;
     background: none;
     cursor: zoom-in;
-    transform: rotate(-3deg);
-    filter: drop-shadow(2px 3px 0 color-mix(in srgb, var(--ink) 30%, transparent));
+    filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--ink) 30%, transparent));
   }
   .title {
     display: flex;
@@ -277,22 +276,24 @@
   }
   .lbl {
     padding: 6px 12px;
-    border: 1.5px solid var(--primary);
-    background: var(--paper);
-    color: var(--primary);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    color: var(--ink);
     font: inherit;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
+  }
+  .lbl:hover {
+    border-color: var(--ink);
   }
   .lbl.big {
     padding: 8px 16px;
-    font-family: var(--font-display);
     font-weight: 600;
   }
   .lbl.on {
+    border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    border-radius: 999px;
   }
   .actions {
     display: flex;
@@ -307,7 +308,7 @@
     margin: 10px -12px -12px;
     padding: 10px 12px;
     background: var(--card-bg);
-    border-top: 1.5px solid color-mix(in srgb, var(--ink) 20%, transparent);
+    border-top: 1px solid var(--line);
   }
   .tip {
     margin-right: auto;
@@ -317,21 +318,20 @@
   .go,
   .ghost {
     padding: 6px 16px;
-    border: 1.5px solid var(--primary);
+    border: 1px solid var(--primary);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
   }
   .go {
     background: var(--primary);
     color: var(--primary-ink);
-    border-radius: 999px;
   }
   .ghost {
+    border-color: var(--line);
     background: transparent;
-    color: var(--primary);
-    border-radius: 999px;
+    color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;

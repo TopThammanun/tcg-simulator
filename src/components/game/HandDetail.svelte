@@ -58,11 +58,11 @@
     width: min(420px, 100%);
     max-height: 100%;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: var(--radius);
     background: var(--card-bg);
     color: var(--ink);
     box-shadow: 0 10px 30px #0006;
-    border: 1.5px solid color-mix(in srgb, var(--ink) 15%, transparent);
+    border: 1px solid var(--line);
   }
   .img {
     align-self: start;
@@ -100,8 +100,8 @@
     gap: 1px;
     padding: 6px 10px;
     border-left: 3px solid var(--stamp);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--stamp) 10%, transparent);
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--stamp) 8%, transparent);
     color: var(--ink);
     line-height: 1.35;
   }
@@ -112,20 +112,23 @@
   .play,
   .close {
     padding: 7px 14px;
-    border-radius: 999px;
+    border-radius: var(--radius);
     font: inherit;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
   }
   .play {
     flex: 1;
-    border: 0;
-    background: var(--accent);
-    color: var(--accent-ink);
-    box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000);
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
+  }
+  .play:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   .close {
-    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border: 1px solid var(--line);
     background: transparent;
     color: var(--ink);
   }

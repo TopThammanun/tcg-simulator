@@ -189,10 +189,10 @@
     outline-offset: 3px;
     transform: scale(1.06);
     animation: none;
-    box-shadow: 0 0 0 9px #f2c94c66;
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 40%, transparent);
   }
   .target .card {
-    outline: 3px solid var(--target, #f2c94c);
+    outline: 3px solid var(--target, var(--accent));
     outline-offset: 2px;
     animation: pulse 1.2s ease-in-out infinite;
   }
@@ -214,7 +214,7 @@
     max-height: 17px;
     display: grid;
     place-items: center;
-    border-radius: 999px;
+    border-radius: 3px;
     border: 1px solid #0009;
     background: linear-gradient(to right, var(--fill) var(--pct), #1b1f1ccc var(--pct));
     color: #fff;
@@ -239,8 +239,8 @@
     right: -7px;
     min-width: 28px;
     padding: 2px 6px;
-    border: 2px solid #fff;
-    border-radius: 999px;
+    border: 1.5px solid #fff;
+    border-radius: 3px;
     background: #c3352b;
     color: #fff;
     font-weight: 700;
@@ -326,10 +326,10 @@
   @keyframes ready {
     0%,
     100% {
-      box-shadow: 0 0 0 2px #f2c94c88, 0 0 10px #f2c94c44;
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 53%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 27%, transparent);
     }
     50% {
-      box-shadow: 0 0 0 3px #f2c94ccc, 0 0 22px #f2c94c88;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 53%, transparent);
     }
   }
   .ability-badge {
@@ -339,12 +339,12 @@
     z-index: 3;
     transform: translate(-50%, -50%);
     padding: 2px 8px;
-    border: 1.5px solid #fff6d6;
-    border-radius: 999px;
-    background: linear-gradient(#e0ad2c, #b9831a);
-    color: #1c1508;
+    border: 1px solid #0006;
+    border-radius: 3px;
+    background: var(--accent);
+    color: var(--accent-ink);
     font-size: 0.62rem;
-    font-weight: 700;
+    font-weight: 600;
     white-space: nowrap;
     pointer-events: none;
     box-shadow: 0 3px 8px #000b;
@@ -399,11 +399,11 @@
     z-index: 4;
     transform: translateX(-50%);
     padding: 1px 10px;
-    border-radius: 999px;
+    border-radius: 3px;
     background: var(--accent);
     color: var(--accent-ink);
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 700;
     box-shadow: 0 2px 6px #000a;
     pointer-events: none;
   }

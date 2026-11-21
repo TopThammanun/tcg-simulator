@@ -63,11 +63,12 @@
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius);
     background: var(--card-bg);
     color: var(--ink);
-    border: 2px solid var(--accent);
-    box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 50%, #000);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    box-shadow: var(--shadow);
   }
   .src {
     flex: none;
@@ -93,8 +94,8 @@
   }
   .chip {
     padding: 1px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
     font-size: 0.8rem;
     font-weight: 600;
   }
@@ -112,21 +113,20 @@
   .go,
   .ghost {
     padding: 6px 14px;
-    border-radius: 999px;
+    border-radius: var(--radius);
     font: inherit;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
   }
   .go {
-    border: 0;
-    background: var(--accent);
-    color: var(--accent-ink);
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
   }
   .ghost {
-    border: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    border: 1px solid var(--line);
     background: transparent;
-    color: var(--primary);
-    border-radius: 999px;
+    color: var(--ink);
   }
   button:disabled {
     opacity: 0.4;

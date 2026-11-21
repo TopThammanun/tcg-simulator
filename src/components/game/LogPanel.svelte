@@ -38,7 +38,7 @@
     flex-direction: column;
     max-height: 420px;
     overflow-y: auto;
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
     font-size: 0.8rem;
     border-radius: var(--radius);
@@ -57,18 +57,17 @@
     background: var(--paper-deep);
   }
   .line.me {
-    border-left-color: var(--teal);
+    border-left-color: var(--primary);
   }
   .line.bot {
     border-left-color: var(--stamp);
   }
   .line.turn {
     margin-top: 6px;
-    font-family: var(--font-display);
     font-weight: 600;
     background: var(--paper-deep);
   }
   .line.at {
-    background: color-mix(in srgb, var(--stamp) 18%, transparent);
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
   }
 </style>

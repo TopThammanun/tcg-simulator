@@ -1,7 +1,7 @@
 <script lang="ts">
   // วิธีเล่น: how the table works, shown before your first game and from the "วิธีเล่น" button.
   import { fade, scale } from 'svelte/transition';
-  import { backOut } from 'svelte/easing';
+  import { cubicOut } from 'svelte/easing';
   import { motion } from '../../ui/anim/motion';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -36,7 +36,7 @@
 <svelte:window onkeydown={onkey} />
 
 <div class="backdrop" role="presentation" onclick={onclose} transition:fade={{ duration: motion(180) }}></div>
-<div class="howto" role="dialog" aria-modal="true" aria-label="วิธีเล่น" in:scale={{ duration: motion(320), start: 0.92, easing: backOut }}>
+<div class="howto" role="dialog" aria-modal="true" aria-label="วิธีเล่น" in:scale={{ duration: motion(240), start: 0.97, easing: cubicOut }}>
   <p class="eyebrow">ก่อนเริ่ม</p>
   <h2>วิธีเล่น</h2>
   <ol>
@@ -58,7 +58,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: #0b0a07b3;
+    background: #0d1014b3;
   }
   .howto {
     position: fixed;
@@ -71,7 +71,7 @@
     overflow-y: auto;
     padding: 24px 24px 20px;
     background: var(--card-bg);
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     box-shadow: var(--shadow-lg);
     border-radius: var(--radius);
   }
@@ -86,20 +86,20 @@
   }
   li {
     display: grid;
-    grid-template-columns: 2.4rem 1fr;
+    grid-template-columns: 2rem 1fr;
     gap: 12px;
     padding: 10px 0;
     border-top: 1px solid var(--rule);
   }
   .n {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.9rem;
-    line-height: 1;
-    color: var(--stamp);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
   }
   strong {
-    font-family: var(--font-display);
+    font-weight: 600;
   }
   p {
     margin: 2px 0 0;
@@ -109,24 +109,26 @@
   .primary {
     width: 100%;
     padding: 10px 14px;
-    border: 2px solid var(--primary);
+    border: 1px solid var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    font-family: var(--font-display);
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
+  }
+  .primary:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   @media (prefers-reduced-motion: no-preference) {
     li {
-      animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-      animation-delay: calc(80ms + var(--i) * 50ms);
+      animation: rise 0.3s ease-out both;
+      animation-delay: calc(60ms + var(--i) * 30ms);
     }
     @keyframes rise {
       from {
         opacity: 0;
-        transform: translateY(6px);
       }
     }
   }

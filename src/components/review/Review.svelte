@@ -182,7 +182,7 @@
   {/if}
   <div class="buttons">
     <button type="button" onclick={() => show(t)}>{selected === t.turn ? 'ซ่อนสนาม' : 'ดูสนาม'}</button>
-    <a class="button" href={`/play/?resume=${game!.id}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้ →</a>
+    <a class="button" href={`/play/?resume=${game!.id}&at=${t.span.start}`}>ลองเล่นใหม่จากตรงนี้</a>
   </div>
 {/snippet}
 
@@ -194,7 +194,7 @@
   {:else if games.length === 0}
     <div class="empty">
       <p>ยังไม่มีเกม เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเทิร์นไหนที่เกมพลิก</p>
-      <a class="cta" href="/play/">เล่นกับบอท →</a>
+      <a class="cta" href="/play/">เล่นกับบอท</a>
     </div>
   {:else}
     {#if record.played}
@@ -225,7 +225,7 @@
             </span>
           </span>
           <span class="act">
-            <a class="button" href={`/review/?id=${g.id}`}>ทบทวน →</a>
+            <a class="button" href={`/review/?id=${g.id}`}>ทบทวน</a>
             <button type="button" class="link" onclick={() => remove(g)}>ลบ</button>
           </span>
         </li>
@@ -334,28 +334,32 @@
   }
   .mono {
     font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
   h2 {
-    font-size: 1.25rem;
-    margin: 24px 0 10px;
+    font-size: 1.3rem;
+    margin: 28px 0 10px;
   }
   .empty {
-    padding: 28px;
-    border: 1.5px dashed var(--rule);
+    padding: 32px;
+    border: 1px dashed var(--line);
     text-align: center;
     color: var(--ink-soft);
   }
   .cta {
     display: inline-block;
     margin-top: 8px;
-    padding: 10px 18px;
+    padding: 10px 22px;
+    border: 1px solid var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    font-family: var(--font-display);
     font-weight: 600;
     text-decoration: none;
-    box-shadow: 0 4px 0 var(--press);
-    border-radius: 999px;
+    border-radius: var(--radius);
+  }
+  .cta:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   /* Your record: two big numbers, then a bar per opponent deck. */
   .record {
@@ -363,9 +367,10 @@
     grid-template-columns: auto minmax(0, 1fr);
     gap: 24px;
     align-items: center;
-    padding: 16px 0 20px;
+    padding: 20px 0 24px;
     margin-bottom: 8px;
-    border-bottom: 2px solid var(--line);
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--line);
   }
   .totals {
     display: flex;
@@ -378,10 +383,10 @@
     font-size: 0.85rem;
   }
   .num {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 2.6rem;
-    line-height: 1;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 2.4rem;
+    line-height: 1.15;
     color: var(--ink);
   }
   .vs {
@@ -398,8 +403,8 @@
     font-size: 0.88rem;
   }
   .vs .bar {
-    height: 8px;
-    background: linear-gradient(to right, var(--teal) var(--w), color-mix(in srgb, var(--stamp) 55%, var(--paper-deep)) var(--w));
+    height: 6px;
+    background: linear-gradient(to right, var(--primary) var(--w), color-mix(in srgb, var(--stamp) 45%, var(--paper-deep)) var(--w));
   }
   .wl {
     text-align: right;
@@ -419,23 +424,23 @@
   }
   .res {
     display: inline-block;
-    padding: 2px 0;
+    padding: 1px 0;
     width: 4.2rem;
     text-align: center;
-    font-family: var(--font-display);
-    font-weight: 700;
-    border: 2px solid var(--ink-soft);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    border-radius: 2px;
     color: var(--ink-soft);
   }
   .res.won {
-    border-color: var(--teal);
-    color: var(--teal);
-    transform: rotate(-3deg);
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
   }
   .res.lost {
     border-color: var(--stamp);
     color: var(--stamp);
-    transform: rotate(2deg);
   }
   .match {
     display: flex;
@@ -443,7 +448,7 @@
     min-width: 0;
   }
   .match strong {
-    font-family: var(--font-display);
+    font-weight: 600;
   }
   .match .muted {
     font-size: 0.82rem;
@@ -482,7 +487,6 @@
     width: 1px;
     height: 1px;
     opacity: 0;
-    border-radius: 10px;
   }
   .link {
     border: 0;
@@ -494,8 +498,8 @@
     cursor: pointer;
   }
   .head {
-    padding-bottom: 14px;
-    border-bottom: 2px solid var(--line);
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
   }
   .back {
     display: inline-block;
@@ -505,7 +509,7 @@
     text-decoration: none;
   }
   .back:hover {
-    color: var(--stamp);
+    color: var(--ink);
   }
   .head .eyebrow {
     margin: 0 0 4px;
@@ -520,8 +524,10 @@
   }
   .head h1 .res {
     width: auto;
-    padding: 2px 14px;
-    font-size: 0.8em;
+    padding: 0 12px;
+    font-family: var(--font-body);
+    font-size: 0.55em;
+    line-height: 1.6;
   }
   .summary {
     margin: 0;
@@ -530,7 +536,7 @@
   .summary progress {
     vertical-align: middle;
     width: 140px;
-    accent-color: var(--stamp);
+    accent-color: var(--primary);
   }
   .bad {
     color: var(--stamp);
@@ -541,8 +547,8 @@
   .clean {
     margin: 18px 0 0;
     padding: 12px 14px;
-    border-left: 4px solid var(--teal);
-    background: color-mix(in srgb, var(--teal) 8%, transparent);
+    border-left: 3px solid var(--teal);
+    background: color-mix(in srgb, var(--teal) 7%, transparent);
   }
   .key > ol {
     list-style: none;
@@ -553,9 +559,9 @@
   }
   .key > ol > li {
     padding: 14px 16px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow);
     font-size: 0.9rem;
     border-radius: var(--radius);
   }
@@ -585,13 +591,13 @@
   }
   .turns > li {
     padding: 10px 12px;
-    border: 1.5px solid var(--rule);
+    border: 1px solid var(--rule);
     background: var(--card-bg);
     font-size: 0.88rem;
   }
   .turns > li.sel,
   .key > ol > li.sel {
-    border-color: var(--stamp);
+    border-color: var(--primary);
   }
   .key p,
   .turns p {
@@ -605,14 +611,14 @@
     align-items: center;
   }
   .row strong {
-    font-family: var(--font-display);
+    font-weight: 600;
   }
   .win {
     margin-left: auto;
   }
   .badge {
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: 2px;
     font-size: 0.78rem;
     font-weight: 600;
   }
@@ -621,8 +627,8 @@
     color: #fff;
   }
   .badge.warn {
-    background: #fab219;
-    color: #0b0b0b;
+    background: var(--accent);
+    color: var(--accent-ink);
   }
   .badge.ok {
     border: 1px solid var(--rule);
@@ -648,8 +654,8 @@
     font-weight: 600;
   }
   .tag.bot {
-    border-color: var(--teal);
-    color: var(--teal);
+    border-color: var(--primary);
+    color: var(--primary);
   }
   .moves {
     display: flex;
@@ -686,31 +692,42 @@
   .button,
   .seg button {
     padding: 4px 12px;
-    border: 1.5px solid var(--primary);
-    background: var(--paper);
-    color: var(--primary);
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    color: var(--ink);
     font: inherit;
     font-size: 0.82rem;
     text-decoration: none;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius);
+  }
+  .buttons button:hover,
+  .button:hover,
+  .seg button:hover {
+    border-color: var(--ink);
   }
   .games .button {
+    border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    font-family: var(--font-display);
     font-weight: 600;
-    border-radius: 999px;
+  }
+  .games .button:hover {
+    border-color: var(--press);
+    background: var(--press);
   }
   .seg {
     display: flex;
     gap: 0;
     margin-bottom: 8px;
   }
+  .seg button + button {
+    margin-left: -1px;
+  }
   .seg button.on {
+    border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
-    border-radius: 999px;
   }
   /* Board.svelte sizes its cards from this box (container query units). */
   .table {

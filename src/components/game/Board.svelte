@@ -306,11 +306,11 @@
     column-gap: 12px;
     row-gap: var(--row-gap);
     padding: 0 var(--pad) 20px;
-    border-radius: 14px;
-    background-color: #1c3a80;
+    border-radius: 6px;
+    background-color: #1a283b;
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-      radial-gradient(120% 70% at 50% 50%, #2d5bb5 0%, #1c3a80 55%, #0f2150 100%);
+      radial-gradient(120% 80% at 50% 50%, #22344c 0%, #1a283b 60%, #131e2e 100%);
     color: var(--mat-ink);
     box-shadow:
       inset 0 0 0 1px #ffffff14,
@@ -321,13 +321,13 @@
   }
   .board.play-ready {
     box-shadow:
-      inset 0 0 0 2px #f2c94c88,
+      inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
       inset 0 0 60px #0007;
   }
   .board.play-over {
     box-shadow:
-      inset 0 0 0 4px #f2c94c,
-      inset 0 0 60px #f2c94c33;
+      inset 0 0 0 4px var(--accent),
+      inset 0 0 60px color-mix(in srgb, var(--accent) 20%, transparent);
   }
   /* Over the bot's hand at the top edge, clear of the cards. */
   .play-hint {
@@ -336,10 +336,9 @@
     top: 6px;
     transform: translateX(-50%);
     padding: 6px 14px;
-    border-radius: 999px;
-    background: #1a150cdd;
-    color: #f2c94c;
-    font-family: var(--font-display);
+    border-radius: 3px;
+    background: #0d1014dd;
+    color: var(--accent);
     font-weight: 600;
     font-size: 0.9rem;
     white-space: nowrap;
@@ -371,10 +370,8 @@
     left: 6%;
     right: 6%;
     top: -2px;
-    height: 3px;
-    border-radius: 3px;
-    background: linear-gradient(90deg, transparent, var(--glow, #f2c94c), transparent);
-    box-shadow: 0 0 14px 2px var(--glow, #f2c94c);
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--glow, var(--accent)) 20% 80%, transparent);
     opacity: 0;
     transition:
       opacity 0.4s ease,
@@ -400,7 +397,7 @@
     transform: translate(-50%, -50%);
     border: 1px solid #ffffff40;
     border-radius: 50%;
-    background: #1f3f88;
+    background: #1a283b;
     color: #e2574b;
     font-size: 10px;
   }
@@ -497,12 +494,12 @@
     gap: 5px;
     align-items: baseline;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 3px;
     background: #0005;
     font-size: 0.72rem;
   }
   .count .n {
-    color: #f2c94c;
+    color: var(--accent);
     font-size: 0.95rem;
     font-weight: 700;
   }
@@ -553,7 +550,7 @@
     transform: translateX(-50%);
     min-width: 26px;
     padding: 0 6px;
-    border-radius: 999px;
+    border-radius: 3px;
     background: #000c;
     color: #fff;
     font-size: 0.78rem;
@@ -598,12 +595,12 @@
     opacity: 0.55;
   }
   .active-spot.accepts .empty {
-    outline: 2px dashed #f2c94c;
-    color: #f2c94c;
+    outline: 2px dashed var(--accent);
+    color: var(--accent);
     opacity: 1;
   }
   .active-spot.over .empty {
-    background: #f2c94c33;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
   }
   .bench {
     display: grid;
@@ -621,8 +618,8 @@
     border-radius: 8px;
   }
   .bench-drop {
-    border: 2px dashed #f2c94c;
-    color: #f2c94c;
+    border: 2px dashed var(--accent);
+    color: var(--accent);
     font-size: 0.75rem;
     font-weight: 600;
     transition:
@@ -630,7 +627,7 @@
       transform 0.12s ease;
   }
   .bench-drop.over {
-    background: #f2c94c33;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
     transform: scale(1.06);
   }
   .ghost-card {
@@ -639,7 +636,7 @@
     border: 0;
     background: none;
     opacity: 0.85;
-    outline: 2px dashed #f2c94c;
+    outline: 2px dashed var(--accent);
     outline-offset: 2px;
     border-radius: 7px;
     cursor: pointer;
@@ -714,7 +711,7 @@
     box-shadow: 0 0 0 2px #4fb3aa;
   }
   .stadium.usable .stadium-card {
-    outline: 3px solid #f2c94c;
+    outline: 3px solid var(--accent);
     outline-offset: 3px;
     animation: pulse 1.2s ease-in-out infinite;
   }
@@ -763,18 +760,16 @@
   .whose {
     padding: 4px 14px;
     border: 1px solid #ffffff30;
-    border-radius: 999px;
+    border-radius: 3px;
     background: #0005;
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.88rem;
+    font-weight: 600;
     white-space: nowrap;
   }
   .whose.you {
-    border-color: #f2c94c;
-    background: #f2c94c;
-    color: #1a150c;
-    box-shadow: 0 0 0 4px #f2c94c33;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
   }
   .mono {
     font-family: var(--font-mono);

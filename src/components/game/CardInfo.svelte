@@ -60,7 +60,7 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: color-mix(in srgb, #1a150c 60%, transparent);
+    background: color-mix(in srgb, #15181d 60%, transparent);
   }
   .info {
     position: relative;
@@ -71,7 +71,7 @@
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     padding: 20px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
     color: var(--ink);
     border-radius: var(--radius);
@@ -93,8 +93,9 @@
   .state {
     margin-bottom: 14px;
     padding: 12px 14px;
-    border-radius: 12px;
-    background: var(--paper-deep);
+    border-radius: var(--radius);
+    background: var(--paper);
+    border: 1px solid var(--rule);
   }
   .row {
     display: flex;
@@ -115,7 +116,7 @@
   .hpbar {
     height: 6px;
     margin: 6px 0 10px;
-    border-radius: 999px;
+    border-radius: 1px;
     background: color-mix(in srgb, var(--ink) 15%, transparent);
     overflow: hidden;
   }
@@ -145,8 +146,8 @@
     margin: 0;
   }
   .chip {
-    padding: 0 8px;
-    border-radius: 999px;
+    padding: 0 7px;
+    border-radius: 2px;
     background: var(--c, var(--primary));
     color: #fff;
     font-size: 0.78rem;

@@ -86,8 +86,8 @@
   .fx-layer :global(.fx-stage-label) {
     transform: translateX(-50%);
     padding: 4px 14px;
-    border-radius: 999px;
-    background: #1a150ce6;
+    border-radius: 3px;
+    background: #15181de6;
     color: #fff;
     font-family: var(--font-display);
     font-weight: 600;
@@ -100,9 +100,9 @@
   .fx-layer :global(.fx-banner) {
     padding: 8px 30px 8px 22px;
     border-left: 10px solid var(--c);
-    background: linear-gradient(90deg, color-mix(in srgb, var(--c) 55%, #1a150c), #1a150cf0 45%, #1a150cd0);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--c) 55%, #15181d), #15181df0 45%, #15181dd0);
     color: #fff;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: clamp(1.1rem, 3.2vw, 1.7rem);
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -116,15 +116,15 @@
     border-left: 0;
     border-right: 10px solid var(--c);
     padding: 8px 22px 8px 30px;
-    background: linear-gradient(270deg, color-mix(in srgb, var(--c) 55%, #1a150c), #1a150cf0 45%, #1a150cd0);
+    background: linear-gradient(270deg, color-mix(in srgb, var(--c) 55%, #15181d), #15181df0 45%, #15181dd0);
   }
 
   .fx-layer :global(.fx-ring) {
-    border: 3px solid #f2c94c;
+    border: 3px solid var(--accent);
     border-radius: 12px;
     box-shadow:
-      0 0 18px #f2c94c,
-      inset 0 0 12px #f2c94c88;
+      0 0 18px var(--accent),
+      inset 0 0 12px color-mix(in srgb, var(--accent) 53%, transparent);
   }
   .fx-layer :global(.fx-ring.red) {
     border-color: #ff5a4a;
@@ -134,7 +134,7 @@
   }
   .fx-layer :global(.fx-tag) {
     padding: 3px 10px;
-    border-radius: 999px;
+    border-radius: 3px;
     font-family: var(--font-display);
     font-size: 0.8rem;
     font-weight: 700;
@@ -142,8 +142,8 @@
     box-shadow: 0 4px 12px -4px #000c;
   }
   .fx-layer :global(.fx-tag.gold) {
-    background: #f2c94c;
-    color: #1a150c;
+    background: var(--accent);
+    color: #15181d;
   }
   .fx-layer :global(.fx-tag.cond) {
     background: #6b2f8a;
@@ -176,7 +176,7 @@
       0 8px 18px -6px #000c;
   }
   .fx-layer :global(.fx-coin-spin .heads) {
-    background: radial-gradient(circle at 35% 30%, #fff3c2, #f2c94c 45%, #b8861d);
+    background: radial-gradient(circle at 35% 30%, #fff3c2, var(--accent) 45%, #b8861d);
     color: #5a3d06;
   }
   .fx-layer :global(.fx-coin-spin .tails) {
@@ -222,7 +222,7 @@
     background: radial-gradient(circle, #ff8a7a, #e2574b 55%, #c3352b00 80%);
     mix-blend-mode: hard-light;
   }
-  /* "KO" stamped in red ink, like the stamp in the site header. */
+  /* "KO" stamped in red ink. */
   .fx-layer :global(.fx-stamp) {
     padding: 0 12px;
     border: 5px solid #e2574b;
@@ -233,13 +233,13 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     line-height: 1.2;
-    background: #1a150c55;
+    background: #15181d55;
     text-shadow: 0 2px 0 #0006;
     box-shadow: 0 0 0 2px #0004;
   }
   .fx-layer :global(.fx-evolve) {
     border-radius: 12px;
-    background: radial-gradient(circle, #fff 0 25%, #fffbe8cc 45%, #f2c94c00 72%);
+    background: radial-gradient(circle, #fff 0 25%, #fffbe8cc 45%, color-mix(in srgb, var(--accent) 0%, transparent) 72%);
     box-shadow: 0 0 40px 10px #fff8;
   }
 
@@ -251,9 +251,9 @@
     justify-content: center;
     gap: 2px;
     padding: 10px 0;
-    background: linear-gradient(90deg, transparent, #1a150ce8 18%, #1a150ce8 82%, transparent);
-    border-top: 1px solid #f2c94c66;
-    border-bottom: 1px solid #f2c94c66;
+    background: linear-gradient(90deg, transparent, #15181de8 18%, #15181de8 82%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     color: #fff;
   }
   .fx-layer :global(.fx-turn small) {
@@ -262,12 +262,12 @@
     opacity: 0.8;
   }
   .fx-layer :global(.fx-turn strong) {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: clamp(1.5rem, 5vw, 2.3rem);
     line-height: 1.1;
   }
   .fx-layer :global(.fx-turn.mine strong) {
-    color: #f2c94c;
+    color: var(--accent);
   }
   .fx-layer :global(.fx-turn.theirs) {
     border-color: #e2574b66;

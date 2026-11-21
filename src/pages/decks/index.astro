@@ -18,7 +18,7 @@ const lists = decks.map((d) => ({
 }));
 const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
 // The deck's headline Pokémon: the one it is named after, then rule-box attackers, then most copies.
-// Drawn last so it sits on top of the fan.
+// Drawn last so it sits on top of the row.
 type Line = (typeof decks)[number]['lines'][number];
 const score = (deckName: string, l: Line) =>
   (deckName.includes(l.card.name.replace(/^Mega | ex$/g, '')) ? 1000 : 0) +
@@ -79,15 +79,15 @@ const thumbs = (d: (typeof decks)[number]) =>
     margin: 0 0 8px;
   }
   .lede {
-    max-width: 60ch;
+    max-width: 62ch;
     color: var(--ink-soft);
-    margin: 0 0 28px;
+    margin: 0 0 32px;
   }
   .decks {
     list-style: none;
     margin: 0;
     padding: 0;
-    border-top: 2px solid var(--line);
+    border-top: 2px solid var(--ink);
   }
   .deck a {
     display: grid;
@@ -100,14 +100,18 @@ const thumbs = (d: (typeof decks)[number]) =>
     transition: background 0.15s ease;
   }
   .deck a:hover {
-    background: var(--paper-deep);
+    background: var(--card-bg);
+  }
+  .deck a:hover .name {
+    color: var(--primary);
   }
   .rank {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 2.2rem;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.6rem;
     line-height: 1;
     text-align: center;
+    color: var(--ink-soft);
   }
   .fan {
     position: relative;
@@ -120,13 +124,9 @@ const thumbs = (d: (typeof decks)[number]) =>
     width: 4rem;
     height: auto;
     border-radius: 3px;
-    box-shadow: var(--shadow);
-    transform: rotate(calc((var(--j) - 1) * 7deg));
-    transform-origin: bottom center;
-    transition: transform 0.2s ease;
-  }
-  .deck a:hover .fan img {
-    transform: rotate(calc((var(--j) - 1) * 12deg)) translateY(-2px);
+    box-shadow:
+      0 0 0 1px #15181d1a,
+      -4px 0 10px -6px #15181d80;
   }
   .info {
     display: flex;
@@ -134,9 +134,9 @@ const thumbs = (d: (typeof decks)[number]) =>
     min-width: 0;
   }
   .name {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.2rem;
+    font-weight: 600;
+    font-size: 1.12rem;
+    transition: color 0.15s ease;
   }
   .source {
     color: var(--ink-soft);
@@ -153,14 +153,12 @@ const thumbs = (d: (typeof decks)[number]) =>
   }
   .bar {
     flex: 1;
-    height: 10px;
-    background: linear-gradient(to right, var(--stamp) var(--w), var(--paper-deep) var(--w));
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    height: 6px;
+    background: linear-gradient(to right, var(--primary) var(--w), var(--paper-deep) var(--w));
   }
   .pct {
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 500;
     min-width: 4.2em;
     text-align: right;
   }

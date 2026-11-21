@@ -114,36 +114,9 @@
   }
   .hcard.grab .cardbox :global(.face) {
     box-shadow:
-      0 0 0 2px #f2c94caa,
-      0 0 12px #f2c94c55,
+      0 0 0 2px color-mix(in srgb, var(--accent) 67%, transparent),
+      0 0 12px color-mix(in srgb, var(--accent) 33%, transparent),
       0 3px 8px -2px #0008;
-  }
-  /* A light sweeps across playable cards now and then. */
-  .hcard.grab .cardbox::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(115deg, transparent 38%, #ffffff70 50%, transparent 62%) no-repeat;
-    background-size: 260% 100%;
-    background-position: 130% 0;
-    pointer-events: none;
-    animation: sheen 3.6s ease-in-out infinite;
-  }
-  .hcard.grab:nth-child(2n) .cardbox::after {
-    animation-delay: 0.5s;
-  }
-  .hcard.grab:nth-child(3n) .cardbox::after {
-    animation-delay: 1.1s;
-  }
-  @keyframes sheen {
-    0%,
-    62% {
-      background-position: 130% 0;
-    }
-    100% {
-      background-position: -30% 0;
-    }
   }
   @media (hover: hover) {
     .hcard:hover {
@@ -156,7 +129,7 @@
     --lift: -18px;
   }
   .hcard.sel .cardbox {
-    outline: 3px solid #f2c94c;
+    outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
   .hcard.marked {

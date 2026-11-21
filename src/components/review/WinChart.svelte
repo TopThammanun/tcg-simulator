@@ -89,10 +89,10 @@
   .chart {
     margin: 0;
     padding: 10px 12px;
-    border: 1.5px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--card-bg);
-    --critical: #d03b3b;
-    --warning: #fab219;
+    --critical: var(--stamp);
+    --warning: var(--accent);
     border-radius: var(--radius);
   }
   figcaption {
@@ -126,13 +126,13 @@
   }
   .line {
     fill: none;
-    stroke: var(--teal);
+    stroke: var(--primary);
     stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
   .dot {
-    fill: var(--teal);
+    fill: var(--primary);
     stroke: var(--card-bg);
     stroke-width: 2;
   }

@@ -170,10 +170,10 @@
     max-height: calc(100dvh - 16px);
     overflow-y: auto;
     padding: 10px 12px 12px;
-    border: 1.5px solid #f2c94c88;
-    border-radius: 12px;
-    background: linear-gradient(#1d3170f7, #121f4cf7);
-    color: #eef3ef;
+    border: 1px solid #ffffff24;
+    border-radius: 6px;
+    background: #1a2230f7;
+    color: #eceef1;
     box-shadow:
       0 0 0 1px #0006,
       0 24px 50px -16px #000e;
@@ -206,8 +206,8 @@
     gap: 4px;
   }
   .state .chip {
-    padding: 0 8px;
-    border-radius: 999px;
+    padding: 0 7px;
+    border-radius: 2px;
     background: var(--c, #ffffff22);
     color: #fff;
     font-size: 0.72rem;
@@ -226,7 +226,7 @@
     min-width: 0;
   }
   .title strong {
-    font-family: var(--font-display);
+    font-weight: 600;
     font-size: 1.05rem;
     line-height: 1.2;
   }
@@ -268,18 +268,18 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px;
-    border-radius: 8px;
-    background: #ffffff0d;
+    border-radius: 4px;
+    background: #ffffff0a;
   }
   .use {
     margin-left: auto;
     padding: 4px 14px;
     border: 0;
-    border-radius: 999px;
-    background: linear-gradient(#f2c94c, #cf961f);
-    color: #1c1508;
+    border-radius: 3px;
+    background: var(--accent);
+    color: var(--accent-ink);
     font: inherit;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
   }
   .use.wide {
@@ -301,35 +301,34 @@
     flex-direction: column;
     gap: 3px;
     padding: 9px 10px;
-    border: 1.5px solid #f2c94c;
-    border-radius: 9px;
-    background: linear-gradient(#2c4592, #22377a);
+    border: 1px solid #ffffff2e;
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    background: #ffffff0f;
     color: #fff;
     text-align: left;
   }
   .attack.off {
-    border-color: #ffffff22;
-    background: #ffffff08;
+    border-color: #ffffff1c;
+    background: #ffffff06;
     color: #9aa7a2;
   }
   /* The attack itself: its own button, so reading the text never attacks. */
   .attack .go {
     align-self: flex-end;
     margin-top: 4px;
-    padding: 5px 16px;
+    padding: 5px 18px;
     border: 0;
-    border-radius: 999px;
-    background: linear-gradient(#ff6b4a, #d8391c);
+    border-radius: 3px;
+    background: #c2362b;
     color: #fff;
     font: inherit;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 3px 0 #8f2410;
-    transition: transform 0.1s ease;
+    transition: background 0.12s ease;
   }
   .attack .go:hover:not(:disabled) {
-    transform: translateY(-1px);
+    background: #a52b22;
   }
   .attack .go:disabled {
     background: #ffffff14;
@@ -366,14 +365,14 @@
   }
   .aname {
     flex: 1;
-    font-family: var(--font-display);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 600;
   }
   .dmg {
+    font-family: var(--font-mono);
     font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffd27a;
+    font-weight: 600;
+    color: #f0d48a;
   }
   .attack.off .dmg {
     color: inherit;
@@ -381,20 +380,20 @@
   /* What the attack would do to their Active: green for damage, gold for a Knock Out. */
   .pv {
     align-self: flex-start;
-    padding: 2px 9px;
-    border-radius: 999px;
+    padding: 2px 8px;
+    border-radius: 2px;
     background: #ffffff1a;
     color: #cfe0ff;
     font-size: 0.74rem;
     font-weight: 600;
   }
   .pv.ko {
-    background: #f2c94c33;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
     color: #ffe08a;
   }
   .pv.sure {
-    background: #f2c94c;
-    color: #1c1508;
+    background: var(--accent);
+    color: var(--accent-ink);
   }
   .why {
     margin: 0;
@@ -444,11 +443,11 @@
   }
   .pick:hover :global(.face) {
     transform: translateY(-3px);
-    box-shadow: 0 0 0 2px #f2c94c;
+    box-shadow: 0 0 0 2px var(--accent);
   }
   .pick.on :global(.face) {
     transform: translateY(-3px);
-    box-shadow: 0 0 0 3px #f2c94c;
+    box-shadow: 0 0 0 3px var(--accent);
   }
   .use:disabled {
     opacity: 0.5;
