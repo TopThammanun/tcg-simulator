@@ -263,15 +263,23 @@ export function playMatch(m: Match, players: Record<string, PlayerSpec>, out: Sh
 }
 
 /** The saved games of a config's `starts`, and each one's start positions (a turn's first free state, turn 2 on). */
-export function startPositions(c: Pick<GenConfig, 'starts'>): { games: SavedGame[]; at: number[][] } {
+export function startPositions(c: Pick<GenConfig, 'starts'>): { games: StartGame[]; at: number[][] } {
   if (!c.starts) return { games: [], at: [] };
-  const games = readGamesFile(readFileSync(c.starts.path, 'utf8'));
+  const games = readGamesFile(readFileSync(c.starts.path, 'utf8')) as StartGame[];
   const at = games.map((g) => {
+    if (g.starts) return g.starts.slice();
     const states = replay(g);
     return [...turnsOf(states, 0), ...turnsOf(states, 1)].filter((t) => t.turn >= 2).map((t) => t.start).sort((x, y) => x - y);
   });
   return { games, at };
 }
+
+/**
+ * A saved game to start from. Made by scripts/learn/positions.ts, it may name its own `starts` (state indices,
+ * e.g. Slowking ready to use Seek Inspiration) and `seatA`, the seat player a always takes there (no swapped game:
+ * the network trains the deck it is learning, BOT-NEXT.md N2).
+ */
+export type StartGame = SavedGame & { starts?: number[]; seatA?: 0 | 1 };
 
 /** Matches for a config: each pairing gets its share of the games, every deck pair, both seats. */
 export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'variants' | 'starts' | 'offmeta'>): Match[] {
@@ -323,6 +331,10 @@ export function matchesFor(c: Pick<GenConfig, 'games' | 'base' | 'pairs' | 'vari
         // Seats as in the saved game: the person's deck first (its plan; "player" for games saved before decks could be picked), the bot's second.
         const g = starts.games[st.g]!;
         const decks: [string, string] = [g.mine ?? 'player', g.opponent];
+        if (g.seatA !== undefined) {
+          out.push({ id: out.length, seed, decks, names: g.seatA === 0 ? [pair.a, pair.b] : [pair.b, pair.a], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
+          continue;
+        }
         out.push({ id: out.length, seed, decks, names: [pair.a, pair.b], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
         if (!mirror) out.push({ id: out.length, seed, decks, names: [pair.b, pair.a], lists: [g.decks[0], g.decks[1]], start: { game: st.g, at: st.at } });
         continue;
