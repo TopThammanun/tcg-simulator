@@ -51,11 +51,24 @@ def play(a: str, b: str, games: int, base: int, threads: int, server: bool, note
     pe = r.get("paired", {}).get("A vs B")
     if pe:
         row["se"] = round(pe["se"], 5)
+    # A's score with each of its decks (keys "A <its deck> vs <B's deck>"): a ship gate also asks that no deck got worse.
+    by = {}
+    for k, v in r.get("byDeck", {}).items():
+        if k.startswith("A "):
+            d = k[2:].split(" vs ")[0]
+            sc_n = by.setdefault(d, [0, 0])
+            sc_n[0] += v["score"]
+            sc_n[1] += v["n"]
+    if by:
+        row["byDeckA"] = by
     os.makedirs(os.path.dirname(LADDER), exist_ok=True)
     with open(LADDER, "a", encoding="utf-8") as f:
         f.write(json.dumps(row) + "\n")
     lo, hi = wilson(sc["score"], sc["n"])
     print(f"{a} vs {b}: {sc['score']}/{sc['n']} = {sc['score'] / sc['n'] * 100:.1f}% (95% CI {lo * 100:.1f}-{hi * 100:.1f}{paired_ci(r)}), {row['seconds']}s")
+    for d, (score, n) in sorted(by.items()):
+        dlo, dhi = wilson(score, n)
+        print(f"  A with {d:<24} {score / n * 100:5.1f}% ({dlo * 100:.1f}-{dhi * 100:.1f}, {n} games)")
     return row
 
 
