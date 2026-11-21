@@ -35,6 +35,13 @@ def _spec(s: str) -> dict:
         return {"kind": "bot", "fast": kind == "bot"}
     if kind == "net":
         return {"kind": "net", "weights": rest[0], "temperature": 0}
+    if kind == "deep":
+        # deep:<weights>[:width:samples]: the look-ahead bot with batched rollouts and no deadline (needs --server).
+        parts = rest[0].rsplit(":", 2) if rest[0].count(":") >= 3 else [rest[0]]
+        out = {"kind": "deep", "weights": parts[0]}
+        if len(parts) == 3:
+            out.update(width=int(parts[1]), samples=int(parts[2]))
+        return out
     if kind in ("search", "search-np", "search-ng"):
         parts = rest[0].rsplit(":", 3) if rest[0].count(":") >= 3 else [rest[0]]
         # The play screen's time limit per decision (src/bots/index.ts SEARCH).

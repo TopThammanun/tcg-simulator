@@ -51,10 +51,10 @@ export interface NetSearchOptions {
   ties?: number;
 }
 
-const MAX_ROLLOUT_ACTIONS = 200;
+export const MAX_ROLLOUT_ACTIONS = 200;
 
 /** Choices whose result shows at once in Prizes: damage counters spread over the Bench, a target for damage. */
-const PRIZE_CHOICES = new Set(['counters', 'target']);
+export const PRIZE_CHOICES = new Set(['counters', 'target']);
 
 /** Prizes the chooser takes once `picks` answers the pending choice and the rest of the move plays out (99: the game won). */
 function prizesAfter(s: GameState, picks: number[], plan: DeckPlan): number {
@@ -73,7 +73,7 @@ function prizesAfter(s: GameState, picks: number[], plan: DeckPlan): number {
  * The network's answer, unless the rule-based chooser's (exact Knock Out arithmetic) or, for one pick, another
  * option takes more Prizes: the policy sometimes spreads Phantom Dive's counters so that nothing is Knocked Out.
  */
-function morePrizes(s: GameState, net: Action, plan: DeckPlan): Action {
+export function morePrizes(s: GameState, net: Action, plan: DeckPlan): Action {
   if (net.t !== 'choose') return net;
   const req = s.pending!.request;
   const others = [choosePicks(s, req, plan)];

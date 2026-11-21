@@ -9,10 +9,11 @@ import { softmax } from '../../src/bots/learn/model';
 import { bestOption, MAX_ACTIONS_PER_TURN, oppHand, oracleOf, turnCounter, type Decision } from '../../src/bots/learn/netbot';
 import { planFor } from '../../src/bots/plans';
 import { makeRand } from '../../src/bots/random';
-import type { Bot } from '../../src/bots/types';
+import type { Bot, DeckPlan } from '../../src/bots/types';
 import { actor, apply } from '../../src/engine/actions';
 import { opp } from '../../src/engine/state';
 import type { Action, GameState, PlayerId } from '../../src/engine/types';
+import { deepAct, deepState, one, type DeepOptions, type DeepState } from './deep';
 import { ShardWriter } from './shard';
 
 /** A decision waiting for a network: what it sees and which network (its weights file). */
@@ -34,6 +35,8 @@ export interface Served {
   record: boolean;
   /** With temperature 0: a random option among those within this much of the best one's probability (netbot.ts). */
   ties?: number;
+  /** The look-ahead bot with its rollouts batched too (deep.ts), and the deck plan its attack planner uses. */
+  deep?: DeepOptions & { plan?: DeckPlan };
 }
 
 /**
@@ -85,6 +88,8 @@ interface Side {
   /** Own turns in a row that started with the value below the resign line, and the last turn counted. */
   low: number;
   lowTurn: number;
+  /** A batched look-ahead side's memory between moves. */
+  deep: DeepState | null;
 }
 
 function* choose(enc: Encoded, me: PlayerId, side: Side, rows: Decision[], first: boolean, s: GameState, resign: ResignSpec | undefined): Generator<Ask, number, Answer> {
@@ -146,7 +151,7 @@ export function* playGame<M extends BatchedMatch, S>(
   rows: Decision[],
   resign: ResignSpec | undefined,
   keepPlaying: boolean,
-): Generator<Ask, BatchedResult<M>, Answer> {
+): Generator<Ask | Ask[], BatchedResult<M>, Answer | Answer[]> {
   const sides: Side[] = [0, 1].map((i) => {
     const spec = deps.players[m.names[i]!]!;
     const slug = m.decks[i]!;
@@ -161,6 +166,7 @@ export function* playGame<M extends BatchedMatch, S>(
       count: turnCounter(),
       low: 0,
       lowTurn: -1,
+      deep: served?.deep ? deepState(seed) : null,
     };
   });
   let s = deps.newGame(m);
@@ -174,8 +180,12 @@ export function* playGame<M extends BatchedMatch, S>(
       const t0 = performance.now();
       a = side.bot.act(s);
       think[p] = Math.max(think[p], performance.now() - t0);
+    } else if (side.deep) {
+      const t0 = performance.now();
+      a = yield* deepAct(s, side.deep, side.decks, side.served!.model, side.served!.deep!.plan, side.served!.deep!);
+      think[p] = Math.max(think[p], performance.now() - t0);
     } else {
-      a = yield* netAct(s, p, side, rows, resign);
+      a = yield* one(netAct(s, p, side, rows, resign));
       if (resign && side.low >= resign.turns) {
         if (!keepPlaying) return { m, winner: opp(p), maxThinkMs: think, resigned: p, taken: taken(s) };
         wouldResign ??= p;
@@ -207,8 +217,9 @@ export async function playBatched<M extends BatchedMatch, S>(
   interface Live {
     m: M;
     rows: Decision[];
-    gen: Generator<Ask, BatchedResult<M>, Answer>;
-    ask: Ask | null;
+    gen: Generator<Ask | Ask[], BatchedResult<M>, Answer | Answer[]>;
+    /** One decision, or a batch of them (the look-ahead's rollouts, deep.ts). */
+    ask: Ask | Ask[] | null;
   }
   const finish = (g: Live, r: BatchedResult<M>) => {
     if (out) {
@@ -223,7 +234,7 @@ export async function playBatched<M extends BatchedMatch, S>(
     o.onError?.(g.m, e);
   };
   // Run a game until it asks or ends; false when it ended.
-  const step = (g: Live, answer: Answer | undefined): boolean => {
+  const step = (g: Live, answer: Answer | Answer[] | undefined): boolean => {
     try {
       const r = g.gen.next(answer as Answer);
       if (r.done) {
@@ -249,8 +260,16 @@ export async function playBatched<M extends BatchedMatch, S>(
     };
     fill();
     while (live.length) {
-      const answers = await infer(live.map((g) => g.ask!));
-      live = live.filter((g, i) => step(g, answers[i]));
+      // Every game's asks in one batch; a game that asked for several gets its answers back as an array.
+      const flat: Ask[] = [];
+      const at = live.map((g) => {
+        const from = flat.length;
+        if (Array.isArray(g.ask)) flat.push(...g.ask);
+        else flat.push(g.ask!);
+        return from;
+      });
+      const answers = await infer(flat);
+      live = live.filter((g, i) => step(g, Array.isArray(g.ask) ? answers.slice(at[i]!, at[i]! + g.ask.length) : answers[at[i]!]));
       fill();
     }
   };

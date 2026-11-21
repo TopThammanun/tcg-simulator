@@ -41,7 +41,12 @@ export type PlayerSpec =
   | { kind: 'net'; weights: string; temperature?: number; record?: boolean; ties?: number }
   /** The game's bot (src/bots/index.ts createBot: bundled network and the deck's expert); fast = without look-ahead. */
   | { kind: 'bot'; fast?: boolean; record?: boolean }
-  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>);
+  | ({ kind: 'search'; weights: string; record?: boolean; tactics?: boolean; guards?: boolean; rolloutWeights?: string } & Omit<NetSearchOptions, 'decks' | 'seed' | 'plan' | 'rollout'>)
+  /**
+   * The look-ahead bot with its rollouts batched on the GPU (deep.ts; needs `server`): no deadline, any number of
+   * deals (BOT-NEXT.md N5). switchZ > 0: leave the policy's choice only for a clearly better mean.
+   */
+  | { kind: 'deep'; weights: string; width?: number; samples?: number; confident?: number; minPrior?: number; guards?: boolean; switchZ?: number; tactics?: boolean; record?: boolean };
 
 export interface GenConfig {
   out: string;
@@ -224,6 +229,10 @@ function newGame(m: Match, games: SavedGame[]): GameState {
 function served(spec: PlayerSpec, slug: string): Served | null {
   if (spec.kind === 'net') return { model: expertWeights(spec.weights, slug), temperature: spec.temperature ?? 0, record: !!spec.record, ties: spec.ties };
   if (spec.kind === 'bot' && (spec.fast ?? true) && !spec.record && MODEL) return { model: expertWeights(BOT_EXPERTS, slug, BOT_WEIGHTS), temperature: 0, record: false };
+  if (spec.kind === 'deep') {
+    const deep = { width: spec.width ?? 4, samples: spec.samples ?? 6, confident: spec.confident ?? 0.9, minPrior: spec.minPrior ?? 0.03, guards: spec.guards ?? true, switchZ: spec.switchZ ?? 0 };
+    return { model: expertWeights(spec.weights, slug), temperature: 0, record: false, deep: { ...deep, plan: spec.tactics === false ? undefined : planFor(slug) } };
+  }
   return null;
 }
 
