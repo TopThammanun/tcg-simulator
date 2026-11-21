@@ -40,7 +40,7 @@
       <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? 'เลือกเด็คใหม่' : 'เกมใหม่'}</button>
       <button type="button" onclick={onclose}>ดูสนาม</button>
     </div>
-    {#if reviewHref}<a class="review" href={reviewHref}>วิจารณ์เกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}
+    {#if reviewHref}<a class="review" href={reviewHref}>ทบทวนเกมนี้: เทิร์นไหนพลาด, win% ทั้งเกม →</a>{/if}
     <a href={botHref}>ดู list ที่บอทใช้ ({botDeck}) →</a>
   </div>
 </div>

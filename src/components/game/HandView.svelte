@@ -1,6 +1,6 @@
 <script lang="ts">
   // Your hand, held like in the game: every card shows, overlapping in a slight fan when there are many
-  // (no scrolling). Cards that can't be played right now are dimmed (PLAN.md: ตาม legalActions).
+  // (no scrolling). On your turn, cards that can't be played right now are dimmed (PLAN.md: ตาม legalActions).
   // Tap a card to select it, or drag it onto the board.
   import { def } from '../../engine/db';
   import { keyOf } from '../../engine/state';
@@ -15,6 +15,7 @@
     marked = new Set(),
     lifted = null,
     sort = true,
+    dimUnplayable = true,
     onpick,
     onzoom,
     onpress,
@@ -28,6 +29,9 @@
     lifted?: CardId | null;
     /** Show the hand sorted by kind and name (ui/play.ts sortedHand) instead of in the order drawn. */
     sort?: boolean;
+    /** Dim the cards that can't be played now: only when you could play some (not on the bot's turn, when the hand
+        is there to be read and planned with). */
+    dimUnplayable?: boolean;
     onpick: (c: CardId) => void;
     onzoom: (key: string) => void;
     onpress?: (c: CardId, e: PointerEvent) => void;
@@ -64,7 +68,7 @@
         onzoom(k);
       }}
     >
-      <span class="cardbox"><CardFace cardKey={k} dim={!playable.has(c)} /></span>
+      <span class="cardbox"><CardFace cardKey={k} dim={dimUnplayable && !playable.has(c)} /></span>
     </button>
   {/each}
   {#if hand.length === 0}<span class="none">ไม่มีการ์ดในมือ</span>{/if}

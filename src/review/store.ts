@@ -73,15 +73,39 @@ export async function getGame(id: number): Promise<SavedGame | undefined> {
   return d ? run<SavedGame | undefined>(d, GAMES, 'readonly', (s) => s.get(id)) : memory.games.get(id);
 }
 
-export async function deleteGame(id: number): Promise<void> {
+/** A deleted game and its stored review, to put back (the review page's "เลิกทำ"). */
+export interface Deleted {
+  game: SavedGame;
+  review?: StoredReview;
+}
+
+/** Delete a game and its review; returns them, so the delete can be undone (restoreGame). */
+export async function deleteGame(id: number): Promise<Deleted | undefined> {
   const d = await db();
   if (!d) {
+    const game = memory.games.get(id);
+    const review = memory.reviews.get(id);
     memory.games.delete(id);
     memory.reviews.delete(id);
-    return;
+    return game && { game, review };
   }
+  const game = await run<SavedGame | undefined>(d, GAMES, 'readonly', (s) => s.get(id));
+  const review = await run<StoredReview | undefined>(d, REVIEWS, 'readonly', (s) => s.get(id));
   await run(d, GAMES, 'readwrite', (s) => s.delete(id));
   await run(d, REVIEWS, 'readwrite', (s) => s.delete(id));
+  return game && { game, review };
+}
+
+/** Put a deleted game back under its own id (links to it keep working), with its review. */
+export async function restoreGame(x: Deleted): Promise<void> {
+  const d = await db();
+  if (!d) {
+    memory.games.set(x.game.id!, x.game);
+    if (x.review) memory.reviews.set(x.review.id, x.review);
+    return;
+  }
+  await run(d, GAMES, 'readwrite', (s) => s.put(x.game));
+  if (x.review) await run(d, REVIEWS, 'readwrite', (s) => s.put(x.review!));
 }
 
 /** The stored review of a game, if it was made by this version of the analysis. */

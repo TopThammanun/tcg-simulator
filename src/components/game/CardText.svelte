@@ -13,9 +13,15 @@
 <div class="text" class:compact>
   <h3>{d.name}</h3>
   {#if d.category === 'pokemon'}
+    {#snippet battle()}
+      weak {#each d.weaknesses as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · resist
+      {#each d.resistances as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · retreat {d.retreat}
+    {/snippet}
     <p class="sub">
       {d.stage === 'Stage1' ? 'Stage 1' : d.stage === 'Stage2' ? 'Stage 2' : 'Basic'}{d.evolvesFrom ? ` · จาก ${d.evolvesFrom}` : ''}
       · {d.hp} HP · {d.types.join('/')}{d.tera ? ' · Tera' : ''}{d.prizes > 1 ? ` · ${d.prizes} prize` : ''}
+      <!-- Compact (the card picked up from the hand): weakness, resistance and retreat on the same line, to save one. -->
+      {#if compact}<span class="mono"> · {@render battle()}</span>{/if}
     </p>
     {#each d.abilities as a}
       <p><span class="tag">Ability</span> <strong>{a.name}</strong><br /><EffectText text={a.effect} /></p>
@@ -30,10 +36,7 @@
         {#if a.effect}<br /><EffectText text={a.effect} />{/if}
       </p>
     {/each}
-    <p class="sub mono">
-      weak {#each d.weaknesses as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · resist
-      {#each d.resistances as w}<Energy type={w.type} />{w.value}{' '}{:else}—{/each} · retreat {d.retreat}
-    </p>
+    {#if !compact}<p class="sub mono">{@render battle()}</p>{/if}
   {:else}
     <p class="sub">{d.category === 'trainer' ? d.trainerType : `${d.energyType} Energy`}{d.aceSpec ? ' · ACE SPEC' : ''}</p>
     {#if d.effect}<p class="effect"><EffectText text={d.effect} /></p>{/if}
@@ -46,13 +49,19 @@
     padding-right: 28px;
   }
   .compact h3 {
-    font-size: 1.05rem;
+    margin-bottom: 0;
+    font-size: 16px;
+    line-height: 24px;
     padding-right: 0;
   }
   .compact p {
-    margin: 0 0 6px;
-    font-size: 0.86rem;
-    line-height: 1.45;
+    margin: 0 0 2px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .compact p.sub {
+    font-size: 12px;
+    line-height: 18px;
   }
   .sub {
     color: var(--ink-soft);

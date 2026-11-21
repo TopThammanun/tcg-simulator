@@ -454,6 +454,27 @@
     opacity: 0.5;
     cursor: default;
   }
+  /* Touch screens: buttons a finger can hit (44px), the ones that act across the whole width. */
+  @media (pointer: coarse) {
+    .x {
+      min-width: 44px;
+      min-height: 44px;
+      margin: -6px -8px 0 0;
+    }
+    .use,
+    .attack .go {
+      min-height: 44px;
+    }
+    .attack .go,
+    .use.wide {
+      align-self: stretch;
+    }
+    .ability .row .use {
+      flex: 1 0 100%;
+      order: 3;
+      margin-left: 0;
+    }
+  }
   .mono {
     font-family: var(--font-mono);
   }

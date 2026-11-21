@@ -657,7 +657,7 @@
     line-height: 24px;
   }
   .caption .step {
-    color: var(--ink-faint);
+    color: var(--ink-soft);
     font-size: 12px;
   }
   .caption .what {
@@ -728,7 +728,7 @@
     border: 0;
     border-radius: var(--radius);
     background: none;
-    color: var(--ink-faint);
+    color: var(--ink-soft);
     text-align: left;
     transition:
       background-color 0.3s var(--ease),
@@ -738,7 +738,7 @@
     background: var(--raised);
   }
   .steps .done button {
-    color: var(--ink-soft);
+    color: var(--ink);
   }
   .steps .on button {
     background: var(--control);
@@ -748,7 +748,7 @@
   .no {
     flex: 0 0 auto;
     min-width: 16px;
-    color: var(--ink-faint);
+    color: var(--ink-soft);
     font-size: 12px;
   }
   /* Where your turn and the bot's part. */

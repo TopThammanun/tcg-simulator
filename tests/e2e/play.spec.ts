@@ -1,4 +1,5 @@
 // PLAN.md: play a seeded game to the end in a real browser and check the screen matches the engine state.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Snapshot {
@@ -348,16 +349,16 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect(zoomed.getByLabel('สถานะในสนาม')).toContainText('ของบอท · ตัวหลัก');
   await expect(zoomed.getByLabel('สถานะในสนาม')).toContainText('HP 30/30');
   await zoomed.getByRole('button', { name: 'ปิด' }).click();
-  // A card that can't be played says why.
+  // A card that can't be played says why, in the dock by your hand.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
-  await expect(page.locator('.detail-layer .why')).toContainText('ถูก KO');
+  await expect(page.locator('.dock .why')).toContainText('ถูก KO');
   await page.locator('.detail-layer').getByRole('button', { name: 'ปิด' }).click();
-  // A tap shows the card's text and a button; nothing is played yet.
+  // A tap shows the card's text, and the dock a button; nothing is played yet.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Energy Switch"]') }).click();
   const detail = page.locator('.detail-layer');
   await expect(detail).toContainText('Move a Basic Energy');
   expect((await state(page)).pending).toBeNull();
-  await detail.getByRole('button', { name: 'ใช้ Energy Switch' }).click();
+  await page.locator('.dock').getByRole('button', { name: 'ใช้ Energy Switch' }).click();
 
   // From which Pokémon: tapped on the table (no box over it); the others step back.
   await expect(page.locator('.choice-layer')).toHaveCount(0);
@@ -407,6 +408,85 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await expect(recap).toHaveCount(0);
 });
 
+/** The table's box on screen (it must not move or change size while a game is played). */
+const boardBox = (page: Page) => page.locator('.board').evaluate((e) => e.getBoundingClientRect().toJSON() as DOMRect);
+
+/** Your turn, the bot's, and the question before leaving: the table keeps its place and size through all three. */
+async function boardStaysPut(page: Page) {
+  await startGame(page, 101);
+  const mine = await boardBox(page);
+  await endTurn(page);
+  await expect.poll(async () => (await state(page)).current).toBe(1);
+  await expect(page.locator('.cmd')).toContainText('ตาบอท');
+  expect(await boardBox(page)).toEqual(mine);
+  await page.getByRole('button', { name: 'เกมใหม่' }).first().click();
+  await expect(page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' })).toBeVisible();
+  expect(await boardBox(page)).toEqual(mine);
+}
+
+/** The cards whose text (Abilities, attacks, Trainer effect) is longest, from the card manifest. */
+function longestCards(n: number): { key: string; name: string }[] {
+  const { cards } = JSON.parse(readFileSync('data/cards.manifest.json', 'utf8')) as {
+    cards: Record<string, { name: string; effect?: string; abilities?: { name: string; effect: string }[]; attacks?: { name: string; effect?: string }[] }>;
+  };
+  const size = (c: (typeof cards)[string]) =>
+    [...(c.abilities ?? []).map((a) => a.name + a.effect), ...(c.attacks ?? []).map((a) => a.name + (a.effect ?? '')), c.effect ?? ''].join(' ').length;
+  return Object.entries(cards)
+    .sort((a, b) => size(b[1]) - size(a[1]))
+    .slice(0, n)
+    .map(([key, c]) => ({ key, name: c.name }));
+}
+
+/** The longest card texts, picked up from the hand: read whole, without scrolling the box, inside the bot's half. */
+async function longTextsFit(page: Page) {
+  await startGame(page, 101);
+  const longest = longestCards(3);
+  await page.evaluate((keys) => {
+    const t = (window as unknown as { __tcg: { state: () => any; load: (s: unknown) => void } }).__tcg;
+    const s = structuredClone(t.state());
+    s.players[0].hand.slice(0, keys.length).forEach((c: number, i: number) => (s.cards[c].key = keys[i]));
+    t.load(s);
+  }, longest.map((c) => c.key));
+  for (const c of longest) {
+    await page.locator('.hcard').filter({ has: page.locator(`img[alt="${c.name}"]`) }).first().click();
+    const box = page.locator('.detail-layer .detail');
+    await expect(box).toContainText(c.name);
+    // Measured once it has flown in.
+    await box.evaluate((d) => Promise.all(d.getAnimations().map((a) => a.finished)));
+    const m = await box.evaluate((d) => {
+      const table = d.closest('.table')!.getBoundingClientRect();
+      return { scroll: d.scrollHeight - d.clientHeight, bottom: d.getBoundingClientRect().bottom - table.top, half: table.height / 2 };
+    });
+    expect(m.scroll, `${c.name}: the text box scrolls`).toBeLessThanOrEqual(0);
+    expect(m.bottom, `${c.name}: the text box reaches into your half`).toBeLessThanOrEqual(m.half);
+    await page.keyboard.press('Escape');
+    await expect(box).toHaveCount(0);
+  }
+}
+
+test('the table keeps its place and size from your turn to the bot\'s', async ({ page }) => {
+  await boardStaysPut(page);
+});
+
+test('"เกมใหม่" during a game asks first; the game goes on unless you say to leave it', async ({ page }) => {
+  await startGame(page, 101);
+  const turn = (await state(page)).turn;
+  const ask = page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' });
+  await page.locator('.tools').getByRole('button', { name: 'เกมใหม่' }).click();
+  await expect(ask).toBeVisible();
+  await ask.getByRole('button', { name: 'เล่นต่อ' }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(page.locator('.board')).toBeVisible();
+  expect((await state(page)).turn).toBe(turn);
+  await page.locator('.tools').getByRole('button', { name: 'เกมใหม่' }).click();
+  await ask.getByRole('button', { name: 'ทิ้งเกม' }).click();
+  await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
+});
+
+test('the longest card texts fit their box without scrolling', async ({ page }) => {
+  await longTextsFit(page);
+});
+
 test('at the end, "เล่นอีกครั้ง" plays the same two decks again', async ({ page }) => {
   await page.goto('/play/?watch=1&test=1&speed=0&seed=9&me=basic-box&opp=dragapult-ex');
   const over = page.getByRole('dialog', { name: 'จบเกม' });
@@ -422,7 +502,7 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await page.goto('/play/?watch=1&test=1&speed=0&seed=7&me=basic-box&opp=dragapult-ex&save=1');
   await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
   // The game-over dialog covers the table; its link opens the review.
-  const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /วิจารณ์เกมนี้/ });
+  const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /ทบทวนเกมนี้/ });
   await expect(link).toBeVisible();
   const started = Date.now();
   await link.click();
@@ -436,6 +516,11 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   expect(await turns.count()).toBeGreaterThan(2);
   await expect(page.locator('figure.chart svg path.line')).toBeVisible();
   await expect(turns.first().locator('.badge')).toBeVisible();
+  // A point on the chart picks its turn in the list.
+  const point = page.locator('figure.chart g.mark').nth(1);
+  const picked = Number((await point.getAttribute('aria-label'))!.match(/เทิร์น (\d+)/)![1]);
+  await point.click();
+  await expect(page.locator('.turns > li.sel')).toHaveAttribute('id', `turn-${picked}`);
 
   // A turn replayed on the table, full screen, with every hidden card shown; stepping on names each move.
   await turns.first().getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
@@ -478,6 +563,16 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await page.goto('/review/');
   await expect(page.locator('.games li').first()).toContainText('Basic Box vs Dragapult ex');
   await expect(page.locator('.record')).toContainText('1');
+
+  // Deleting it can be undone for a few seconds: it comes back under the same id, its review with it.
+  const games = page.locator('.games li');
+  const first = await games.first().getByRole('link', { name: 'ทบทวน' }).getAttribute('href');
+  await games.first().getByRole('button', { name: 'ลบ' }).click();
+  await expect(games).toHaveCount(0);
+  await page.getByRole('status').getByRole('button', { name: 'เลิกทำ' }).click();
+  await expect(games.first().getByRole('link', { name: 'ทบทวน' })).toHaveAttribute('href', first!);
+  await page.goto(first!);
+  await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 3_000 });
 });
 
 test.describe('on a phone', () => {
@@ -509,6 +604,40 @@ test.describe('on a phone', () => {
     for (let i = 1; i <= 12; i++) await touch('touchMove', sx + ((tx - sx) * i) / 12, sy + ((ty - sy) * i) / 12);
     await touch('touchEnd');
     await expect.poll(() => energyOnActive(page)).toBe(1);
+  });
+
+  test('the table keeps its place and size from your turn to the bot\'s', async ({ page }) => {
+    await boardStaysPut(page);
+  });
+
+  test('the longest card texts fit their box without scrolling', async ({ page }) => {
+    await longTextsFit(page);
+  });
+
+  test('everything pressed with a finger is at least 44px (cards and log lines aside)', async ({ page }) => {
+    await startGame(page, 101);
+    /** Buttons and fields on screen under `root` smaller than 44×44, cards left out. */
+    const small = (root: string) =>
+      page.locator(root).evaluate((el) => {
+        const CARDS = '.card, .hcard, .pile, .stadium, .ghost-card, .pick, .thumb, .src, .line, .pip';
+        return [...el.querySelectorAll<HTMLElement>('button, select, a, input, [role="button"]')]
+          .filter((b) => !b.matches(CARDS) && !b.closest('.hand, .board .slot'))
+          .map((b) => ({ what: (b.getAttribute('aria-label') || b.textContent || b.className).trim().slice(0, 30), r: b.getBoundingClientRect() }))
+          .filter(({ r }) => r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight)
+          .filter(({ r }) => Math.min(r.width, r.height) < 44 - 0.5)
+          .map(({ what, r }) => `${what} ${Math.round(r.width)}×${Math.round(r.height)}`);
+      });
+    expect(await small('.game')).toEqual([]);
+    // A hand card picked up: its box and the dock's buttons.
+    await page.locator('.hcard').first().click();
+    await expect(page.locator('.detail-layer')).toBeVisible();
+    await expect.poll(() => small('.game')).toEqual([]);
+    await page.keyboard.press('Escape');
+    // Your Active's pop-up (measured once it has grown in: it starts at 90% of its size).
+    await faceUp(page, '.side.mine .slot.active .card');
+    await page.locator('.side.mine .slot.active .card').click();
+    await expect(page.locator('.pmenu')).toBeVisible();
+    await expect.poll(() => small('.pmenu')).toEqual([]);
   });
 
   test('long press shows the card', async ({ page }) => {

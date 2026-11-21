@@ -1,8 +1,8 @@
 // Pure helpers for the play screen: what a click on a card or Pokémon can do, Thai labels.
-import { legalActions } from '../engine/actions';
+import { actor, legalActions } from '../engine/actions';
 import { def, isBasicEnergy } from '../engine/db';
 import { keyOf, topDef } from '../engine/state';
-import type { Action, CardId, GameState, SlotId } from '../engine/types';
+import type { Action, CardId, ChoiceRequest, GameState, SlotId } from '../engine/types';
 
 export type CardActions = { kind: 'now'; action: Action } | { kind: 'target'; actions: Action[] };
 
@@ -103,6 +103,32 @@ export function turnUses(s: GameState): TurnUse[] {
       ? { label: 'ถอย', state: 'used', title: 'ถอยไปแล้วเทิร์นนี้' }
       : { label: 'ถอย', state: 'free', title: 'ยังถอยได้ 1 ครั้ง' },
   ];
+}
+
+/**
+ * The command bar when there is nothing for you to press: whose move it is and the last thing that happened (the
+ * bot's turn), the question a box over the table asks, the result, or that an earlier position is shown.
+ */
+export function waitingText(s: GameState, o: { watch?: boolean; viewing?: boolean; prompt?: string }): string {
+  if (o.viewing) return 'กำลังดูสนามย้อนหลัง · กด "กลับไปเกมปัจจุบัน" ที่แถบบน';
+  if (s.winner !== null) return `${s.winner === 0 ? 'คุณชนะ' : s.winner === 1 ? 'บอทชนะ' : 'เสมอ'}${s.winReason ? ` · ${s.winReason}` : ''}`;
+  if (o.prompt) return o.prompt;
+  const last = s.log[s.log.length - 1]?.text;
+  const who = o.watch ? 'ดูบอทเล่น' : actor(s) === 1 ? 'ตาบอท' : '';
+  return [who, last].filter(Boolean).join(' · ');
+}
+
+/**
+ * Setup, the Bench step: how many more Basics can go down, or why none can (the Bench is full, or the hand has no
+ * Basic left). `room`: the Bench's free spots (the request's `max` is also cut to the Basics in hand).
+ */
+export function benchHint(req: ChoiceRequest, picked: number, room: number): string {
+  const more = Math.min(room, req.options.length) - picked;
+  const now =
+    picked >= room ? 'ลง Bench ครบแล้ว' : more <= 0 ? 'ไม่มี Basic ในมือแล้ว' : `ลาก Basic ลง Bench ได้อีก ${more} ตัว (หรือแตะการ์ด)`;
+  return [req.hint === 'mulligan' ? 'Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง' : '', now, picked ? 'แตะตัวบน Bench เพื่อเอาคืน' : '']
+    .filter(Boolean)
+    .join(' · ');
 }
 
 const TRAINER_RANK = { Supporter: 10, Item: 11, Tool: 12, Stadium: 13 } as const;

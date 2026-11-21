@@ -6,8 +6,8 @@
   // show it, the bot waits for them, and anything you do skips them.
   import { untrack } from 'svelte';
   import { fade, scale } from 'svelte/transition';
-  import { actor, apply, createGame, legalActions } from '../../engine/actions';
-  import { maxHp } from '../../engine/rules';
+  import { actor, apply, createGame, legalActions, whyNotPlayable } from '../../engine/actions';
+  import { benchLimit, maxHp } from '../../engine/rules';
   import { keyOf, slotsOf, topDef, topKey } from '../../engine/state';
   import type { Action, CardId, ChoiceRequest, GameState, PlayerId, SlotId } from '../../engine/types';
   import { redeal, viewFor } from '../../engine/view';
@@ -15,7 +15,18 @@
   import { remoteBot, type RemoteBot } from '../../bots/remote';
   import { DEFAULT_POLICY, planFor } from '../../bots/plans';
   import type { Bot } from '../../bots/types';
-  import { describeAction, handActions, keyCommand, sortedHand, targetOf, turnUses } from '../../ui/play';
+  import { def } from '../../engine/db';
+  import {
+    actionLabel,
+    benchHint,
+    describeAction,
+    handActions,
+    keyCommand,
+    sortedHand,
+    targetOf,
+    turnUses,
+    waitingText,
+  } from '../../ui/play';
   import { headline, nearestDeck, pickOpponent, type MetaDeck } from '../../ui/decks';
   import { loadMyDecks, myDeckCards } from '../../ui/my-decks';
   import { handDrops, pickDrop, setupDrops, slotDrops, zonesAt } from '../../ui/drag';
@@ -134,6 +145,8 @@
   let menuFor = $state<SlotId | null>(null);
   /** "จบเทิร์น" pressed while an attack can still be used: the dock asks first (an attack lost by a slip is a turn). */
   let confirmEnd = $state(false);
+  /** "เกมใหม่" pressed in a game that isn't over: the dock asks first (the game isn't saved until it ends). */
+  let confirmNew = $state(false);
   /** The turn whose recap of the bot's last turn was closed (✕ or your first move). */
   let recapClosed = $state(-1);
   let menuAnchor = $state<DOMRect | null>(null);
@@ -210,6 +223,10 @@
     return () => clearTimeout(t);
   });
   const attacksLeft = $derived([...new Set(legal.filter((a) => a.t === 'attack').map((a) => (a as { name: string }).name))]);
+  /** The card picked up from your hand (its text over the bot's side; what it does, in the dock). */
+  const held = $derived(selected !== null && cur && !req && cur.players[0].hand.includes(selected) ? selected : null);
+  const heldActions = $derived(held !== null ? hand.get(held) : undefined);
+  const heldWhy = $derived(held !== null && myTurn && !heldActions ? whyNotPlayable(cur!, held) : null);
   /**
    * Your answers so far to the card being played (Energy Switch: which Pokémon, which Energy, then where): shown with
    * the next question, and the Pokémon picked are marked on the table. Same `pending.base` = the same play.
@@ -402,6 +419,18 @@
     if (!watch && !testing && !seenHowTo()) howto = true;
   }
 
+  /** Back to the match sheet; a game still being played is only left once the dock's question is answered. */
+  function newGame(sure = false) {
+    sideOpen = false;
+    if (!sure && cur && cur.winner === null && !watch) {
+      confirmNew = true;
+      return;
+    }
+    confirmNew = false;
+    showOver = false;
+    states = [];
+  }
+
   /** Whether "วิธีเล่น" has been shown before (and from now on it has). */
   function seenHowTo(): boolean {
     try {
@@ -480,7 +509,8 @@
     fx?.finish();
     drag = null;
     confirmEnd = false;
-    if (cur && actor(cur) === 0) recapClosed = cur.turn;
+    // A move of yours answers "ทิ้งเกมนี้?" with no; the bot's moves leave the question up.
+    if (cur && actor(cur) === 0) (recapClosed = cur.turn), (confirmNew = false);
     // The action goes into the history (saved to IndexedDB) and the state (posted to the bot's worker), which take
     // plain data only; `picks` of the choice box and setup bar is a $state proxy, and so could any other action be.
     a = $state.snapshot(a);
@@ -739,6 +769,7 @@
       if (zoom) (zoom = null), (zoomSlot = null);
       else if (discardOf !== null) discardOf = null;
       else if (menuFor !== null) menuFor = null;
+      else if (confirmNew) confirmNew = false;
       else if (confirmEnd) confirmEnd = false;
       else if (selected !== null) selected = null;
       else if (recap.length) recapClosed = cur.turn;
@@ -890,11 +921,16 @@
     />
   {/snippet}
   <div class="game" class:dragging>
+    <div class="rotate" role="status">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="6" width="20" height="36" rx="3" /><path d="M40 20a14 14 0 0 1-6 14M38 34h-4v-4" /></svg>
+      <strong>หมุนจอเป็นแนวตั้งเพื่อเล่น</strong>
+      <span>จอนี้เตี้ยเกินกว่าจะวางสนามได้ครบ (ถ้าเป็นคอมพิวเตอร์ ขยายหน้าต่างให้สูงขึ้น)</span>
+    </div>
     <div class="main">
       <div class="status">
         {#if cur.winner !== null}
           <strong class="result">{cur.winner === 0 ? 'คุณชนะ' : cur.winner === 1 ? 'บอทชนะ' : 'เสมอ'} · {cur.winReason}</strong>
-          {#if savedId !== null}<a href={`/review/?id=${savedId}`}>วิจารณ์เกมนี้ →</a>{/if}
+          {#if savedId !== null}<a href={`/review/?id=${savedId}`}>ทบทวนเกมนี้ →</a>{/if}
           <a href={`/decks/${botSlug}/`}>ดู list ที่บอทใช้ ({botDeck?.name}) →</a>
         {:else if viewing !== null}
           <strong>กำลังดูสนามย้อนหลัง</strong>
@@ -909,7 +945,7 @@
         <span class="top-tools">
           {#if narrow}
             <button type="button" class="small" aria-expanded={sideOpen} onclick={() => (sideOpen = !sideOpen)}>ข้อมูล · log</button>
-            <button type="button" class="small" onclick={() => (states = [])}>เกมใหม่</button>
+            <button type="button" class="small" onclick={() => newGame()}>เกมใหม่</button>
           {/if}
         </span>
       </div>
@@ -944,17 +980,9 @@
            table itself (the dock says what is asked). The card picked up from your hand shows its text. -->
       {#if req && !setupReq && !onTable && !prizeReq}
         <div class="choice-layer">{@render choice()}</div>
-      {:else if selected !== null && !req && cur.players[0].hand.includes(selected)}
+      {:else if held !== null}
         <div class="detail-layer">
-          <HandDetail
-            s={cur}
-            card={selected}
-            actions={hand.get(selected)}
-            {myTurn}
-            onplay={(a) => step(a)}
-            onclose={() => (selected = null)}
-            onzoom={(k) => zoomTo(k)}
-          />
+          <HandDetail s={cur} card={held} onclose={() => (selected = null)} onzoom={(k) => zoomTo(k)} />
         </div>
       {/if}
       <!-- What the bot did on its turn, when yours starts: gone with your first move. -->
@@ -977,66 +1005,104 @@
       </div>
 
       <div class="dock">
-        {#if req && !setupReq && onTable}
-          <ChoiceBar
-            {req}
-            {picks}
-            earlier={earlierWords}
-            onsubmit={() => step({ t: 'choose', picks })}
-            onclear={() => (picks = [])}
-            onzoom={(k) => zoomTo(k)}
-          />
-        {:else if myTurn && !req}
-          {#if confirmEnd}
-            <div class="bar end-warn" role="alertdialog" aria-label="ยังโจมตีได้">
-              <span class="warn-text"><strong>ยังโจมตีได้อยู่</strong> ({attacksLeft.join(', ')}) จะจบเทิร์นโดยไม่โจมตีไหม?</span>
-              <button
-                type="button"
-                class="primary"
-                onclick={() => {
-                  confirmEnd = false;
-                  menuFor = cur.players[0].active?.uid ?? null;
-                }}>กลับไปโจมตี</button
-              >
-              <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์นเลย</button>
+        <!-- The command bar: always there and always the same height (the table above never moves), what is going on
+             at the left, the buttons for it at the right. -->
+        <div class="cmd">
+          {#if confirmNew}
+            <div class="bar warn" role="alertdialog" aria-label="ทิ้งเกมนี้">
+              <span class="say"><strong>ทิ้งเกมนี้?</strong> เกมที่ยังไม่จบจะไม่ถูกบันทึก</span>
+              <span class="acts">
+                <button type="button" onclick={() => (confirmNew = false)}>เล่นต่อ</button>
+                <button type="button" class="danger" onclick={() => newGame(true)}>ทิ้งเกม</button>
+              </span>
+            </div>
+          {:else if req && !setupReq && onTable}
+            <ChoiceBar
+              {req}
+              {picks}
+              earlier={earlierWords}
+              onsubmit={() => step({ t: 'choose', picks })}
+              onclear={() => (picks = [])}
+              onzoom={(k) => zoomTo(k)}
+            />
+          {:else if myTurn && !req && confirmEnd}
+            <div class="bar warn" role="alertdialog" aria-label="ยังโจมตีได้">
+              <span class="say"><strong>ยังโจมตีได้</strong> ({attacksLeft.join(', ')}) · จบเทิร์นโดยไม่โจมตี?</span>
+              <span class="acts">
+                <button
+                  type="button"
+                  class="primary"
+                  onclick={() => {
+                    confirmEnd = false;
+                    menuFor = cur.players[0].active?.uid ?? null;
+                  }}>กลับไปโจมตี</button
+                >
+                <button type="button" class="end" onclick={() => step({ t: 'end' })}>จบเทิร์นเลย</button>
+              </span>
+            </div>
+          {:else if myTurn && !req && held !== null}
+            <!-- A card picked up from your hand: its text is over the bot's side, what it does is here. -->
+            <div class="bar">
+              <span class="say">
+                <strong>{def(keyOf(cur, held)).name}</strong>
+                {#if heldActions?.kind === 'now'}
+                  <span class="sub">แตะการ์ดอีกครั้ง หรือกดปุ่มเพื่อใช้ · ลากลงสนามก็ได้</span>
+                {:else if heldActions?.kind === 'target'}
+                  <span class="sub">แตะ Pokémon ที่สว่าง หรือลากการ์ดไปวาง</span>
+                {:else}
+                  <span class="sub why" role="note">ใช้ตอนนี้ไม่ได้{heldWhy ? `: ${heldWhy}` : ''}</span>
+                {/if}
+              </span>
+              <span class="acts">
+                <button type="button" onclick={() => (selected = null)}>ยกเลิก</button>
+                {#if heldActions?.kind === 'now'}
+                  <button type="button" class="primary" onclick={() => step(heldActions.action)}>{actionLabel(cur, heldActions.action)}</button>
+                {/if}
+              </span>
+            </div>
+          {:else if myTurn && !req}
+            <div class="bar">
+              <span class="say">
+                <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
+                  {#each turnUses(cur) as u (u.label)}
+                    <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
+                  {/each}
+                </span>
+                <span class="sub hint">แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability</span>
+              </span>
+              <span class="acts">
+                <button
+                  type="button"
+                  class="end"
+                  aria-keyshortcuts="E"
+                  title="จบเทิร์น (E)"
+                  onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}>จบเทิร์น</button
+                >
+              </span>
+            </div>
+          {:else if setupReq}
+            <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
+              {#if setupReq.purpose === 'setup-active'}
+                <span class="say"><strong>เลือกตัวหลัก</strong><span class="sub">ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด</span></span>
+              {:else}
+                <span class="say">
+                  <strong>ลง Bench</strong>
+                  <span class="sub">{benchHint(setupReq, picks.length, benchLimit(cur, 0) - cur.players[0].bench.length)}</span>
+                </span>
+                <span class="acts">
+                  {#if picks.length}<button type="button" onclick={() => (picks = [])}>ล้าง</button>{/if}
+                  <button type="button" class="primary" onclick={() => step({ t: 'choose', picks })}>
+                    ยืนยัน{picks.length ? ` (ลง Bench ${picks.length} ตัว)` : ' (ไม่ลง Bench)'}
+                  </button>
+                </span>
+              {/if}
             </div>
           {:else}
-            <div class="bar">
-              <button
-                type="button"
-                class="end"
-                aria-keyshortcuts="E"
-                title="จบเทิร์น (E)"
-                onclick={() => (attacksLeft.length ? (confirmEnd = true) : step({ t: 'end' }))}>จบเทิร์น</button
-              >
-              <span class="uses" aria-label="ใช้ไปแล้วเทิร์นนี้">
-                {#each turnUses(cur) as u (u.label)}
-                  <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
-                {/each}
-              </span>
-              <span class="hint">
-                {selected !== null
-                  ? 'แตะการ์ดอีกครั้งเพื่อใช้ · แตะ Pokémon ที่สว่าง · หรือลากการ์ดลงสนาม'
-                  : 'แตะการ์ดในมือเพื่ออ่านและใช้ · แตะ Pokémon ของคุณเพื่อโจมตี ถอย หรือใช้ Ability'}
-              </span>
+            <div class="bar idle" aria-live="polite">
+              <span class="say">{waitingText(cur, { watch, viewing: viewing !== null, prompt: req?.prompt })}</span>
             </div>
           {/if}
-        {:else if setupReq}
-          <div class="bar setup-bar" data-step={setupReq.purpose === 'setup-active' ? 'active' : 'bench'}>
-            {#if setupReq.purpose === 'setup-active'}
-              <span class="hint">ลาก Basic จากมือไปวางที่ช่องตัวหลัก หรือแตะการ์ด</span>
-            {:else}
-              <button type="button" class="primary" onclick={() => step({ t: 'choose', picks })}>
-                ยืนยัน{picks.length ? ` (ลง Bench ${picks.length} ตัว)` : ' (ไม่ลง Bench)'}
-              </button>
-              {#if picks.length}<button type="button" class="ghost" onclick={() => (picks = [])}>ล้าง</button>{/if}
-              <span class="hint">
-                {setupReq.hint === 'mulligan' ? 'Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง · ' : ''}{picks.length < setupReq.max ? `ลาก Basic ลง Bench ได้อีก ${setupReq.max - picks.length} ตัว` : 'ลง Bench ครบแล้ว'} · แตะตัวบน
-                Bench เพื่อเอาคืน
-              </span>
-            {/if}
-          </div>
-        {/if}
+        </div>
 
         <HandView
           s={shown}
@@ -1045,6 +1111,7 @@
           {marked}
           lifted={drag?.card ?? null}
           sort={sortHand}
+          dimUnplayable={myTurn || !!setupReq}
           onpick={onHand}
           onpress={onHandPress}
           onzoom={(k) => zoomTo(k)}
@@ -1065,7 +1132,7 @@
       </section>
       <LogPanel log={cur.log} {viewing} onview={(st) => (viewing = st)} />
       <div class="tools">
-        <button type="button" onclick={() => (states = [])}>เกมใหม่</button>
+        <button type="button" onclick={() => newGame()}>เกมใหม่</button>
         <label class="anim-pick">
           Animation
           <select bind:value={animLevel} onchange={saveSettings}>
@@ -1112,7 +1179,7 @@
     botHref={`/decks/${botSlug}/`}
     reviewHref={savedId !== null ? `/review/?id=${savedId}` : null}
     onagain={resumedFrom === null ? () => start(true) : undefined}
-    onnew={() => ((states = []), (showOver = false))}
+    onnew={() => newGame(true)}
     onclose={() => (showOver = false)}
   />
 {/if}
@@ -1185,7 +1252,8 @@
     border: 1px solid var(--rule);
     background: var(--card-bg);
     border-radius: var(--radius-xl);
-    overflow: hidden;
+    /* clip, not hidden: hidden would make the sheet a scroll box, and the start row couldn't stick to the screen. */
+    overflow: clip;
   }
   .sheet-head {
     display: flex;
@@ -1203,6 +1271,10 @@
   }
   .sheet-head .eyebrow {
     margin: 0 0 4px;
+  }
+  .sheet-head .link {
+    flex: none;
+    white-space: nowrap;
   }
   .match {
     display: grid;
@@ -1363,8 +1435,20 @@
       padding-left: 16px;
       padding-right: 16px;
     }
+    /* The settings and "เริ่มเกม" stay at the bottom of the screen while the sheet scrolls. */
+    .prefs {
+      position: sticky;
+      bottom: 0;
+      /* Over the decks' card fans (their cards are stacked up to z-index 3). */
+      z-index: 5;
+      flex-wrap: nowrap;
+      gap: 8px;
+      padding-top: 12px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
     .start {
-      width: 100%;
+      flex: 1 1 auto;
+      min-height: 44px;
     }
   }
   label {
@@ -1585,8 +1669,8 @@
       transform: translateY(-6px);
     }
   }
-  /* The card picked up from the hand: its text over the opponent's side (top right), so your Pokémon, where it is
-     played, stay free to tap. */
+  /* The card picked up from the hand: its text over the opponent's side (top right), no taller than that half, so
+     your Pokémon, where it is played, stay free to tap. Wide enough that the longest card text fits. */
   .detail-layer {
     position: absolute;
     right: 10px;
@@ -1594,11 +1678,13 @@
     z-index: 5;
     display: flex;
     justify-content: flex-end;
-    width: min(440px, calc(100% - 20px));
-    max-height: calc(100% - 20px);
+    align-items: flex-start;
+    width: min(720px, calc(100% - 20px));
     pointer-events: none;
   }
+  /* From 10px under the top of the table down to its middle line at most. */
   .detail-layer > :global(*) {
+    max-height: calc(50cqh - 10px);
     pointer-events: auto;
   }
   .result {
@@ -1621,20 +1707,88 @@
     background: none;
     color: var(--ink-strong);
   }
+  /* The command bar: one height whatever it says, so the table above keeps its size from turn to turn. What is
+     going on at the left (two lines at most), the buttons at the right. */
+  .cmd {
+    --cmd-h: 56px;
+    flex: 0 0 var(--cmd-h);
+    height: var(--cmd-h);
+    min-width: 0;
+  }
+  .cmd > :global(*) {
+    height: 100%;
+  }
   .bar {
     display: flex;
-    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+    padding: 0 4px 0 12px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+  }
+  .say {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-height: 100%;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .say strong {
+    overflow: hidden;
+    color: var(--ink-strong);
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .sub {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 16px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .sub.why {
+    color: var(--stamp);
+    font-weight: 500;
+  }
+  .idle .say {
+    display: -webkit-box;
+    color: var(--ink-soft);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .acts {
+    display: flex;
+    flex: 0 0 auto;
     gap: 8px;
     align-items: center;
   }
-  /* The once-a-turn plays: free ones outlined, used ones ticked and faded, a barred one struck through. */
+  .acts button {
+    padding: 8px 16px;
+    white-space: nowrap;
+  }
+  .acts .primary {
+    padding: 8px 20px;
+  }
+  /* The once-a-turn plays: free ones outlined, used ones ticked and filled, a barred one struck through. */
   .uses {
-    display: inline-flex;
+    display: flex;
     flex-wrap: wrap;
     gap: 4px;
   }
   .use {
-    padding: 2px 8px;
+    padding: 1px 8px;
     border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--ink-strong);
@@ -1645,29 +1799,34 @@
   }
   .use.used {
     border-color: var(--rule);
-    background: var(--raised);
-    color: var(--ink-faint);
+    background: var(--control);
+    color: var(--ink-soft);
   }
   .use.barred {
     border-color: var(--line);
     color: var(--ink-soft);
     text-decoration: line-through;
   }
-  /* Ending the turn while an attack is still there: asked in the dock, the attack first. */
-  .end-warn {
-    padding: 8px 12px;
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    border-radius: var(--radius-lg);
+  /* A question before something that can't be taken back (ending the turn with an attack left, leaving the game). */
+  .bar.warn {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
     background: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
   }
-  .warn-text {
-    flex: 1 1 260px;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .warn-text strong {
+  .bar.warn .say strong {
     color: var(--accent);
+  }
+  .bar.warn .say {
+    display: block;
+  }
+  .danger {
+    border-color: var(--stamp);
+    background: var(--stamp);
+    color: #fff;
     font-weight: 600;
+  }
+  .danger:hover:not(:disabled) {
+    border-color: #c93c41;
+    background: #c93c41;
   }
   /* Ending the turn: the one big button, as on a game screen. */
   .bar .end {
@@ -1683,11 +1842,30 @@
     border-color: #c93c41;
     background: #c93c41;
   }
-  .hint {
-    margin: 0;
-    color: var(--ink-soft);
-    font-size: 14px;
-    line-height: 20px;
+  /* Phones: the bar keeps to what is going on now; how to play is in "วิธีเล่น". */
+  @media (max-width: 700px) {
+    .sub.hint {
+      display: none;
+    }
+    /* Three lines of a question fit the bar. */
+    .bar.warn .say {
+      font-size: 12px;
+      line-height: 16px;
+    }
+    .bar {
+      gap: 8px;
+      padding-left: 10px;
+    }
+    .acts {
+      gap: 4px;
+    }
+    .acts button,
+    .acts .primary,
+    .bar .end {
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 20px;
+    }
   }
   /* The hand and buttons stay on screen while the board scrolls, so a drag can always reach a target. */
   .dock {
@@ -1895,12 +2073,74 @@
     .opp {
       display: none;
     }
-    .bar {
-      gap: 4px;
+    .detail-layer {
+      left: 6px;
+      right: 6px;
+      top: 6px;
+      width: auto;
     }
-    .bar button {
-      padding: 4px 9px;
-      font-size: 0.82rem;
+    .detail-layer > :global(*) {
+      max-height: calc(50cqh - 6px);
+    }
+  }
+  /* Touch screens: everything pressed with a finger is at least 44px (cards and log lines aside). */
+  @media (pointer: coarse) {
+    button,
+    select {
+      min-height: 44px;
+    }
+    .acts button {
+      min-width: 44px;
+    }
+    .recap-layer header button {
+      min-width: 44px;
+      margin: -12px -12px -12px 0;
+    }
+    .recap-pill {
+      min-height: 44px;
+    }
+    .anim-pick {
+      min-height: 44px;
+    }
+    .anim-pick input {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  /* A phone on its side (or a very short window): the table can't fit, so ask for the other way round. */
+  .rotate {
+    display: none;
+  }
+  @media (orientation: landscape) and (max-height: 479px) {
+    .rotate {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-content: center;
+      gap: 8px;
+      padding: 24px;
+      background: var(--paper);
+      color: var(--ink-soft);
+      text-align: center;
+      font-size: 14px;
+      line-height: 20px;
+    }
+    .rotate strong {
+      color: var(--ink-strong);
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+    .rotate svg {
+      justify-self: center;
+      width: 48px;
+      height: 48px;
+      fill: none;
+      stroke: var(--ink-strong);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
   }
 </style>

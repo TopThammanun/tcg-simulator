@@ -127,9 +127,14 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   opponent — then the game, played as at a real table; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
   Twin Shotels ruling; `HowTo.svelte` before the first game), `/review/` (ประวัติเกม: your record, saved games, one
-  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo; a tap picks a hand card up
-  and shows its text (`HandDetail.svelte`, over the opponent's side; a second tap or its button plays it, a drag plays
-  it at once). A choice of Pokémon or of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
+  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo. Under the table, the dock's
+  command bar (`.cmd` in Game.svelte) is always there at one height, so the table never moves: what is going on at
+  the left, its buttons at the right (the turn's chips and "จบเทิร์น"; the card picked up: "ใช้ …" or why it can't
+  be played; the questions before ending a turn with an attack left and before leaving a game that isn't over; on
+  the bot's turn its last log line: `waitingText()` in `ui/play.ts`). A tap picks a hand card up and shows its text
+  (`HandDetail.svelte`: over the opponent's side, no taller than that half, the whole text without a scroll box; a
+  second tap or the dock's button plays it, a drag plays it at once). Touch screens (`pointer: coarse`) get 44px
+  buttons; a screen shorter than 480px in landscape is asked to turn. A choice of Pokémon or of an Energy/Tool attached to one (Energy Switch: tapped on the Pokémon, the pips
   grow) is made on the table: the dock shows `ChoiceBar.svelte` (what is asked, this card's earlier answers) and the
   Pokémon that aren't options dim. Prize cards: `rules.pickPrizes` (the play screen only) asks player 0 which
   face-down Prize to take, by position; bots and look-ahead take them in order (`determinize()` turns it off); the

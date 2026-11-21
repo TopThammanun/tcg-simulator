@@ -1,10 +1,14 @@
 <script lang="ts">
   // Win% after each of your turns: one line, a marker per turn (a cross for a clear mistake, a triangle
-  // for "probably better", a dot otherwise), 50% as the reference. Hover for a turn's readout; the turn list
-  // below the chart is its table view (and where a turn is picked).
+  // for "probably better", a dot otherwise), 50% as the reference. Hover for a turn's readout; click or tap a point
+  // (or Enter on it) to pick that turn in the list below, the chart's table view.
   import type { TurnReview } from '../../analysis/review';
 
-  let { turns, selected = null }: { turns: TurnReview[]; selected?: number | null } = $props();
+  let {
+    turns,
+    selected = null,
+    onpick,
+  }: { turns: TurnReview[]; selected?: number | null; onpick?: (turn: number) => void } = $props();
 
   // Drawn at the box's real width (text stays 11px), a fixed height.
   let W = $state(640);
@@ -42,8 +46,8 @@
       width={W}
       height={H}
       viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label="กราฟ win% หลังจบเทิร์นของคุณแต่ละเทิร์น"
+      role="group"
+      aria-label="กราฟ win% หลังจบเทิร์นของคุณแต่ละเทิร์น (แต่ละจุดกดเพื่อไปที่เทิร์นนั้น)"
       onpointermove={move}
       onpointerleave={() => (hover = null)}
     >
@@ -59,7 +63,16 @@
       {#each pts as t, i (t.turn)}
         {@const cx = x(i)}
         {@const cy = y(t.win.p)}
-        <g class={`mark ${t.verdict}`} class:sel={selected === t.turn}>
+        <g
+          class={`mark ${t.verdict}`}
+          class:sel={selected === t.turn}
+          role="button"
+          tabindex="0"
+          aria-label={`เทิร์น ${t.turn}: ${VERDICT[t.verdict]}, win% ${Math.round(t.win.p * 100)}%`}
+          onclick={() => onpick?.(t.turn)}
+          onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onpick?.(t.turn))}
+        >
+          <circle class="hit" {cx} {cy} r="16" />
           {#if t.verdict === 'missed-win' || t.verdict === 'missed-ko'}
             <path class="ring" d={`M${cx - 6},${cy - 6}L${cx + 6},${cy + 6}M${cx + 6},${cy - 6}L${cx - 6},${cy + 6}`} />
             <path class="x" d={`M${cx - 5},${cy - 5}L${cx + 5},${cy + 5}M${cx + 5},${cy - 5}L${cx - 5},${cy + 5}`} />
@@ -82,6 +95,7 @@
     <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="x" d="M2,2L10,10M10,2L2,10" /></svg>พลาดชัด</span>
     <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><path class="tri" d="M6,1L11,10H1Z" /></svg>น่าจะมีทางที่ดีกว่า</span>
     <span class="k"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="dot" cx="6" cy="6" r="4" /></svg>ไม่พบจุดพลาด</span>
+    {#if onpick}<span class="k how">แตะจุดเพื่อดูเทิร์นนั้น</span>{/if}
   </p>
 </figure>
 
@@ -153,6 +167,21 @@
     stroke: var(--card-bg);
     stroke-width: 2;
     stroke-linejoin: round;
+  }
+  /* A point is a button: a bigger invisible circle to hit, a ring when focused from the keyboard. */
+  .mark {
+    cursor: pointer;
+    outline: none;
+  }
+  .hit {
+    fill: transparent;
+  }
+  .mark:focus-visible .hit {
+    stroke: var(--ink-strong);
+    stroke-width: 2;
+  }
+  .how {
+    margin-left: auto;
   }
   .mark.sel .dot,
   .mark.sel .tri {

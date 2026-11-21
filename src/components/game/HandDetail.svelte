@@ -1,11 +1,9 @@
 <script lang="ts">
-  // The card picked up from your hand, as at a real table: its text to read, and what you can do with it (play it, or
-  // tap the Pokémon it goes on). Cards you can't play now can be read too, with the reason (engine whyNotPlayable).
+  // The card picked up from your hand, as at a real table: its text to read, whole (no scrolling box inside). What
+  // you can do with it (play it, tap a Pokémon, or why it can't be played now) is said in the dock, by your hand.
   import { fly } from 'svelte/transition';
-  import { whyNotPlayable } from '../../engine/actions';
   import { keyOf } from '../../engine/state';
-  import type { Action, CardId, GameState } from '../../engine/types';
-  import { actionLabel, type CardActions } from '../../ui/play';
+  import type { CardId, GameState } from '../../engine/types';
   import { motion } from '../../ui/anim/motion';
   import CardFace from './CardFace.svelte';
   import CardText from './CardText.svelte';
@@ -13,50 +11,35 @@
   let {
     s,
     card,
-    actions,
-    myTurn,
-    onplay,
     onclose,
     onzoom,
   }: {
     s: GameState;
     card: CardId;
-    actions: CardActions | undefined;
-    myTurn: boolean;
-    onplay: (a: Action) => void;
     onclose: () => void;
     onzoom: (key: string) => void;
   } = $props();
   const k = $derived(keyOf(s, card));
-  const why = $derived(myTurn && !actions ? whyNotPlayable(s, card) : null);
 </script>
 
 <aside class="detail" aria-label="การ์ดที่หยิบจากมือ" in:fly={{ y: 18, duration: motion(200) }}>
   <button type="button" class="img" onclick={() => onzoom(k)} title="ดูใบใหญ่"><CardFace cardKey={k} /></button>
-  <div class="body">
-    <div class="scroll"><CardText cardKey={k} compact /></div>
-    <div class="acts">
-      {#if actions?.kind === 'now'}
-        <button type="button" class="play" onclick={() => onplay(actions.action)}>{actionLabel(s, actions.action)}</button>
-      {:else if actions?.kind === 'target'}
-        <span class="hint">แตะ Pokémon ที่ไฮไลต์ หรือลากการ์ดไปวาง</span>
-      {:else}
-        <span class="hint why" role="note">
-          {#if myTurn}<strong>ใช้ตอนนี้ไม่ได้</strong>{#if why}<span>{why}</span>{/if}{:else}ยังไม่ใช่ตาคุณ{/if}
-        </span>
-      {/if}
-      <button type="button" class="close" onclick={onclose}>ปิด</button>
-    </div>
-  </div>
+  <div class="body"><CardText cardKey={k} compact /></div>
+  <button type="button" class="close" onclick={onclose} aria-label="ปิด" title="ปิด (Esc)">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+  </button>
 </aside>
 
 <style>
+  /* The picture at the top left with the text flowing round it and then under it at full width: the longest card
+     text fits in half the table without a scroll box. */
   .detail {
-    display: grid;
-    grid-template-columns: 116px 1fr;
-    gap: 12px;
-    width: min(420px, 100%);
+    position: relative;
+    display: flow-root;
+    width: 100%;
     max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 12px;
     border-radius: var(--radius-lg);
     background: var(--card-bg);
@@ -65,81 +48,69 @@
     border: 1px solid var(--line);
   }
   .img {
-    align-self: start;
+    float: left;
+    width: 96px;
+    margin: 0 12px 4px 0;
     padding: 0;
     border: 0;
     background: none;
     cursor: zoom-in;
   }
-  .body {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    gap: 8px;
+  /* Room for the close button beside the name. */
+  .body :global(h3) {
+    padding-right: 36px;
   }
-  .scroll {
-    overflow-y: auto;
-    max-height: 210px;
+  .body :global(p:last-child) {
+    margin-bottom: 0;
   }
-  .acts {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-top: auto;
-  }
-  .hint {
-    flex: 1;
-    font-size: 0.82rem;
+  .close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
     color: var(--ink-soft);
-  }
-  /* Can't be played now: what stops it, on a soft red. */
-  .hint.why {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 12px;
-    border: 1px solid color-mix(in srgb, var(--stamp) 40%, transparent);
-    border-radius: var(--radius);
-    background: color-mix(in srgb, var(--stamp) 10%, transparent);
-    color: var(--ink);
-    line-height: 20px;
-  }
-  .hint.why strong {
-    color: var(--stamp);
-    font-size: 12px;
-    line-height: 16px;
-  }
-  .play,
-  .close {
-    padding: 7px 14px;
-    border-radius: var(--radius);
-    font: inherit;
-    font-weight: 600;
     cursor: pointer;
+    transition:
+      color 0.3s var(--ease),
+      background-color 0.3s var(--ease);
   }
-  .play {
-    flex: 1;
-    border: 1px solid var(--primary);
-    background: var(--primary);
-    color: var(--primary-ink);
+  .close:hover {
+    background: var(--control);
+    color: var(--ink-strong);
   }
-  .play:hover {
-    border-color: var(--press);
-    background: var(--press);
+  .close svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
   }
-  .close {
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--ink);
+  @media (pointer: coarse) {
+    .body :global(h3) {
+      padding-right: 44px;
+    }
+    .close {
+      top: 2px;
+      right: 2px;
+      width: 44px;
+      height: 44px;
+    }
   }
   @media (max-width: 600px) {
     .detail {
-      grid-template-columns: 84px 1fr;
-      width: 100%;
+      padding: 10px;
     }
-    .scroll {
-      max-height: 150px;
+    .img {
+      width: 56px;
+      margin-right: 10px;
     }
   }
 </style>

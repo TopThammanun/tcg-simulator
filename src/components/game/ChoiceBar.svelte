@@ -60,7 +60,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 8px 12px;
+    padding: 0 4px 0 12px;
     border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--accent) 8%, var(--card-bg));
     color: var(--ink);
@@ -68,19 +68,25 @@
   }
   .src {
     flex: none;
-    width: 40px;
+    width: 32px;
     padding: 0;
     border: 0;
     background: none;
     cursor: zoom-in;
   }
+  /* Two lines at most: the command bar keeps one height (Game.svelte .cmd). */
   .what {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 2px 10px;
+    align-content: center;
+    gap: 0 10px;
     min-width: 0;
+    max-height: 100%;
+    overflow: hidden;
     flex: 1;
+    font-size: 14px;
+    line-height: 20px;
   }
   .earlier {
     display: inline-flex;
@@ -89,17 +95,19 @@
     gap: 4px;
   }
   .chip {
-    padding: 1px 8px;
+    padding: 0 8px;
     border-radius: 2px;
     background: color-mix(in srgb, var(--accent) 22%, transparent);
-    font-size: 0.8rem;
+    font-size: 12px;
+    line-height: 18px;
     font-weight: 600;
   }
   .arrow {
     color: var(--ink-soft);
   }
   .how {
-    font-size: 0.82rem;
+    font-size: 12px;
+    line-height: 20px;
     color: var(--ink-soft);
   }
   .acts {
@@ -127,5 +135,11 @@
   button:disabled {
     opacity: 0.4;
     cursor: default;
+  }
+  @media (pointer: coarse) {
+    .go,
+    .ghost {
+      min-height: 44px;
+    }
   }
 </style>

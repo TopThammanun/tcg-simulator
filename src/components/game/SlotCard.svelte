@@ -160,6 +160,12 @@
   .hp .mono::after {
     content: counter(left) '/' counter(max);
   }
+  /* A card too narrow for "210/210" (the bot's Bench of 8 on a phone): the HP left only. */
+  @container (max-width: 47px) {
+    .hp .mono::after {
+      content: counter(left);
+    }
+  }
   .dmg::after {
     content: counter(dmg);
   }
@@ -172,6 +178,7 @@
     background: none;
     cursor: pointer;
     border-radius: 7px;
+    container-type: inline-size;
     transition: transform 0.12s ease;
     -webkit-touch-callout: none;
     user-select: none;

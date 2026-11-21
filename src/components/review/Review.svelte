@@ -8,7 +8,7 @@
   import { reviewGame, type ReviewRun } from '../../analysis/review-remote';
   import type { GameState } from '../../engine/types';
   import { gamesFile, readGamesFile, replay, turnsOf, type SavedGame, type TurnSpan } from '../../review/record';
-  import { deleteGame, getGame, getReview, listGames, persistent, saveGame, saveReview } from '../../review/store';
+  import { deleteGame, getGame, getReview, listGames, persistent, restoreGame, saveGame, saveReview, type Deleted } from '../../review/store';
   import ReplayViewer, { type LineKind } from './ReplayViewer.svelte';
   import WinChart from './WinChart.svelte';
 
@@ -129,9 +129,33 @@
     }
   }
 
+  /** The game just deleted, for a few seconds: "เลิกทำ" puts it back. */
+  let undo = $state.raw<Deleted | null>(null);
+  let undoTimer: ReturnType<typeof setTimeout> | undefined;
+  const UNDO_MS = 6000;
+
   async function remove(g: SavedGame) {
-    await deleteGame(g.id!);
+    const gone = await deleteGame(g.id!);
     games = (games ?? []).filter((x) => x.id !== g.id);
+    clearTimeout(undoTimer);
+    undo = gone ?? null;
+    undoTimer = setTimeout(() => (undo = null), UNDO_MS);
+  }
+
+  async function putBack() {
+    const x = undo;
+    if (!x) return;
+    clearTimeout(undoTimer);
+    undo = null;
+    await restoreGame(x);
+    games = await listGames();
+  }
+
+  /** A turn picked on the chart: marked, and its card in the list brought into view. */
+  function pickTurn(n: number) {
+    selected = n;
+    const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    document.getElementById(`turn-${n}`)?.scrollIntoView({ behavior, block: 'center' });
   }
 
   function watch(t: TurnReview, line: LineKind) {
@@ -231,6 +255,12 @@
     {#if note}<span class="muted">{note}</span>{/if}
   </p>
   {#if !persistent}<p class="muted">เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ เกมจะหายเมื่อปิดหน้า</p>{/if}
+  {#if undo}
+    <div class="toast" role="status">
+      <span>ลบเกม {yours(undo.game)} vs {undo.game.opponentName} แล้ว</span>
+      <button type="button" onclick={putBack}>เลิกทำ</button>
+    </div>
+  {/if}
 {:else if game}
   <section class="head">
     <a class="back" href="/review/">← ประวัติเกม</a>
@@ -266,13 +296,13 @@
     {/if}
   {/if}
 
-  {#if sorted.length}<WinChart turns={sorted} {selected} />{/if}
+  {#if sorted.length}<WinChart turns={sorted} {selected} onpick={pickTurn} />{/if}
 
   <section class="all">
     <h2>ทุกเทิร์นของคุณ</h2>
     <ol class="turns">
       {#each sorted as t (t.turn)}
-        <li class:sel={selected === t.turn}>{@render turnBody(t)}</li>
+        <li id={`turn-${t.turn}`} class:sel={selected === t.turn}>{@render turnBody(t)}</li>
       {/each}
     </ol>
   </section>
@@ -459,7 +489,7 @@
     line-height: 16px;
   }
   .vs-word {
-    color: var(--ink-faint);
+    color: var(--ink-soft);
     font-size: 0.75em;
     font-weight: 400;
   }
@@ -747,9 +777,54 @@
   }
   .note {
     margin-top: 32px;
-    color: var(--ink-faint);
+    color: var(--ink-soft);
     font-size: 12px;
     line-height: 20px;
+  }
+  /* "ลบเกม … แล้ว · เลิกทำ": at the bottom of the screen for a few seconds. */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    z-index: 30;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 8px 8px 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--raised);
+    box-shadow: var(--shadow-lg);
+    font-size: 14px;
+    line-height: 20px;
+    transform: translateX(-50%);
+  }
+  .toast button {
+    flex: none;
+    min-height: 36px;
+    padding: 4px 12px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-ink);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  @media (pointer: coarse) {
+    .toast button,
+    .buttons button,
+    .button,
+    .act .link {
+      min-height: 44px;
+    }
+    .buttons button,
+    .button {
+      display: inline-flex;
+      align-items: center;
+    }
   }
   @media (max-width: 640px) {
     .record {
