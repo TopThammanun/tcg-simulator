@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeBot } from '../../src/bots/core';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
 import { actor, apply, createGame } from '../../src/engine/actions';
-import { knownTopCards } from '../../src/engine/state';
+import { DEFAULT_RULES, knownTopCards } from '../../src/engine/state';
 import type { Action, GameState } from '../../src/engine/types';
 import { redeal } from '../../src/engine/view';
 import { isFree, replay, type Redeal, type SavedGame } from '../../src/review/record';
@@ -94,7 +94,7 @@ describe('redeal (undo in practice mode)', () => {
       opponent: 'basic-box',
       opponentName: 'Basic Box',
       mine: 'dragapult-ex',
-      rules: {},
+      rules: { ...DEFAULT_RULES },
       policy: DEFAULT_POLICY,
       decks: [deck('dragapult-ex').cards, deck('basic-box').cards],
       actions: [...first.actions, ...second.actions, ...third.actions],

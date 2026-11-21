@@ -1,6 +1,7 @@
 // Scenario tests from PLAN.md ("Scenario test ชุดแรก") plus per-deck mechanics.
 import { describe, expect, it } from 'vitest';
-import { apply, legalActions } from '../../src/engine/actions';
+import { apply, createGame, legalActions } from '../../src/engine/actions';
+import type { DeckSpec, Rules } from '../../src/engine/types';
 import { determinize, viewFor } from '../../src/engine/view';
 import { active, bench, choose, handCard, optionFor, scenario } from './helpers';
 
@@ -310,5 +311,67 @@ describe('turn rules', () => {
     let s = scenario({ p0: { active: 'abra' }, p1: { active: 'abra', deck: [] } });
     s = apply(s, { t: 'end' });
     expect(s.winner).toBe(0);
+  });
+});
+
+describe('setup', () => {
+  // Deck b has one Basic, so it mulligans on most deals; a is all Basics, so it has some left to draw.
+  const decks = (): [DeckSpec, DeckSpec] => [
+    { name: 'a', cards: Array<string>(60).fill('dreepy') },
+    { name: 'b', cards: ['dreepy', ...Array<string>(59).fill('psychic-energy')] },
+  ];
+  /** Play the setup through: first choice, Actives, no Bench, every extra card; what was asked, and what the board was then. */
+  function setUp(seed: number, rules: Partial<Rules> = {}) {
+    let s = createGame({ seed, decks: decks(), rules });
+    const asked: { purpose: string; player: number; actives: number; prizes: number; options: number[]; hand: number[] }[] = [];
+    while (s.pending) {
+      const r = s.pending.request;
+      const ps = s.players[r.player];
+      asked.push({
+        purpose: r.purpose,
+        player: r.player,
+        actives: s.players.filter((p) => p.active).length,
+        prizes: ps.prizes.length,
+        options: r.options.map((o) => o.value),
+        hand: [...ps.hand],
+      });
+      const drew = asked.some((x) => x.purpose === 'mulligan-draw');
+      const picks = r.purpose === 'setup-bench' && !drew ? [] : r.options.slice(0, r.max).map((o) => o.value);
+      s = choose(s, ...(r.purpose === 'mulligan-draw' ? [r.options[r.options.length - 1]!.value] : picks));
+    }
+    return { s, asked };
+  }
+  const withMulligan = (rules: Partial<Rules> = {}) => {
+    for (let seed = 1; seed < 100; seed++) {
+      const r = setUp(seed, rules);
+      if (r.s.players[1].mulligans > 0) return r;
+    }
+    throw new Error('no deal with a mulligan');
+  };
+
+  it("draws the extra cards for the opponent's mulligans after both Active Pokémon are down, then sets the Prizes", () => {
+    const { s, asked } = withMulligan();
+    const draw = asked.findIndex((x) => x.purpose === 'mulligan-draw');
+    expect(draw).toBeGreaterThan(asked.findLastIndex((x) => x.purpose === 'setup-active'));
+    expect(asked[draw]).toMatchObject({ player: 0, actives: 2, prizes: 0 });
+    expect(s.players[0].prizes).toHaveLength(6);
+    expect(s.players[0].hand.length + s.players[0].bench.length).toBe(6 + s.players[1].mulligans);
+  });
+
+  it('lets the Basics drawn that way go onto the Bench, and only those', () => {
+    const { s, asked } = withMulligan();
+    const draw = asked.findIndex((x) => x.purpose === 'mulligan-draw');
+    const extra = asked[draw + 1]!;
+    expect(extra.purpose).toBe('setup-bench');
+    const before = new Set(asked[draw]!.hand);
+    const drawn = extra.hand.filter((c) => !before.has(c));
+    expect(drawn).toHaveLength(s.players[1].mulligans);
+    expect(extra.options.sort()).toEqual(drawn.sort());
+    expect(s.players[0].bench).toHaveLength(Math.min(5, drawn.length));
+  });
+
+  it('games saved under rules version 1 replay with the extra cards drawn first', () => {
+    const { asked } = withMulligan({ version: 1 });
+    expect(asked.findIndex((x) => x.purpose === 'mulligan-draw')).toBeLessThan(asked.findIndex((x) => x.purpose === 'setup-active'));
   });
 });

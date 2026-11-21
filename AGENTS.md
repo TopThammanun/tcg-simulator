@@ -75,7 +75,8 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   same rows: `model3.ts` = `ml/net3.py`, `train_bc.py --v3 --bf16`; BOT-LEAP.md L3), `netbot.ts` (plays from the policy, picks one at a time; `recordBot` turns any bot's moves
   into training rows). Trained by imitation of the hard bot, then self-play PPO with a league (`ml/`, data from
   `scripts/learn/gen.ts`). The rule-based bots stay as teachers, sparring partners and quick internal models:
-  `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning) + `choose.ts` (pending
+  `core.ts` (development heuristics) + `finisher.ts` (simulated attack planning; `sureLine` also runs `winLine` in
+  endgames: every order of the moves that draw, search and flip nothing, for a win this turn) + `choose.ts` (pending
   choices) + `plans/<deck>.ts`; `params.ts` holds their weights, tuned by SPSA (`scripts/tune.ts`);
   `hard.ts` adds Monte Carlo. On the play screen the bot runs in a Web Worker (`worker.ts`, `remote.ts`).
   `coach.ts` = the network's best three moves with reasons (`explain.ts`: read from the position + the move played out
@@ -94,7 +95,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   real cards judged on the same re-deals, where it parts from yours and why (`explain.ts`); run on several workers by
   `review-remote.ts` / `review-worker.ts`. Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions, your deck's plan `mine`, `mode`, and the undos'
-  re-deals `redeals`; `replay()`, `turnsOf()`), `store.ts`
+  re-deals `redeals`; `replay()`, `turnsOf()`; a game keeps its `rules`, and `Rules.version` (`engine/state.ts`
+  `RULES_VERSION`) is raised by a fix that changes how games play out, the old behaviour kept for older games so they
+  replay), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
   game; `/review/` exports them all as one file (`gamesFile`) and imports such files; (`components/review/Review.svelte`, `WinChart.svelte`) lists and reviews them;
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point.

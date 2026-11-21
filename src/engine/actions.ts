@@ -20,7 +20,7 @@ import {
   trimBenches,
   usableAttacks,
 } from './rules';
-import { cloneState, keyOf, knownTopCards, mustSlot, newState, opp, slotsOf, topDef } from './state';
+import { cloneState, keyOf, knownTopCards, mustSlot, newState, opp, rulesBefore, slotsOf, topDef } from './state';
 import type { Action, CardId, DeckSpec, GameState, PlayerId, Rules, Slot } from './types';
 
 export function createGame(opts: {
@@ -201,6 +201,7 @@ export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string
   'night-stretcher': () => 'ไม่มี Pokémon หรือพลังงานพื้นฐานในกองทิ้ง',
   'energy-switch': () => 'ต้องมี Pokémon 2 ตัวขึ้นไป และมีพลังงานพื้นฐานติดอยู่ให้ย้าย',
   switch: () => 'ไม่มี Pokémon บน Bench ให้สลับ',
+  'crushing-hammer': () => 'Pokémon ของคู่แข่งไม่มีพลังงานติดอยู่',
   'enhanced-hammer': () => 'Pokémon ของคู่แข่งไม่มีพลังงานพิเศษ',
   'rare-candy': (s) => (s.turn <= 2 ? 'เทิร์นแรกของแต่ละคนใช้ไม่ได้' : 'ไม่มี Basic ในสนามที่มี Stage 2 ของมันอยู่ในมือ'),
   'tool-scrapper': () => 'ไม่มี Tool ติดอยู่ในสนาม',
@@ -372,13 +373,8 @@ function setup(ctx: Ctx): void {
       ps.hand.push(...ps.deck.splice(0, 7));
     }
   }
-  for (const p of [0, 1] as const) {
-    const m = ctx.ps(opp(p)).mulligans;
-    if (m === 0) continue;
-    const labels = Array.from({ length: m + 1 }, (_, i) => `${i} ใบ`);
-    const n = ctx.pickOption(p, `${ctx.who(opp(p))} mulligan ${m} ครั้ง: จั่วเพิ่มกี่ใบ?`, labels, undefined, 'mulligan-draw');
-    if (n > 0) ctx.draw(p, n);
-  }
+  const drawsFirst = rulesBefore(s, 2);
+  if (drawsFirst) for (const p of [0, 1] as const) mulliganDraw(ctx, p);
 
   for (const p of [s.first, opp(s.first)] as const) {
     const ps = ctx.ps(p);
@@ -386,10 +382,15 @@ function setup(ctx: Ctx): void {
     const [a] = ctx.pickCards(p, basics(), { purpose: 'setup-active', prompt: 'เลือก Pokémon ตัวหลัก', min: 1, max: 1 });
     ctx.take(p, a!);
     ps.active = ctx.newSlot(a!);
-    const bench = ctx.pickCards(p, basics(), { purpose: 'setup-bench', prompt: 'เลือก Pokémon ลง Bench (ไม่เกิน 5)', min: 0, max: 5 });
-    for (const c of bench) {
-      ctx.take(p, c);
-      ps.bench.push(ctx.newSlot(c));
+    benchFrom(ctx, p, basics(), 'เลือก Pokémon ลง Bench (ไม่เกิน 5)');
+  }
+  // The extra cards for the opponent's mulligans come once both sides have put their Pokémon down; Basics
+  // drawn that way may still go onto the Bench.
+  if (!drawsFirst) {
+    for (const p of [s.first, opp(s.first)] as const) {
+      const drawn = mulliganDraw(ctx, p);
+      const basics = drawn.filter((c) => isBasicPokemon(keyOf(s, c)));
+      if (basics.length) benchFrom(ctx, p, basics, 'Basic ที่จั่วเพิ่มจาก mulligan: ลง Bench ตัวไหน', 'mulligan');
     }
   }
   for (const p of [0, 1] as const) {
@@ -399,4 +400,28 @@ function setup(ctx: Ctx): void {
   }
   s.phase = 'main';
   startTurn(ctx, s.first);
+}
+
+/** p draws up to one card for each mulligan the opponent took, as many as p chooses; the cards drawn. */
+function mulliganDraw(ctx: Ctx, p: PlayerId): CardId[] {
+  const m = ctx.ps(opp(p)).mulligans;
+  if (m === 0) return [];
+  const labels = Array.from({ length: m + 1 }, (_, i) => `${i} ใบ`);
+  const n = ctx.pickOption(p, `${ctx.who(opp(p))} mulligan ${m} ครั้ง: จั่วเพิ่มกี่ใบ?`, labels, undefined, 'mulligan-draw');
+  const ps = ctx.ps(p);
+  const drawn = ps.deck.slice(0, n);
+  if (n > 0) ctx.draw(p, n);
+  return drawn;
+}
+
+/** Setup: p puts any of `basics` (cards in hand) onto the Bench, up to its room. */
+function benchFrom(ctx: Ctx, p: PlayerId, basics: CardId[], prompt: string, hint?: string): void {
+  const ps = ctx.ps(p);
+  const room = benchLimit(ctx.s, p) - ps.bench.length;
+  if (room <= 0) return;
+  const picked = ctx.pickCards(p, basics, { purpose: 'setup-bench', prompt, hint, min: 0, max: room });
+  for (const c of picked) {
+    ctx.take(p, c);
+    ps.bench.push(ctx.newSlot(c));
+  }
 }

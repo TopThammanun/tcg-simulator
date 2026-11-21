@@ -73,6 +73,13 @@ export interface Rules {
    * Off for bots: they take them in order, and their look-ahead turns it off (engine/view.ts determinize()).
    */
   pickPrizes?: boolean;
+  /**
+   * The rules a saved game was played under (state.ts RULES_VERSION now; review/record.ts replay() gives games saved
+   * without one 1): what has been fixed since is kept as it was for older games, so they replay. Version 1, until
+   * 21 Nov 2026: the extra cards for mulligans were drawn before setting up, and Metallic Hammer's 150 more needed
+   * 3 {M} Energy to discard.
+   */
+  version?: number;
 }
 
 export interface LogEntry {

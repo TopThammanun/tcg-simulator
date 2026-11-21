@@ -54,6 +54,13 @@ describe('Items', () => {
     expect(bench(s, 0, 0).energy).toHaveLength(0);
   });
 
+  it('Crushing Hammer needs an Energy attached to one of their Pokémon', () => {
+    const none = scenario({ p0: { active: 'abra', hand: ['crushing-hammer'] }, p1: { active: 'abra', bench: ['dreepy'] } });
+    expect(legalActions(none).some((a) => a.t === 'trainer')).toBe(false);
+    const benched = scenario({ p0: { active: 'abra', hand: ['crushing-hammer'] }, p1: { active: 'abra', bench: [{ card: 'dreepy', energy: ['fire-energy'] }] } });
+    expect(legalActions(benched).some((a) => a.t === 'trainer')).toBe(true);
+  });
+
   it('Tool Scrapper discards up to 2 Tools in play', () => {
     let s = scenario({ p0: { active: 'abra', hand: ['tool-scrapper'] }, p1: { active: { card: 'mega-kangaskhan-ex', tool: 'heros-cape' } } });
     s = play(s, 'tool-scrapper');
@@ -337,6 +344,20 @@ describe('attack effects', () => {
     );
     expect([active(s, 1).damage, bench(s, 1, 0).damage, bench(s, 1, 1).damage]).toEqual([110, 110, 110]);
     expect(active(s, 0).energy).toHaveLength(0); // Trifrost discards the user's Energy
+  });
+
+  it('Metallic Hammer copied by Slowking does 300: the 150 more needs no {M} Energy to discard (Japanese Q&A)', () => {
+    const king = () =>
+      scenario({ p0: { active: { card: 'slowking', under: ['slowpoke'], energy: ['psychic-energy', 'psychic-energy'] }, deck: ['metagross', 'psychic-energy'] }, p1: { active: 'dragapult-ex' } });
+    let s = attack(king(), 'Seek Inspiration');
+    s = choose(s, optionFor(s, 'Metallic Hammer'));
+    expect(s.pending).toBeNull();
+    expect(active(s, 1).damage).toBe(300);
+    expect(active(s, 0).energy).toHaveLength(2);
+    // Games saved under rules version 1 replay with 150.
+    let old = attack({ ...king(), rules: { ...king().rules, version: 1 } }, 'Seek Inspiration');
+    old = choose(old, optionFor(old, 'Metallic Hammer'));
+    expect(active(old, 1).damage).toBe(150);
   });
 
   it('Seek Inspiration does nothing when the top card has a Rule Box', () => {

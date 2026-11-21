@@ -4,7 +4,7 @@ import type { TurnReview } from '../analysis/review';
 import type { SavedGame } from './record';
 
 /** Bump when the review's analysis changes: older stored reviews are then redone. */
-export const REVIEW_VERSION = 2;
+export const REVIEW_VERSION = 3;
 
 export interface StoredReview {
   id: number;

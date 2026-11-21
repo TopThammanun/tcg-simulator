@@ -5,7 +5,12 @@ import type { CardId, CardInst, DeckSpec, GameState, PlayerId, PlayerState, Rule
 
 export const opp = (p: PlayerId): PlayerId => (p === 0 ? 1 : 0);
 
-export const DEFAULT_RULES: Rules = { twinShotelsPiercesBenchShields: false };
+/** Rules.version of new games; raise it with each fix that changes how a game plays out. */
+export const RULES_VERSION = 2;
+export const DEFAULT_RULES: Rules = { twinShotelsPiercesBenchShields: false, version: RULES_VERSION };
+
+/** The game follows the rules of before `version` (a saved game replaying). */
+export const rulesBefore = (s: GameState, version: number) => (s.rules.version ?? RULES_VERSION) < version;
 
 export function keyOf(s: GameState, card: CardId): string {
   return s.cards[card]!.key;

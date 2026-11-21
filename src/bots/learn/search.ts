@@ -48,6 +48,43 @@ export interface NetSearchOptions {
 
 const MAX_ROLLOUT_ACTIONS = 200;
 
+/** Choices whose result shows at once in Prizes: damage counters spread over the Bench, a target for damage. */
+const PRIZE_CHOICES = new Set(['counters', 'target']);
+
+/** Prizes the chooser takes once `picks` answers the pending choice and the rest of the move plays out (99: the game won). */
+function prizesAfter(s: GameState, picks: number[], plan: DeckPlan): number {
+  const me = s.pending!.request.player;
+  try {
+    let st = apply(s, { t: 'choose', picks });
+    for (let guard = 0; st.pending && st.winner === null && guard < 30; guard++) st = apply(st, { t: 'choose', picks: choosePicks(st, st.pending.request, plan) });
+    if (st.winner === me) return 99;
+    return s.players[me].prizes.length - st.players[me].prizes.length;
+  } catch {
+    return -1;
+  }
+}
+
+/**
+ * The network's answer, unless the rule-based chooser's (exact Knock Out arithmetic) or, for one pick, another
+ * option takes more Prizes: the policy sometimes spreads Phantom Dive's counters so that nothing is Knocked Out.
+ */
+function morePrizes(s: GameState, net: Action, plan: DeckPlan): Action {
+  if (net.t !== 'choose') return net;
+  const req = s.pending!.request;
+  const others = [choosePicks(s, req, plan)];
+  if (req.min === 1 && req.max === 1 && !req.repeat) others.push(...req.options.map((x) => [x.value]));
+  let best = net.picks;
+  let most = prizesAfter(s, net.picks, plan);
+  for (const picks of others) {
+    const n = prizesAfter(s, picks, plan);
+    if (n > most) {
+      best = picks;
+      most = n;
+    }
+  }
+  return best === net.picks ? net : { t: 'choose', picks: best };
+}
+
 export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBot {
   const width = o.width ?? 4;
   const samples = o.samples ?? 6;
@@ -97,7 +134,8 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
         if (f && f.every((v) => req.options.some((x) => x.value === v)) && f.length >= req.min && f.length <= req.max) return { t: 'choose', picks: f };
         queue = [];
         if (onLine && o.plan && req.player === actor(s)) return { t: 'choose', picks: choosePicks(s, req, o.plan) };
-        return greedy.act(s);
+        const net = greedy.act(s);
+        return o.plan && guards && PRIZE_CHOICES.has(req.purpose) ? morePrizes(s, net, o.plan) : net;
       }
       onLine = false;
       if (s.phase !== 'main') return greedy.act(s);

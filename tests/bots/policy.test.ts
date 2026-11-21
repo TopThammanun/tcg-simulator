@@ -5,6 +5,7 @@ import { makeBot } from '../../src/bots/core';
 import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, encode } from '../../src/bots/learn/encode';
 import { randomModel, run } from '../../src/bots/learn/model';
 import { makeNetBot, recordBot, type Decision } from '../../src/bots/learn/netbot';
+import { runStep, sureLine } from '../../src/bots/finisher';
 import { makeSearchNetBot } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
 import type { Bot } from '../../src/bots/types';
@@ -155,6 +156,41 @@ describe('the hint button with a network', () => {
     for (const t of tips) {
       expect(legal).toContain(JSON.stringify(t.action));
       expect(t.title.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('what the bot checks before it plays', () => {
+  it("finds a sure win the attack planner's patterns miss: retreat to Fezandipiti ex, power it up, Cruel Arrow the Benched Latias ex", () => {
+    // 20 Nov 2026, a game against a person: the bot attacked with Rapid-Fire Combo instead and needed two heads.
+    const s = scenario({
+      p0: {
+        active: { card: 'mega-kangaskhan-ex', energy: ['fighting-energy', 'psychic-energy', 'psychic-energy', 'grass-energy'] },
+        bench: ['fezandipiti-ex', { card: 'mega-kangaskhan-ex', energy: ['grass-energy', 'psychic-energy', 'grass-energy'] }],
+        hand: ['energy-switch', 'energy-switch', 'energy-switch', 'lightning-energy'],
+        prizes: 2,
+      },
+      p1: { active: 'mega-kangaskhan-ex', bench: [{ card: 'latias-ex', damage: 200 }] },
+    });
+    const plan = planFor('basic-box');
+    const line = sureLine(s, 0, plan, 3);
+    expect(line.wins).toBe(true);
+    let st = s;
+    for (const step of line.steps) st = runStep(st, step, plan);
+    expect(st.winner).toBe(0);
+  });
+
+  it('spreads Phantom Dive counters for every Knock Out they can make, whatever the network would pick', () => {
+    let s = scenario({
+      p0: { active: { card: 'dragapult-ex', under: ['dreepy', 'drakloak'], energy: ['fire-energy', 'psychic-energy'] } },
+      p1: { active: 'fezandipiti-ex', bench: [{ card: 'budew', damage: 20 }, { card: 'drakloak', under: ['dreepy'], damage: 60 }, { card: 'dreepy', damage: 20 }] },
+    });
+    s = apply(s, { t: 'attack', name: 'Phantom Dive' });
+    expect(s.pending?.request.purpose).toBe('counters');
+    for (const seed of [1, 2, 3]) {
+      const bot = makeSearchNetBot(randomModel(seed), { decks: ['Dragapult ex', 'player'], seed, plan: planFor('dragapult-ex') });
+      // Budew needs 1 counter and Drakloak 3: 2 Prizes, with 2 counters to spare.
+      expect(6 - apply(s, bot.act(s)).players[0].prizes.length).toBe(2);
     }
   });
 });

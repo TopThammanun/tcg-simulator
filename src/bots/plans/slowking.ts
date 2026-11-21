@@ -1,10 +1,11 @@
 // Slowking: Seek Inspiration discards the top card of the deck and copies its attack, so the deck is
-// stacked first with Ciphermaniac's Codebreaking or Academy at Night (Kyurem, Metagross, Zeraora, Annihilape:
-// Destined Fight trades the 1-Prize Slowking for their Active Pokémon ex, Ghostly Blow adds 5 counters).
+// stacked first with Ciphermaniac's Codebreaking or Academy at Night (Kyurem, Metagross: Metallic Hammer for 300,
+// Zeraora, Annihilape: Destined Fight trades the 1-Prize Slowking for their Active Pokémon ex, Ghostly Blow adds 5 counters).
 import { canAttackNow } from '../knowledge';
 import { keyOf, opp, topKey } from '../../engine/state';
 import type { GameState, PlayerId } from '../../engine/types';
 import { hasRuleBox } from '../../engine/db';
+import { hpLeft } from '../../engine/rules';
 import type { DeckPlan } from '../types';
 
 const SOURCES = ['kyurem', 'metagross', 'zeraora', 'annihilape-ssp-100', 'annihilape-pbl-41'];
@@ -12,7 +13,13 @@ const SOURCES = ['kyurem', 'metagross', 'zeraora', 'annihilape-ssp-100', 'annihi
 function sourceRank(s: GameState, me: PlayerId, key: string): number {
   if (key === 'zeraora') return s.players[opp(me)].bench.some((b) => hasRuleBox(topKey(s, b))) ? 3 : 0;
   if (key === 'kyurem') return 4;
-  if (key === 'metagross') return 2;
+  // Metallic Hammer does 300 for Slowking (no {M} Energy to discard): the pick when it Knocks Out their Active
+  // and Trifrost's 110 doesn't, ahead of Destined Fight, which costs the Slowking.
+  if (key === 'metagross') {
+    const theirs = s.players[opp(me)].active;
+    const left = theirs ? hpLeft(s, theirs) : 0;
+    return left > 110 && left <= 300 ? 7 : 2;
+  }
   // Destined Fight: worth it when their Active gives more Prizes than the Slowking it costs.
   if (key === 'annihilape-ssp-100') {
     const theirs = s.players[opp(me)].active;

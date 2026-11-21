@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { matchesFor, playMatch, startPositions } from '../../scripts/learn/gen';
 import { makeBot } from '../../src/bots/core';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
+import { DEFAULT_RULES } from '../../src/engine/state';
 import { gamesFile, replay, type SavedGame } from '../../src/review/record';
 import { playGame } from '../../src/sim/game';
 import { deck } from '../engine/helpers';
@@ -22,7 +23,7 @@ function savedGame(): SavedGame {
     seed: 21,
     opponent: 'dragapult-ex',
     opponentName: 'Dragapult ex',
-    rules: {},
+    rules: { ...DEFAULT_RULES },
     policy: DEFAULT_POLICY,
     decks: [deck('player').cards, deck('dragapult-ex').cards],
     actions: r.history!,

@@ -76,7 +76,8 @@ export function replay(g: SavedGame): GameState[] {
         { name: 'บอท', cards: g.decks[1] },
       ],
       names: ['คุณ', 'บอท'],
-      rules: g.rules,
+      // Games saved before rules had a version replay under version 1's (engine/types.ts Rules.version).
+      rules: { version: 1, ...g.rules },
     }),
   ];
   const redeals = g.redeals ?? [];

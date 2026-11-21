@@ -1,7 +1,7 @@
 // Attack planning: simulate short setup sequences (switch in an attacker, attach Energy, gust a target,
 // boost damage) followed by each attack, on a determinized state, and keep the best outcome.
 // Uses the engine itself, so damage, Weakness and every card effect are counted exactly.
-import { apply, legalActions } from '../engine/actions';
+import { actor, apply, legalActions } from '../engine/actions';
 import { isBasicEnergy } from '../engine/db';
 import { energyOf, hpLeft, provides, retreatCost } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef } from '../engine/state';
@@ -28,14 +28,15 @@ export interface Finish {
 type Category = 'switch' | 'energy' | 'supporter' | 'tool';
 const NODE_BUDGET = 70;
 
-/** Apply one step, answering its choices with the forced picks first, then the chooser. */
+/** Apply one step, answering its player's choices with the forced picks first, then the chooser (the opponent's: the chooser). */
 export function runStep(s: GameState, step: Step, plan: DeckPlan): GameState {
+  const me = actor(s);
   let cur = apply(s, step.action, { trusted: true });
   const forced = (step.picks ?? []).slice();
   let guard = 0;
   while (cur.pending && cur.winner === null && guard++ < 60) {
     const req = cur.pending.request;
-    const f = forced.shift();
+    const f = req.player === me ? forced.shift() : undefined;
     const valid = f && f.every((v) => req.options.some((o) => o.value === v)) && f.length >= req.min && f.length <= req.max;
     cur = apply(cur, { t: 'choose', picks: valid ? f! : choosePicks(cur, req, plan) });
   }
@@ -223,6 +224,109 @@ function minMissing(s: GameState, sl: Slot, have: ReturnType<typeof energyOf>): 
 /** The planner searches with these seeds (several, as its search is cut short); fixed, so a position always gets the same answer. */
 const SURE_SEEDS = [1, 2, 3];
 
+/** Positions the win search tries at most (each a move and its choices played on the engine). */
+const WIN_BUDGET = 2500;
+
+/** A win this turn is worth looking for: a single Knock Out, or two, could take the last Prizes, or they have nothing to promote. */
+function winPlausible(s: GameState, me: PlayerId): boolean {
+  const left = s.players[me].prizes.length;
+  const theirs = s.players[opp(me)];
+  if (left <= 2 || theirs.bench.length === 0) return true;
+  return slotsOf(theirs).some((sl) => topDef(s, sl).prizes >= left);
+}
+
+/**
+ * The attack planner tries a few set patterns; this tries every order of the moves a sure win can be made of
+ * (Benching, evolving, Energy, retreating, gusts, Energy Switch, Tools, Abilities, the attack), on one deal of
+ * what `me` can't see, and returns a line that wins this turn. Moves that draw, search, shuffle or flip a coin are
+ * left out, so a line found here wins whatever the hidden cards are (sureLine still checks it on re-deals).
+ * Choices with one pick among a few options are each tried; the others are made by the chooser.
+ */
+export function winLine(s: GameState, me: PlayerId, plan: DeckPlan, seed: number, budget = WIN_BUDGET): Step[] | null {
+  const root = determinize(s, me, seed);
+  const o = opp(me);
+  const seen = new Set<string>();
+  let nodes = 0;
+  const hidden = (st: GameState) => [st.players[me].deck.length, st.players[o].deck.length, st.players[o].hand.length, st.rng.coin, ...st.rng.shuffle].join();
+  const position = (st: GameState) =>
+    JSON.stringify([st.players.map((p) => [p.hand, p.active, p.bench, p.discard.length, p.prizes.length, p.supporterPlayed, p.energyAttached, p.retreated, p.stadiumPlayed]), st.stadium]);
+
+  /** Every way to play `action` through its choices: the position after it and the picks made. */
+  const ways = (st: GameState, action: Action): { next: GameState; picks: number[][] }[] => {
+    const out: { next: GameState; picks: number[][] }[] = [];
+    const before = hidden(st);
+    const go = (cur: GameState, picks: number[][]) => {
+      if (nodes++ > budget) return;
+      if (hidden(cur) !== before) return;
+      if (!cur.pending || cur.winner !== null) {
+        out.push({ next: cur, picks });
+        return;
+      }
+      const req = cur.pending.request;
+      const options =
+        req.player === me && req.min === 1 && req.max === 1 && !req.repeat && req.options.length <= 6
+          ? req.options.map((x) => [x.value])
+          : [choosePicks(cur, req, plan)];
+      for (const p of options) {
+        let next: GameState;
+        try {
+          next = apply(cur, { t: 'choose', picks: p });
+        } catch {
+          continue;
+        }
+        go(next, req.player === me ? [...picks, p] : picks);
+      }
+    };
+    try {
+      go(apply(st, action, { trusted: true }), []);
+    } catch {
+      // not playable here
+    }
+    return out;
+  };
+
+  const dfs = (st: GameState): Step[] | null => {
+    const legal = legalActions(st);
+    // Attacks first: they end the turn, and a win is usually one attack away.
+    const order = [...legal.filter((a) => a.t === 'attack'), ...legal.filter((a) => a.t !== 'attack' && a.t !== 'end')];
+    for (const action of order) {
+      for (const { next, picks } of ways(st, action)) {
+        const step: Step = picks.length ? { action, picks } : { action };
+        if (next.winner === me) return [step];
+        if (next.winner !== null || next.current !== me || action.t === 'attack') continue;
+        const key = position(next);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const rest = dfs(next);
+        if (rest) return [step, ...rest];
+      }
+      if (nodes > budget) return null;
+    }
+    return null;
+  };
+  return dfs(root);
+}
+
+/** Prizes `steps` take from `s` on `checks` re-deals (the least), and whether they win on every one; null if they break. */
+function checkLine(s: GameState, me: PlayerId, plan: DeckPlan, steps: Step[], checks: number): { prizes: number; wins: boolean } | null {
+  let prizes = Infinity;
+  let wins = true;
+  try {
+    for (let k = 0; k < checks; k++) {
+      let st = determinize(s, me, 7919 * (k + 1));
+      for (const step of steps) {
+        if (st.winner !== null || st.current !== me || st.pending) break;
+        st = runStep(st, step, plan);
+      }
+      prizes = Math.min(prizes, s.players[me].prizes.length - st.players[me].prizes.length);
+      if (st.winner !== me) wins = false;
+    }
+  } catch {
+    return null;
+  }
+  return prizes === Infinity ? null : { prizes, wins };
+}
+
 /**
  * The attack planner's best line from `s` checked on `checks` re-deals of what `me` can't see: the Prizes
  * it takes on all of them (the least), and whether it wins on all of them. The search and the re-deals use
@@ -234,23 +338,15 @@ export function sureLine(s: GameState, me: PlayerId, plan: DeckPlan, checks: num
   for (const seed of SURE_SEEDS) {
     const fin = planFinish(s, me, plan, seed);
     if (!fin.steps.length) continue;
-    let prizes = Infinity;
-    let wins = true;
-    try {
-      for (let k = 0; k < checks; k++) {
-        let st = determinize(s, me, 7919 * (k + 1));
-        for (const step of fin.steps) {
-          if (st.winner !== null || st.current !== me || st.pending) break;
-          st = runStep(st, step, plan);
-        }
-        prizes = Math.min(prizes, s.players[me].prizes.length - st.players[me].prizes.length);
-        if (st.winner !== me) wins = false;
-      }
-    } catch {
-      continue;
-    }
-    if (prizes === Infinity) continue;
-    if (Number(wins) > Number(best.wins) || (wins === best.wins && prizes > best.prizes)) best = { prizes, wins, steps: fin.steps };
+    const r = checkLine(s, me, plan, fin.steps, checks);
+    if (!r) continue;
+    if (Number(r.wins) > Number(best.wins) || (r.wins === best.wins && r.prizes > best.prizes)) best = { ...r, steps: fin.steps };
+  }
+  // The planner's patterns found no win; the wider search may (a win made of more moves than they cover).
+  if (!best.wins && s.phase === 'main' && !s.pending && s.current === me && winPlausible(s, me)) {
+    const steps = winLine(s, me, plan, SURE_SEEDS[0]!);
+    const r = steps && checkLine(s, me, plan, steps, checks);
+    if (steps && r?.wins) best = { ...r, steps };
   }
   return best;
 }

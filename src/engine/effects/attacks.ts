@@ -6,7 +6,7 @@ import type { AttackCtx, AttackImpl } from '../combat';
 import { uniqueByKey } from '../ctx';
 import { def, hasRuleBox, isBasicEnergy, isBasicPokemon, isNsPokemon, isPokemon } from '../db';
 import { chooseSwitch, maxHp, provides, switchIn } from '../rules';
-import { keyOf, nameOf, slotsOf, topDef, topKey } from '../state';
+import { keyOf, nameOf, rulesBefore, slotsOf, topDef, topKey } from '../state';
 
 /** Attacks that copy other attacks are not offered as copy targets themselves (avoids loops). */
 const COPYING = new Set(['Night Joker', 'Seek Inspiration']);
@@ -222,14 +222,15 @@ export const ATTACKS: Record<string, AttackImpl> = {
   },
 
   // ---- Energy on the user ----
+  // Japanese Q&A: the 150 more is the choice and the discard follows as far as it can, so a user with no {M}
+  // Energy (Slowking copying it) does 300 for nothing.
+  // (Rules version 1 offered it only with 3 {M} Energy to discard.)
   'Metallic Hammer': (a) => {
-    const metal = a.user.energy.filter((e) => provides(keyOf(a.s, e)) === 'Metal');
-    let extra = 0;
-    if (metal.length >= 3 && a.ctx.yesNo(a.me, 'ทิ้งพลังงาน {M} 3 ใบเพื่อเพิ่ม 150?', 'metagross')) {
-      a.discardEnergy(a.user, metal.slice(0, 3));
-      extra = 150;
-    }
-    a.hit(a.defender, a.base + extra);
+    const metal = a.user.energy.filter((e) => provides(keyOf(a.s, e)) === 'Metal').slice(0, 3);
+    const offered = rulesBefore(a.s, 2) ? metal.length === 3 : true;
+    const more = offered && (metal.length === 0 || a.ctx.yesNo(a.me, `ทิ้งพลังงาน {M} ${metal.length} ใบเพื่อเพิ่ม 150?`, 'metagross'));
+    if (more && metal.length > 0) a.discardEnergy(a.user, metal);
+    a.hit(a.defender, a.base + (more ? 150 : 0));
   },
   'Icicle Loop': (a) => {
     a.hit(a.defender, a.base);

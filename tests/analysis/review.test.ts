@@ -4,6 +4,7 @@ import { estimateWin, merge, pairedDiff, summarize } from '../../src/analysis/wi
 import { makeBot } from '../../src/bots/core';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
 import { apply } from '../../src/engine/actions';
+import { DEFAULT_RULES } from '../../src/engine/state';
 import type { Action, GameState } from '../../src/engine/types';
 import { gamesFile, isFree, readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review/record';
 import { playGame } from '../../src/sim/game';
@@ -132,7 +133,7 @@ describe('saved games (record.ts)', () => {
       seed: 5,
       opponent: slug,
       opponentName: 'Dragapult ex',
-      rules: {},
+      rules: { ...DEFAULT_RULES },
       policy: DEFAULT_POLICY,
       decks: [deck('player').cards, deck(slug).cards],
       actions: r.history!,

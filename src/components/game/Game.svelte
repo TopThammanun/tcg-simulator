@@ -1026,7 +1026,7 @@
               </button>
               {#if picks.length}<button type="button" class="ghost" onclick={() => (picks = [])}>ล้าง</button>{/if}
               <span class="hint">
-                {picks.length < setupReq.max ? `ลาก Basic ลง Bench ได้อีก ${setupReq.max - picks.length} ตัว` : 'ลง Bench ครบแล้ว'} · แตะตัวบน
+                {setupReq.hint === 'mulligan' ? 'Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง · ' : ''}{picks.length < setupReq.max ? `ลาก Basic ลง Bench ได้อีก ${setupReq.max - picks.length} ตัว` : 'ลง Bench ครบแล้ว'} · แตะตัวบน
                 Bench เพื่อเอาคืน
               </span>
             {/if}

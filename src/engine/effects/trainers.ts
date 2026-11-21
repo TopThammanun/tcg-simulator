@@ -104,6 +104,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
     play: (ctx, p) => chooseSwitch(ctx, p, 'switch'),
   },
   'crushing-hammer': {
+    canPlay: (s, p) => slotsOf(s.players[opp(p)]).some((sl) => sl.energy.length > 0),
     play: (ctx, p) => {
       const targets = slotsOf(ctx.ps(opp(p))).filter((sl) => sl.energy.length > 0);
       if (!ctx.flip() || targets.length === 0) return;
