@@ -7,8 +7,9 @@ deck across the table is piloted by its own expert rather than by the generalist
 Round r: for each deck, ppo.py continues that deck's expert from round r-1 (--focus deck) with the round r-1 expert
 set as the frozen opponent (60%), its own earlier versions (20%), itself (15%) and the game's network (5%),
 opponent decks by PFSP; then round r's set is put together from each run's best evaluated checkpoint
-(<root>/r<r>/). Arguments after "--" go to every ppo.py run. Resumes: a deck whose run reached --iters (or
-stopped on --patience) is not run again.
+(<root>/r<r>/). A deck without an expert in --start begins from its default.json. Arguments after "--" go to every
+ppo.py run; --first 2 --start <root>/r1 carries on with other arguments. Resumes: a deck whose run reached --iters
+(or stopped on --patience) is not run again.
 """
 from __future__ import annotations
 
@@ -30,6 +31,7 @@ def main():
     ap.add_argument("--start", required=True, help="round 0: an expert set (folder of <deck>.json + default.json)")
     ap.add_argument("--root", required=True)
     ap.add_argument("--rounds", type=int, default=2)
+    ap.add_argument("--first", type=int, default=1, help="the first round's number (--start is the round before it)")
     ap.add_argument("--iters", type=int, default=120)
     ap.add_argument("--decks", default="", help="these decks only (default: every expert in --start)")
     ap.add_argument("--mix", default="frozen:0.6,old:0.2,self:0.15,bot:0.05")
@@ -38,7 +40,7 @@ def main():
     root = os.path.abspath(a.root)
     decks = a.decks.split(",") if a.decks else sorted(os.path.splitext(f)[0] for f in os.listdir(start) if f.endswith(".json") and f != "default.json")
     prev = start
-    for r in range(1, a.rounds + 1):
+    for r in range(a.first, a.first + a.rounds):
         here = os.path.join(root, f"r{r}")
         os.makedirs(here, exist_ok=True)
         for d in decks:
@@ -46,7 +48,8 @@ def main():
             state = os.path.join(run, "state.json")
             done = json.load(open(state)) if os.path.exists(state) else {"iter": 0}
             if done["iter"] < a.iters and not done.get("stopped"):
-                cmd = [sys.executable, os.path.join(ROOT, "ml", "ppo.py"), "--init", os.path.join(prev, f"{d}.json"), "--dir", run,
+                init = os.path.join(prev, f"{d}.json")
+                cmd = [sys.executable, os.path.join(ROOT, "ml", "ppo.py"), "--init", init if os.path.exists(init) else os.path.join(prev, "default.json"), "--dir", run,
                        "--focus", d, "--iters", str(a.iters - done["iter"]), "--mix", a.mix, "--frozen", prev, "--pfsp",
                        "--eval-vs", "frozen", *extra]
                 print(" ".join(cmd), flush=True)
