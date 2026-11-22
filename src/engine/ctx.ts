@@ -5,7 +5,7 @@ import { tx, verb } from '../i18n';
 import { def } from './db';
 import { next, shuffleInPlace } from './rng';
 import { keyOf, nameOf } from './state';
-import type { CardId, ChoiceRequest, GameState, PlayerId, PlayerState, Purpose, Slot } from './types';
+import type { CardId, ChoiceRequest, GameState, PlayerId, PlayerState, Purpose, Slot, SlotId } from './types';
 
 export class NeedChoice {
   constructor(readonly request: ChoiceRequest) {}
@@ -127,13 +127,14 @@ export class Ctx {
 
   // ---------- log ----------
 
-  log(text: string, player: PlayerId | null = null): void {
+  /** `ko`: the slot this line reports Knocked Out. */
+  log(text: string, player: PlayerId | null = null, ko?: SlotId): void {
     if (this.s.quiet) return;
     if (!this.logCopied) {
       this.s.log = this.s.log.slice();
       this.logCopied = true;
     }
-    this.s.log.push({ turn: this.s.turn, player, text, step: this.s.steps });
+    this.s.log.push({ turn: this.s.turn, player, text, step: this.s.steps, ...(ko !== undefined && { ko }) });
   }
 
   who(p: PlayerId): string {

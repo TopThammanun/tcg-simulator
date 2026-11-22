@@ -3,7 +3,7 @@
 import type { PokemonCard } from '../data/cards';
 import { tx } from '../i18n';
 import { def, isPokemon, isTrainerType } from '../engine/db';
-import { attackCost, benchLimit, energyOf, hpLeft, maxHp, provides, retreatCost, stadiumKey, toolKey } from '../engine/rules';
+import { attackCost, benchLimit, energyOf, hpLeft, knockedOut, maxHp, provides, retreatCost, stadiumKey, toolKey } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef, topKey } from '../engine/state';
 import type { Action, CardId, GameState, PlayerId, Slot, SlotId } from '../engine/types';
 import { determinize } from '../engine/view';
@@ -41,7 +41,8 @@ const abilityText = (name: string): string | undefined => (ABILITY[name] ? tx(..
 /** Play `steps` on a determinized copy until the turn ends; the states before each step and the end. */
 function simulate(s: GameState, me: PlayerId, steps: Step[], plan: DeckPlan): { states: GameState[]; end: GameState } {
   const states: GameState[] = [];
-  let cur = determinize(s, me, SIM_SEED);
+  // With its log kept, so effectFacts can tell a Knock Out from a Pokémon discarded another way.
+  let cur: GameState = { ...determinize(s, me, SIM_SEED), quiet: false };
   const root = cur;
   for (const st of steps) {
     if (cur.winner !== null || cur.current !== me) break;
@@ -70,12 +71,14 @@ export function effectFacts(before: GameState, after: GameState, me: PlayerId, p
   const out: string[] = [];
   const turnOver = after.current !== me || after.turn !== before.turn;
 
-  // The opponent's side: Knock Outs, damage, a new Active.
+  // The opponent's side: Knock Outs (a Pokémon discarded another way, such as from a Bench over its limit, is not one), damage, a new Active.
+  const kos = knockedOut(before, after);
   const theirsNow = new Map(slotsOf(after.players[o]).map((sl) => [sl.uid, sl]));
   for (const sl of slotsOf(before.players[o])) {
     const now = theirsNow.get(sl.uid);
     const name = topDef(before, sl).name;
-    if (!now) out.push(`KO ${name}`);
+    if (!now && (!kos || kos.has(sl.uid))) out.push(`KO ${name}`);
+    else if (!now) out.push(after.players[o].discard.includes(sl.stack[sl.stack.length - 1]!) ? tx(`${name} ถูกทิ้งจากสนาม ไม่ใช่ KO จึงไม่ได้ Prize`, `${name} is discarded from play: not a Knock Out, so no Prize`) : tx(`${name} ออกจากสนาม ไม่ใช่ KO จึงไม่ได้ Prize`, `${name} leaves play: not a Knock Out, so no Prize`));
     else if (now.damage > sl.damage) out.push(tx(`${name} โดน ${now.damage - sl.damage} (เหลือ ${hpLeft(after, now)} HP)`, `${name} takes ${now.damage - sl.damage} (${hpLeft(after, now)} HP left)`));
   }
   const took = before.players[me].prizes.length - after.players[me].prizes.length;

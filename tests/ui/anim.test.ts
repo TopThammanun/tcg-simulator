@@ -128,6 +128,25 @@ describe('attacks', () => {
     expect(prize).toHaveLength(1);
     expect(prize[0]).toMatchObject({ to: { zone: 'hand', player: 0 }, faceUp: [false, true], phase: 'move' });
   });
+
+  it('a Pokémon discarded from the Bench is not Knocked Out: no hit, no KO, it just goes to the discard pile', () => {
+    // Area Zero Underdepths replaced: the bot's Bench of 6 goes down to 5, and nobody takes a Prize.
+    const s = scenario({
+      p0: { active: 'dreepy', hand: ['risky-ruins'] },
+      p1: { active: 'teal-mask-ogerpon-ex', bench: ['budew', 'dreepy', 'latias-ex', 'budew', 'dreepy', 'budew'] },
+      stadium: { card: 'area-zero-underdepths', owner: 1 },
+    });
+    const card = handCard(s, 0, 'risky-ruins');
+    const n = chooseFirst(apply(s, { t: 'trainer', card }));
+    expect(n.players[1].bench).toHaveLength(5);
+    expect(n.players[0].prizes).toHaveLength(s.players[0].prizes.length);
+    const evs = animEvents(s, n, { t: 'trainer', card });
+    expect(of(evs, 'ko')).toEqual([]);
+    expect(of(evs, 'damage')).toEqual([]);
+    const gone = of(evs, 'move').filter((m) => m.from.zone === 'pokemon' && m.to.zone === 'discard');
+    expect(gone).toHaveLength(1);
+    expect(gone[0]!.phase).toBe('move');
+  });
 });
 
 describe('turns, coins and the end of the game', () => {
