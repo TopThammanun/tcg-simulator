@@ -25,7 +25,7 @@ export interface NetSearchOptions {
   seed?: number;
   /** Options searched, best by the policy first. */
   width?: number;
-  /** Deals per option. */
+  /** Deals per option. 0 = no look-ahead: the policy's move, still after the sure-win and Prize checks (BOT-NEXT.md N5). */
   samples?: number;
   /** Skip the search when the policy gives its best option at least this probability. */
   confident?: number;
@@ -182,6 +182,13 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
       if (enc.refs.length === 1) return action(0);
       const p = softmax(run(model, enc).logits);
       const order = Array.from(p.keys()).sort((a, b) => p[b]! - p[a]!);
+      /** The policy's best option, or with `ties` a random one of those near it. */
+      const policyMove = () => {
+        if (!o.ties) return action(order[0]!);
+        const near = order.filter((i) => p[i]! >= p[order[0]!]! - o.ties!);
+        return action(near[Math.floor(rand() * near.length)]!);
+      };
+      if (samples === 0) return policyMove();
       const cands = order.filter((i, k) => k === 0 || (k < width && p[i]! >= minPrior));
       // The attack planner's first step, when its line gains something.
       let tactic = -1;
@@ -199,11 +206,7 @@ export function makeSearchNetBot(model: Model, o: NetSearchOptions): SearchingBo
         }
       }
       const sure = p[order[0]!]! >= confident && !(urgent && tactic >= 0 && tactic !== order[0]);
-      if (sure || cands.length === 1) {
-        if (!o.ties) return action(order[0]!);
-        const near = order.filter((i) => p[i]! >= p[order[0]!]! - o.ties!);
-        return action(near[Math.floor(rand() * near.length)]!);
-      }
+      if (sure || cands.length === 1) return policyMove();
       const stepOf = (i: number): Step => ({ action: action(i), picks: i === tactic ? tacticPicks : undefined });
       bot.lastSearched = true;
       const total = cands.map(() => 0);

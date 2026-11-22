@@ -205,6 +205,19 @@ describe('what the bot checks before it plays', () => {
     expect(sureTarget(b, 0, planFor('player'), encode(b, { decks: DECKS }))).toBe(-1);
   });
 
+  it('with no deals (samples 0) plays the network’s move without a search, but still a sure win', () => {
+    const m = randomModel(3);
+    const plan = planFor('basic-box');
+    const s = cruelArrowWin();
+    const bot = makeSearchNetBot(m, { decks: [plan.name, plan.name], seed: 1, plan, samples: 0 });
+    expect(actionKey(s, bot.act(s))).toBe(actionKey(s, sureLine(s, 0, plan, 3).steps[0]!.action));
+    // No sure win here: the move of the network alone.
+    const b = board();
+    const quick = makeSearchNetBot(m, { decks: DECKS, seed: 1, plan: planFor('player'), samples: 0 });
+    expect(actionKey(b, quick.act(b))).toBe(actionKey(b, makeNetBot(m, { decks: DECKS, seed: 1, temperature: 0 }).act(b)));
+    expect(quick.lastSearched).toBe(false);
+  });
+
   it('spreads Phantom Dive counters for every Knock Out they can make, whatever the network would pick', () => {
     let s = scenario({
       p0: { active: { card: 'dragapult-ex', under: ['dreepy', 'drakloak'], energy: ['fire-energy', 'psychic-energy'] } },
