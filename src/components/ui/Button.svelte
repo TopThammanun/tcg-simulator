@@ -29,7 +29,7 @@
     gap: 8px;
     min-height: 40px;
     padding: 8px 16px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: var(--radius);
     background: var(--control);
     color: var(--ink-strong);

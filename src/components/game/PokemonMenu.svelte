@@ -87,12 +87,12 @@
   {/if}
 
   {#each menu.abilities as ab}
-    <section class="ability">
+    <section class="ability" class:can={!!ab.action}>
       <div class="row">
         <span class="tag">Ability</span>
         <strong>{ab.name}</strong>
         {#if ab.action}
-          <button type="button" class="use" onclick={() => onact(ab.action!)}>{tx('ใช้', 'Use')}</button>
+          <button type="button" class="use can" onclick={() => onact(ab.action!)}>{tx('ใช้ Ability', 'Use Ability')}</button>
         {:else}
           <span class="auto">{ab.passive ? tx('ทำงานเอง', 'Always on') : tx('ใช้ไม่ได้ตอนนี้', "Can't be used now")}</span>
         {/if}
@@ -171,7 +171,7 @@
     padding: 10px 12px 12px;
     border: 1px solid #ffffff24;
     border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--raised) 96%, transparent);
+    background: var(--raised);
     color: var(--ink);
     box-shadow:
       0 0 0 1px #0006,
@@ -273,16 +273,21 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px;
+    border: 1px solid transparent;
     border-radius: var(--radius-sm);
     background: #ffffff0a;
   }
-  /* Using an Ability, retreating: ordinary buttons (the attack is the main one). */
+  /* An Ability that can be used now: lit like a usable attack, as its "✦ Ability" tag on the table. */
+  .ability.can {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  /* Retreating, switching in: ordinary buttons, edged so they read as buttons on the dark box. */
   .use {
     margin-left: auto;
     padding: 6px 16px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: var(--radius);
-    background: var(--control);
+    background: var(--control-hover);
     color: var(--ink-strong);
     font: inherit;
     font-weight: 600;
@@ -290,7 +295,16 @@
     transition: background-color 0.3s var(--ease);
   }
   .use:hover:not(:disabled) {
-    background: var(--control-hover);
+    border-color: var(--ink-faint);
+  }
+  /* Using an Ability: amber, what can be played now. */
+  .use.can {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .use.can:hover {
+    background: color-mix(in srgb, var(--accent) 85%, #fff);
   }
   .use.wide {
     margin: 0;

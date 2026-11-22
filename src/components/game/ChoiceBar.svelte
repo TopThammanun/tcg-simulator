@@ -41,12 +41,11 @@
     {#if earlier.length}
       <span class="earlier">{#each earlier as e}<span class="chip">{e}</span>{/each}<span class="arrow">→</span></span>
     {/if}
-    <strong>{req.prompt}</strong>
-    <span class="how">
-      {how}{req.repeat ? tx(' (แตะซ้ำได้)', ' (tap again for more)') : ''}{single
-        ? ''
-        : ` · ${tx('เลือกแล้ว', 'chosen')} ${picks.length}${req.max < 99 ? `/${req.max}` : ''}`}
-    </span>
+    <strong
+      >{req.prompt}{#if !single}<span class="count" title={tx('เลือกแล้ว', 'chosen')}>{picks.length}{req.max < 99 ? `/${req.max}` : ''}</span
+        >{/if}</strong
+    >
+    <span class="how">{how}{req.repeat ? tx(' (แตะซ้ำได้)', ' (tap again for more)') : ''}</span>
   </div>
   {#if !single}
     <div class="acts">
@@ -110,6 +109,23 @@
     font-size: 12px;
     line-height: 20px;
     color: var(--ink-soft);
+  }
+  /* How many are picked of how many, right after what is asked. */
+  .count {
+    margin-left: 8px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* A phone: what is asked and the count only (the lit cards show where to tap), so two lines hold it. */
+  @media (max-width: 600px) {
+    .how {
+      display: none;
+    }
   }
   .acts {
     display: flex;

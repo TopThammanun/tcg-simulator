@@ -43,6 +43,8 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#000000" />
+    <!-- Already dark: a browser's own dark mode (Chrome's auto-dark) must not recolour it. -->
+    <meta name="color-scheme" content="dark" />
     <link rel="canonical" href={url(localePath(lang, path))} />
     {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     <meta property="og:type" content="website" />

@@ -134,8 +134,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `card-back.ts` (the real card back, loaded from pokemontcg.io; a drawn back while it loads or if it fails),
   `images.ts` (card pictures fetched ahead at low priority: the card back and the picked decks' small pictures on
   the match sheet, both lists at the start; `CardFace.svelte` shows its text frame until the picture loads, a zoomed
-  card the small picture until the large one has), `symbols.ts` (the real
-  Energy symbols and coin, PokéWiki's pictures cut to webp circles in `public/energy/` and `public/coin/`; drawn by
+  card the small picture until the large one has), `symbols.ts` (the
+  Energy symbols and coin, drawn flat as SVG in `public/energy/` (a circle in the type's colour, a white glyph) and
+  `public/coin/` (gold heads with a star, silver tails); drawn by
   `components/game/Energy.svelte`, card text with {G}… by `EffectText.svelte`, the coin by `fx.ts`), `menu.ts`
   (what the pop-up for a tapped Pokémon shows: attacks and why one can't be used, Abilities, retreat;
   rendered by `PokemonMenu.svelte` — attacking and retreating happen there, not in the dock; reading never acts:
@@ -194,7 +195,7 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   `headlines()` in `lib/decks.ts`), steps, the review beside its screenshot (`public/home/review.jpg`, retake it after
   restyling the review), a tagline lit word by word on scroll, FAQ (facts only). The playmat is
   flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
-  site's own design; the game pieces on the table (card images and back, Energy symbols, the coin) are the real ones.
+  site's own design; the card images and back on the table are the real ones (the Energy symbols and the coin are our own flat drawings).
 
 ## Versions
 

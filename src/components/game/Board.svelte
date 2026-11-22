@@ -179,7 +179,8 @@
       {/if}
     </div>
 
-    <div class="bench" aria-label="Bench" data-zone={`bench-${p}`} data-drop={mine ? 'bench' : undefined} style:--n={benchLimit(s, p)}>
+    <!-- One row even over the limit (Area Zero Underdepths left play: Benched Pokémon to discard, picked here). -->
+    <div class="bench" aria-label="Bench" data-zone={`bench-${p}`} data-drop={mine ? 'bench' : undefined} style:--n={Math.max(benchLimit(s, p), ps.bench.length + ghosts.length)}>
       {#each ps.bench as b (b.uid)}
         {@render slotCard(p, b, false)}
       {/each}

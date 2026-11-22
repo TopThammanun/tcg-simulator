@@ -1,11 +1,10 @@
-// The Energy symbols and the coin as on real cards and coins: PokéWiki's pictures ("<Typ>Symbol TCG.png", the gold
-// Pikachu coin "TCG-Münze Pikachu Gold Non-Holo.jpg" and the standard back "TCG-Münze Rückseite Pokémon Nintendo TM.png"),
-// cut to circles as webp in public/energy/ (96px) and public/coin/ (192px).
+// The Energy symbols and the coin, drawn flat as SVG (sharp at any size): each type a circle in its colour with a white
+// glyph (public/energy/), the coin gold with a star for heads and silver with rings for tails (public/coin/).
 import type { EnergyType } from '../data/cards';
 
-export const energyIcon = (type: string) => `/energy/${type.toLowerCase()}.webp`;
+export const energyIcon = (type: string) => `/energy/${type.toLowerCase()}.svg`;
 
-export const COIN = { heads: '/coin/heads.webp', tails: '/coin/tails.webp' };
+export const COIN = { heads: '/coin/heads.svg', tails: '/coin/tails.svg' };
 
 const BY_LETTER: Record<string, EnergyType> = {
   G: 'Grass', R: 'Fire', W: 'Water', L: 'Lightning', P: 'Psychic', F: 'Fighting',
