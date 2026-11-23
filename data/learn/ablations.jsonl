@@ -1,0 +1,6 @@
+{"run": "prizes", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1958.5, "n": 3840, "se": 0.00622, "seconds": 34, "date": "2026-11-22 21:58"}
+{"run": "revealed", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1892, "n": 3840, "se": 0.00605, "seconds": 34, "date": "2026-11-22 21:59"}
+{"run": "history", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1899, "n": 3840, "se": 0.0062, "seconds": 29, "date": "2026-11-22 21:59"}
+{"run": "sim", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1927.5, "n": 3840, "se": 0.00601, "seconds": 30, "date": "2026-11-22 22:00"}
+{"run": "critic", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1945, "n": 3840, "se": 0.00617, "seconds": 93, "date": "2026-11-22 22:01"}
+{"run": "sure", "deck": "all", "base": "../Tcg Simulator/.cache/learn/l2-60.json", "iters": 100, "score": 1213, "n": 3840, "se": 0.00645, "seconds": 104, "date": "2026-11-22 22:03"}

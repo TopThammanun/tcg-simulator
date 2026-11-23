@@ -2,9 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import { suggestNet } from '../../src/bots/coach';
 import { makeBot } from '../../src/bots/core';
+import { createBot } from '../../src/bots/index';
 import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, encode } from '../../src/bots/learn/encode';
 import { randomModel, run } from '../../src/bots/learn/model';
-import { actionKey, makeNetBot, recordBot, sureTarget, type Decision } from '../../src/bots/learn/netbot';
+import { actionKey, makeNetBot, recordBot, sureTarget, type Decision, type SearchingBot } from '../../src/bots/learn/netbot';
 import { runStep, sureLine } from '../../src/bots/finisher';
 import { makeSearchNetBot } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
@@ -230,5 +231,19 @@ describe('what the bot checks before it plays', () => {
       // Budew needs 1 counter and Drakloak 3: 2 Prizes, with 2 counters to spare.
       expect(6 - apply(s, bot.act(s)).players[0].prizes.length).toBe(2);
     }
+  });
+});
+
+describe("the game's bot (createBot)", () => {
+  it('plays an expert whose file says so without look-ahead (meta.search, BOT-NEXT.md N5), the others with it', () => {
+    const b = board();
+    const plain = randomModel(3);
+    plain.meta.search = { samples: 0 };
+    const quick = createBot(planFor('player'), 1, planFor('dragapult-ex'), { model: plain }) as SearchingBot;
+    quick.act(b);
+    expect(quick.lastSearched).toBe(false);
+    const searching = createBot(planFor('player'), 1, planFor('dragapult-ex'), { model: randomModel(3) }) as SearchingBot;
+    searching.act(b);
+    expect(searching.lastSearched).toBe(true);
   });
 });

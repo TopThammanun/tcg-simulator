@@ -36,13 +36,16 @@ export function reviewGame(
   if (typeof Worker === 'undefined') {
     const states = replay(game);
     const plans = { mine: planFor(game.mine ?? 'player', game.policy), theirs: planFor(game.opponent) };
-    const loaded = import('./review');
+    const loaded = Promise.all([import('./review'), import('../bots/experts')]).then(async ([{ reviewTurn }, { expertFor }]) => ({
+      reviewTurn,
+      nets: { mine: await expertFor(game.mine ?? 'player'), theirs: await expertFor(game.opponent) },
+    }));
     const step = async () => {
       const span = queue.shift();
       if (!span || stopped) return;
-      const { reviewTurn } = await loaded;
+      const { reviewTurn, nets } = await loaded;
       try {
-        onturn(reviewTurn(states, game.actions, span, plans, opts));
+        onturn(reviewTurn(states, game.actions, span, plans, opts, nets));
       } catch (e) {
         errors.push((e as Error).message);
       }

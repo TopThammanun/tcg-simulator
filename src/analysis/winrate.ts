@@ -60,15 +60,16 @@ export function pairedDiff(a: WinEstimate, b: WinEstimate): { diff: number; se: 
  * Chance to win as the bot's network judges it (its value head, learn/model.ts): the position re-dealt
  * `deals` times from what `me` could see, each judged by whoever acts next. One forward pass per deal, so a
  * whole game's review takes moments, and the same deals (`seed`) give the same answer. `decks` are the plan
- * names [mine, theirs] the network is told.
+ * names [mine, theirs] the network is told. `theirs` judges the deals where the other side acts (its deck's
+ * expert: an expert has only learned the positions of its own deck); `model` by default.
  */
-export function netWin(s: GameState, me: PlayerId, model: Model, decks: readonly [string, string], opts: { deals?: number; seed?: number } = {}): WinEstimate {
+export function netWin(s: GameState, me: PlayerId, model: Model, decks: readonly [string, string], opts: { deals?: number; seed?: number } = {}, theirs: Model = model): WinEstimate {
   if (s.winner !== null) return summarize([s.winner === me ? 1 : s.winner === 'draw' ? 0.5 : 0]);
   const n = s.pending ? 1 : (opts.deals ?? 16);
   const results = Array.from({ length: n }, (_, i) => {
     const d = s.pending ? s : determinize(s, me, rolloutSeed(opts.seed ?? 1, i));
     const who = actor(d);
-    const v = run(model, encode(d, { decks: who === me ? decks : [decks[1], decks[0]] }), false).value;
+    const v = run(who === me ? model : theirs, encode(d, { decks: who === me ? decks : [decks[1], decks[0]] }), false).value;
     return who === me ? v : 1 - v;
   });
   return summarize(results);

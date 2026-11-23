@@ -8,7 +8,9 @@
 An expert set is a folder of <deck slug>.json with default.json for the other decks: gen.ts, match.py and decks.py
 take the folder wherever they take a weights file (`net:<folder>`, `search:<folder>`). `ship` writes each expert
 as float16 (half the download; check one with scripts/learn/half-check.ts) where the web loads it from
-(src/bots/experts.ts); the bundled network keeps playing the decks without one.
+(src/bots/experts.ts); the bundled network keeps playing the decks without one. `--no-look-ahead <slugs>` marks
+experts that play without look-ahead on the play screen (meta.search, src/bots/index.ts): those whose deck the
+look-ahead helps by under 3 points (BOT-NEXT.md N5, ml/ladder.py play "search:<set>" vs "search:<set>|samples=0").
 """
 from __future__ import annotations
 
@@ -42,6 +44,7 @@ def main():
     p = sub.add_parser("ship")
     p.add_argument("--set", required=True)
     p.add_argument("--decks", default="", help="only these (comma-separated)")
+    p.add_argument("--no-look-ahead", default="", help="these experts play without look-ahead (comma-separated)")
     a = ap.parse_args()
     if a.cmd == "best":
         path, score, it = best(a.run)
@@ -57,15 +60,23 @@ def main():
         return
     os.makedirs(WEB, exist_ok=True)
     only = set(a.decks.split(",")) if a.decks else None
+    plain = set(a.no_look_ahead.split(",")) if a.no_look_ahead else set()
     for f in sorted(os.listdir(a.set)):
         slug = os.path.splitext(f)[0]
         if not f.endswith(".json") or slug == "default" or (only and slug not in only):
             continue
         j = json.load(open(os.path.join(a.set, f)))
         j["tensors"] = {k: b64(unb64(v), half=True) for k, v in j["tensors"].items()}
-        j.setdefault("meta", {})["shipped from"] = os.path.relpath(os.path.join(a.set, f), ROOT).replace("\\", "/")
+        meta = j.setdefault("meta", {})
+        # From .cache/ on when the set was trained in another worktree of the repo.
+        src = os.path.abspath(os.path.join(a.set, f)).replace("\\", "/")
+        meta["shipped from"] = src[src.find(".cache/"):] if ".cache/" in src else os.path.relpath(src, ROOT).replace("\\", "/")
+        if slug in plain:
+            meta["search"] = {"samples": 0}
+        else:
+            meta.pop("search", None)
         write_json(j, os.path.join(WEB, f))
-        print(f"shipped {slug} ({os.path.getsize(os.path.join(WEB, f)) / 1e6:.1f} MB)")
+        print(f"shipped {slug} ({os.path.getsize(os.path.join(WEB, f)) / 1e6:.1f} MB){' without look-ahead' if slug in plain else ''}")
 
 
 if __name__ == "__main__":

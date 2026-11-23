@@ -1,7 +1,8 @@
 // Game review: each of your turns gets
-// - your win% before and after it: the bot's network judges the position (winrate.ts netWin), averaged over
-//   re-deals of what you couldn't see, so it is the same network the opponent plays with, takes moments, and
-//   gives the same answer every time (the rule-based bots' played-out games when no network is bundled),
+// - your win% before and after it: the bot's networks judge the position (winrate.ts netWin; each side's positions
+//   by the network its deck plays with, `Nets`), averaged over re-deals of what you couldn't see, so the opponent's
+//   side is judged by the network it plays with, it takes moments, and gives the same answer every time (the
+//   rule-based bots' played-out games when no network is bundled),
 // - a check for clear mistakes: at the moment you chose how to end the turn (and at its start), the attack
 //   planner finds a line that wins or takes more Prizes than you took, on every re-deal of what you couldn't
 //   see ("พลาดชัด": engine-checked with fixed seeds, so it doesn't depend on luck or on how well bots play),
@@ -14,6 +15,7 @@ import { choosePicks } from '../bots/choose';
 import { explainAction, explainEnd } from '../bots/explain';
 import { sureLine as sureLineFor, type Step } from '../bots/finisher';
 import { createBot, MODEL } from '../bots/index';
+import type { Model } from '../bots/learn/model';
 import { describeAction } from '../ui/play';
 import { isFree, type TurnSpan } from '../review/record';
 import type { Plans } from './threat';
@@ -65,14 +67,27 @@ export interface ReviewOptions {
   seed?: number;
 }
 
+/**
+ * The networks the bot plays each side's deck with (bots/experts.ts expertFor: the deck's expert, also for a list of
+ * your own, by its plan); the bundled network for a side without one.
+ */
+export interface Nets {
+  mine?: Model | null;
+  theirs?: Model | null;
+}
+
 /** Smallest win% gain of the bot's turn over yours for "น่าจะดีกว่า". */
 export const BETTER_BY = 0.1;
 /** The bot's seed for the suggested turn (plus the turn number). */
 const ALT_SEED = 7331;
 
-/** Win% of `me` in `s`, from what `me` could see: the chance if both sides play on like the bot. */
-export function winOf(s: GameState, me: PlayerId, plans: Plans, opts: { deals?: number; seed?: number }): WinEstimate {
-  if (MODEL) return netWin(s, me, MODEL, [plans.mine.name, plans.theirs.name], opts);
+/**
+ * Win% of `me` in `s`, from what `me` could see: the chance if both sides play on like the bot, each side's
+ * positions judged by the network that plays its deck.
+ */
+export function winOf(s: GameState, me: PlayerId, plans: Plans, opts: { deals?: number; seed?: number }, nets: Nets = {}): WinEstimate {
+  const mine = nets.mine ?? MODEL;
+  if (mine) return netWin(s, me, mine, [plans.mine.name, plans.theirs.name], opts, nets.theirs ?? MODEL ?? mine);
   return estimateWin(s, me, plans, { samples: 3 * (opts.deals ?? 16), seed: opts.seed });
 }
 
@@ -89,11 +104,11 @@ export function sureLine(s: GameState, me: PlayerId, plans: Plans, checks: numbe
 }
 
 /**
- * The bot (bots/index.ts, without look-ahead so a whole game's review stays quick) plays `me`'s turn from `s`
- * on the real cards (the opponent answers its own choices); the state once the turn has passed.
+ * The bot (bots/index.ts, your deck's network without look-ahead so a whole game's review stays quick) plays
+ * `me`'s turn from `s` on the real cards (the opponent answers its own choices); the state once the turn has passed.
  */
-export function botTurn(s: GameState, me: PlayerId, plans: Plans, seed: number): { end: GameState; states: GameState[]; actions: Action[] } {
-  const bot = createBot(plans.mine, seed, plans.theirs, { fast: true });
+export function botTurn(s: GameState, me: PlayerId, plans: Plans, seed: number, nets: Nets = {}): { end: GameState; states: GameState[]; actions: Action[] } {
+  const bot = createBot(plans.mine, seed, plans.theirs, { fast: true, model: nets.mine });
   const states = [s];
   const actions: Action[] = [];
   let st = s;
@@ -117,7 +132,7 @@ function sameMoves(sa: GameState[], aa: Action[], sb: GameState[], ab: Action[],
   return key(sa, aa) === key(sb, ab);
 }
 
-export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpan, plans: Plans, opts: ReviewOptions = {}): TurnReview {
+export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpan, plans: Plans, opts: ReviewOptions = {}, nets: Nets = {}): TurnReview {
   const me = actor(states[span.start]!);
   const checks = opts.checks ?? 4;
   const odds = { deals: opts.deals ?? 16, seed: (opts.seed ?? 1) * 1009 + span.turn };
@@ -141,14 +156,14 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
     }
   }
 
-  const before = winOf(start, me, plans, odds).p;
-  const win = winOf(end, me, plans, odds);
+  const before = winOf(start, me, plans, odds, nets).p;
+  const win = winOf(end, me, plans, odds, nets);
 
   // The bot's turn from the same start. Its seed is fixed, so a position always gets the same suggestion.
   let alt: TurnReview['alt'];
-  const bot = botTurn(start, me, plans, ALT_SEED + span.turn);
+  const bot = botTurn(start, me, plans, ALT_SEED + span.turn, nets);
   if (!sameMoves(states.slice(span.start, span.end), actions.slice(span.start, span.end), bot.states, bot.actions, me)) {
-    const theirs = winOf(bot.end, me, plans, odds);
+    const theirs = winOf(bot.end, me, plans, odds, nets);
     const its = moves(bot.states, bot.actions, 0, bot.actions.length, me);
     let split = 0;
     while (split < its.length && split < mine.length && its[split]!.label === mine[split]!.label) split++;

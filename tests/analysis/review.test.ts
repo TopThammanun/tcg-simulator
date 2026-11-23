@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { reviewTurn, sureLine } from '../../src/analysis/review';
-import { estimateWin, merge, pairedDiff, summarize } from '../../src/analysis/winrate';
+import { estimateWin, merge, netWin, pairedDiff, summarize } from '../../src/analysis/winrate';
 import { makeBot } from '../../src/bots/core';
+import { randomModel } from '../../src/bots/learn/model';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
 import { actor, apply } from '../../src/engine/actions';
 import { DEFAULT_RULES } from '../../src/engine/state';
@@ -110,6 +111,19 @@ describe('win% (winrate.ts)', () => {
     const b = summarize([1, 1, 1, 1]);
     expect(merge(a, summarize([0, 0])).p).toBeCloseTo(0.5, 10);
     expect(pairedDiff(a, b)).toMatchObject({ diff: 0.25 });
+  });
+
+  it("asks each side's own network (its deck's expert) about the deals where that side acts", () => {
+    const mine = randomModel(1);
+    const theirs = randomModel(2);
+    const decks = [plans.mine.name, plans.theirs.name] as const;
+    // The opponent to move: only their network is asked.
+    const waiting = { ...position([]), current: 1 as const };
+    expect(netWin(waiting, 0, mine, decks, FAST, theirs).results).toEqual(netWin(waiting, 0, theirs, decks, FAST).results);
+    expect(netWin(waiting, 0, mine, decks, FAST, theirs).results).not.toEqual(netWin(waiting, 0, mine, decks, FAST).results);
+    // You to move: only yours.
+    const s = position([]);
+    expect(netWin(s, 0, mine, decks, FAST, theirs).results).toEqual(netWin(s, 0, mine, decks, FAST).results);
   });
 });
 

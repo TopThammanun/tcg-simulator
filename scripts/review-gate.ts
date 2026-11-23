@@ -1,8 +1,8 @@
 // Game review gate. Bot games between the meta decks (every pairing, both seats); then:
 // 1. win% calibration: after each of your turns, the review's win% (the network's value, review.ts winOf,
 //    from what you could see) is checked against how the game really ended (scripts/lib/calibration-table.ts).
-//    Two kinds of games: your side played by the network (as strong as the opponent), and by the rule-based
-//    bot (a weaker player than the network expects).
+//    Two kinds of games: your side played by your deck's network (its expert, as strong as the opponent's), and by
+//    the rule-based bot (a weaker player than the network expects).
 // 2. stability: every turn of the first --stability games is reviewed twice with different re-deals; the
 //    verdict (missed-win / missed-ko / better / ok) should be the same at least 90% of the time.
 // 3. time: a whole game's review on one thread (the review page splits turns over several workers).
@@ -15,6 +15,7 @@ import { createBot } from '../src/bots/index';
 import { expertModel } from './lib/experts';
 import { DEFAULT_POLICY, planFor } from '../src/bots/plans';
 import { deckKeys } from '../src/engine/db';
+import { RULES_VERSION } from '../src/engine/state';
 import { replay, turnsOf, type SavedGame } from '../src/review/record';
 import { playGame } from '../src/sim/game';
 import { calibrationTable, mean, pct, type Prediction } from './lib/calibration-table';
@@ -52,15 +53,18 @@ function run(job: Job): Result {
     const opp = decks[Math.floor(k / decks.length) % decks.length]!;
     const seed = job.base + i;
     const plans = { mine: planFor(mine), theirs: planFor(opp) };
-    const me = side === 'net' ? createBot(plans.mine, seed + 1, plans.theirs, { fast: true }) : makeBot(plans.mine, { seed: seed + 1 });
-    const r = playGame({ seed, decks: [spec(mine), spec(opp)], bots: [me, createBot(plans.theirs, seed + 2, plans.mine, { fast: true, model: expertModel(opp) })], record: true });
+    // Each deck played and judged by its expert, as on the review page.
+    const nets = { mine: expertModel(mine), theirs: expertModel(opp) };
+    const me = side === 'net' ? createBot(plans.mine, seed + 1, plans.theirs, { fast: true, model: nets.mine }) : makeBot(plans.mine, { seed: seed + 1 });
+    const r = playGame({ seed, decks: [spec(mine), spec(opp)], bots: [me, createBot(plans.theirs, seed + 2, plans.mine, { fast: true, model: nets.theirs })], record: true });
     const game: SavedGame = {
       savedAt: 0,
       seed,
       opponent: opp,
       opponentName: opp,
       mine,
-      rules: {},
+      // Played under today's rules: without a version, replay() would play it on under version 1's.
+      rules: { version: RULES_VERSION },
       policy: DEFAULT_POLICY,
       decks: [spec(mine).cards, spec(opp).cards],
       actions: r.history!,
@@ -74,13 +78,13 @@ function run(job: Job): Result {
     for (const sp of spans) {
       const end = states[sp.end]!;
       if (end.winner !== null) continue; // a decided game says nothing about calibration
-      out.predictions[side].push({ p: winOf(end, 0, plans, { deals: job.deals, seed: seed * 13 + sp.turn }).p, y, game: i });
+      out.predictions[side].push({ p: winOf(end, 0, plans, { deals: job.deals, seed: seed * 13 + sp.turn }, nets).p, y, game: i });
     }
     if (i < job.stability) {
       const t0 = performance.now();
-      const a = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 1 }));
+      const a = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 1 }, nets));
       out.times.push([performance.now() - t0, spans.length]);
-      const b = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 2 }));
+      const b = spans.map((sp) => reviewTurn(states, game.actions, sp, plans, { deals: job.deals, seed: 2 }, nets));
       a.forEach((x, n) => out.verdicts.push([x.verdict, b[n]!.verdict]));
     }
   }

@@ -32,7 +32,7 @@ ml/.venv/Scripts/python ml/ppo.py --init .cache/learn/bc.json --dir .cache/learn
 ml/.venv/Scripts/python ml/match.py --a search:src/bots/learn/weights.json --b hard   # A vs B: every deck pair, both seats (--server: net/bot players batched on the GPU)
 ml/.venv/Scripts/python ml/ladder.py play <A> <B> [--a-decks <deck>]   # one match into data/learn/ladder.jsonl; `table` = everyone's Elo
 ml/.venv/Scripts/python ml/decks.py --a net:<expert> --b net:<W> --decks <deck>   # A plays that deck vs B on every deck (the expert gates) -> data/learn/decks.jsonl
-ml/.venv/Scripts/python ml/experts.py assemble|best|ship   # deck experts: an expert set (folder of <deck>.json + default.json), a run's best eval, float16 into src/bots/learn/experts/
+ml/.venv/Scripts/python ml/experts.py assemble|best|ship   # deck experts: an expert set (folder of <deck>.json + default.json), a run's best eval, float16 into src/bots/learn/experts/ (ship --no-look-ahead <decks>)
 ml/.venv/Scripts/python ml/league.py --start <set> --root <dir> -- <ppo.py args>   # the experts' league: each deck's expert vs the previous round's set
 ml/.venv/Scripts/python ml/refresh.py --set <set> --decks <changed> --out <new set> [--ship]   # a deck's list or rules changed: its expert trains on, the better one goes into a new set
 ml/.venv/Scripts/python ml/ablate.py --base <expert> --deck <deck> --root <dir>   # each new input group / the critic / --sure vs a control trained as long
@@ -93,7 +93,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   value head), or the hard bot when no network is bundled; `{ fast: true }` is the network alone (the simulator
   and its replays, the review's comparison turn). A bot deck can have its own network, an expert trained on that deck
   (`learn/experts/<deck>.json`, float16, `ml/experts.py ship`): `experts.ts` loads it in the worker at `init`, as its
-  own chunk; decks without one, and a failed load, play the bundled network. Scripts find the same files with
+  own chunk; decks without one, and a failed load, play the bundled network. An expert whose file has
+  `meta.search` (`ship --no-look-ahead`: its deck gains under 3 points from the look-ahead) plays without it, at once;
+  `SEARCH.ties` picks at random among the moves within 2% of the best. Scripts find the same files with
   `scripts/lib/experts.ts`, and every weights argument also takes an expert set (a folder of `<deck>.json` + `default.json`).
   `scripts/learn/gen.ts` plays training games; with a `server` in its config, `batched.ts` keeps many games in flight
   per worker and sends every waiting decision to `ml/serve.py` (one select loop, CUDA graphs per batch size) in one frame
@@ -122,10 +124,12 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   seen. Sampled in a Web Worker a batch at a time (`worker.ts`, `remote.ts`). The play screen no longer shows them
   (practice mode was removed, 20 Nov); the code and its gate are kept for analysis. `winrate.ts` = win% by playing the game out (rule-based bots, quick; re-dealt
   hidden cards), or `netWin` (the network's value head on re-deals: one forward pass each). `review.ts` = one of your
-  turns reviewed: win% before and after it (`winOf`: netWin, the chance if both sides play on like the bot), clear
-  mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on several re-deals), the bot's turn on the
-  real cards judged on the same re-deals, where it parts from yours and why (`explain.ts`); run on several workers by
-  `review-remote.ts` / `review-worker.ts`. Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
+  turns reviewed: win% before and after it (`winOf`: netWin, the chance if both sides play on like the bot; each
+  side's positions judged by the network its deck plays with, `Nets`: the experts of your deck's plan and of the
+  opponent's, which the workers load), clear mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on
+  several re-deals), the bot's turn (your deck's network) on the real cards judged on the same re-deals, where it
+  parts from yours and why (`explain.ts`); run on several workers by `review-remote.ts` / `review-worker.ts`.
+  Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions, your deck's plan `mine`, `mode`, and the undos'
   re-deals `redeals`; `replay()`, `turnsOf()`; a game keeps its `rules`, and `Rules.version` (`engine/state.ts`
   `RULES_VERSION`) is raised by a fix that changes how games play out, the old behaviour kept for older games so they
