@@ -1,8 +1,10 @@
 ---
+import ArenaLines from '../../components/ArenaLines.astro';
 import DeckCard from '../../components/DeckCard.astro';
+import GymBadge from '../../components/GymBadge.svelte';
 import { langPaths, localePath, tFor } from '../../i18n';
 import Base from '../../layouts/Base.astro';
-import { archetypes, headlines, loadDecks } from '../../lib/decks';
+import { gymLeaders, headlines, loadDecks } from '../../lib/decks';
 import { appLd, faqLd, siteUrl } from '../../lib/seo';
 import { SUPPORTED } from '../../ui/decklist';
 import limitless from '../../../data/meta/limitless.json';
@@ -18,29 +20,34 @@ const to = (path: string) => localePath(lang, path);
 const shot = (name: string) => `/home/${name}${lang === 'en' ? '-en' : ''}.jpg`;
 
 const decks = await loadDecks();
-const opponents = archetypes(decks);
-const maxShare = Math.max(...opponents.map((a) => a.metaShare));
+// The meta decks are the gym's leaders: beat one and its badge is yours (the game list keeps them).
+const gyms = gymLeaders(decks);
+const maxShare = Math.max(...gyms.map((a) => a.metaShare));
 const updated = new Date(limitless.fetched).toLocaleDateString(lang === 'en' ? 'en-GB' : 'th-TH', { dateStyle: 'medium' });
 const num = (n: number) => n.toLocaleString('en-US');
 const artOf = (slug: string) => headlines(decks.find((d) => d.slug === slug)!)[0]?.print.image.high;
 
+// A trainer's session: warm up, battle, cool down.
 const steps = [
   {
-    title: t('เลือกเด็ค', 'Pick a deck'),
+    phase: t('วอร์มอัป', 'Warm up'),
+    title: t('เลือกหรือจัดเด็ค', 'Pick or build a deck'),
     text: t(
       'เลือกเด็คใน meta จัดเด็คเองด้วยการกดเลือกการ์ด หรือวาง list ที่ export จาก Limitless หรือ Pokémon TCG Live แล้วเลือกคู่แข่ง หรือสุ่มตามสัดส่วนที่เจอจริง',
       'Pick a meta deck, build your own by clicking cards in, or paste a list exported from Limitless or Pokémon TCG Live, then pick an opponent, or let it be drawn by how often each deck is played',
     ),
   },
   {
-    title: t('เล่นกับบอท', 'Play the bot'),
+    phase: t('ลงสนาม', 'Battle'),
+    title: t('เล่นกับ Gym leader', 'Play a gym leader'),
     text: t(
       'เล่นตามกฎ Standard เหมือนที่โต๊ะ ค้นเด็คแล้วเห็นทั้งเด็ค เลือก Prize เอง ไม่มีตัวช่วยหรือย้อนตา',
       'Standard rules, as at a real table: a search shows your whole deck, you pick your own Prize cards, and there are no hints or take-backs',
     ),
   },
   {
-    title: t('ทบทวนเกม', 'Review the game'),
+    phase: t('คูลดาวน์', 'Cool down'),
+    title: t('ทบทวนกับโค้ช', 'Review with the coach'),
     text: t(
       'ดู win% ทุกเทิร์น เทิร์นที่เกมพลิก บอทจะเล่นต่างจากคุณตรงไหน ทางนั้นได้อะไร และ play around อะไรในเทิร์นหน้า แล้วลองเล่นเทิร์นนั้นใหม่',
       'See your win% on every turn, the turn the game turned on, where the bot would have played differently, what that gets you and what it plays around next turn, then play that turn again',
@@ -51,8 +58,8 @@ const steps = [
 // The tagline, word by word (Thai has no spaces between words, so the words come from the segmenter).
 const TAGLINE =
   lang === 'en'
-    ? ['The bots play the same lists as the top players,', "so you practise the matchups you'll meet at real events"]
-    : ['บอทเล่น list เดียวกับผู้เล่นที่ติดอันดับ', 'คุณได้ซ้อม matchup ที่จะเจอในทัวร์จริง'];
+    ? ['Every gym leader plays the same list as the top players,', 'so beat them all here before the real event']
+    : ['Gym leader ทุกคนใช้ list เดียวกับผู้เล่นที่ติดอันดับ', 'ผ่านให้ครบที่นี่ แล้วไปเจอกันในทัวร์จริง'];
 const segmenter = new Intl.Segmenter(lang, { granularity: 'word' });
 const taglineWords = TAGLINE.map((line) => {
   const words: string[] = [];
@@ -64,6 +71,20 @@ const taglineWords = TAGLINE.map((line) => {
 });
 
 const faq = [
+  {
+    q: t('MyTrainerGym คืออะไร', 'What is MyTrainerGym?'),
+    a: t(
+      'ยิมซ้อม Pokémon TCG ในเบราว์เซอร์: จัดเด็ค เล่นกับบอทที่ใช้เด็คที่ครอง meta (Gym leader) แล้วทบทวนเกมกับโค้ชที่บอกว่าเทิร์นไหนพลาด ทางที่ดีกว่าได้อะไร และควร play around อะไร ฟรี ไม่ต้องสมัคร',
+      'A Pokémon TCG training gym in your browser: build a deck, battle bots playing the decks that rule the meta (the gym leaders), then review the game with a coach that shows which turns slipped, what the better way gets you and what to play around. Free, no sign-up.',
+    ),
+  },
+  {
+    q: t('เหรียญยิมได้มายังไง', 'How do I earn gym badges?'),
+    a: t(
+      `Gym leader มี ${gyms.length} คน คือเด็คที่ครอง meta ชนะเด็คไหนได้เหรียญของเด็คนั้น เหรียญที่เก็บได้อยู่ในหน้าประวัติเกม`,
+      `There are ${gyms.length} gym leaders, the decks that rule the meta. Beat one and you earn its badge; your badge case is on the game history page.`,
+    ),
+  },
   {
     q: t('ต้องสมัครสมาชิกไหม', 'Do I need an account?'),
     a: t(
@@ -110,8 +131,8 @@ const faq = [
 ---
 
 <Base
-  title={t('จำลองเกม Pokémon TCG ซ้อม matchup กับบอท AI', 'Pokémon TCG simulator: practise matchups against AI bots')}
-  words={t('จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG simulator,matchup practice,AI bot').split(',')}
+  title={t('ยิมซ้อม Pokémon TCG ซ้อม matchup กับบอท AI', 'Pokémon TCG training gym: practise matchups against AI bots')}
+  words={t('ยิมซ้อม Pokémon TCG,จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG training gym,Pokémon TCG simulator,matchup practice,AI bot').split(',')}
   jsonLd={[
     appLd(
       lang,
@@ -126,18 +147,19 @@ const faq = [
   ]}
 >
   <section class="hero">
+    <ArenaLines class="hero-arena" frame />
     <p class="proof caption-4">
       {t('ข้อมูลจาก Limitless', 'Data from Limitless')} · <span class="mono">{num(limitless.tournaments)}</span> {t('ทัวร์นาเมนต์', 'tournaments')} ·
       <span class="mono">{num(limitless.players)}</span> {t('ผู้เล่น', 'players')} · {t('', 'last')} <span class="mono">{limitless.days}</span> {t('วันล่าสุด', 'days')}
     </p>
     <h1 class="heading-1">
-      {t('ซ้อมกับเด็คที่ครอง meta', 'Practise against the decks that rule the meta')}<br />{t('ก่อนเจอกันในทัวร์จริง', 'before you meet them at an event')}
+      {t('ยิมซ้อม Pokémon TCG', 'Your Pokémon TCG gym.')}<br />{t('ท้าชิงเด็คที่ครอง meta', 'Train against the meta.')}
     </h1>
     <p class="sub body-7">
-      {t('เลือกเด็ค Pokémon TCG ของคุณหรือจัดเด็คเอง แล้วเล่นกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด', 'Pick your Pokémon TCG deck or build your own, then play bots running real lists from recent tournaments,')}<br />
+      {t('เลือกเด็คของคุณหรือจัดเด็คเอง แล้วลงสนามกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด', 'Pick your deck or build your own, then battle bots running real lists from recent tournaments,')}<br />
       {t('ตามกฎ Standard ในเบราว์เซอร์ ไม่ต้องสมัคร', 'under Standard rules, in your browser, with no sign-up')}
     </p>
-    <a class="btn primary" href={to('/play/')}>{t('เริ่มเล่นกับบอท', 'Play the bot')}</a>
+    <a class="btn primary" href={to('/play/')}>{t('เริ่มซ้อมกับบอท', 'Start training')}</a>
     <figure class="shot">
       <img
         src={shot('board')}
@@ -155,16 +177,22 @@ const faq = [
   <section class="section" aria-labelledby="meta-title">
     <header class="section-head reveal">
       <div>
-        <h2 id="meta-title" class="heading-3">{t('เด็คที่คุณจะเจอ', "The decks you'll face")}</h2>
+        <p class="eyebrow">{t('Gym leader', 'Gym leaders')}</p>
+        <h2 id="meta-title" class="heading-3">{t('เด็คที่คุณต้องผ่านให้ได้', 'The decks you have to beat')}</h2>
         <p class="body-3 muted">
-          {t(`สัดส่วนใน meta จาก Limitless ${limitless.days} วันล่าสุด อัปเดต ${updated}`, `Meta share on Limitless over the last ${limitless.days} days, updated ${updated}`)}
+          {
+            t(
+              `${gyms.length} เด็คที่ครอง meta บน Limitless ${limitless.days} วันล่าสุด (อัปเดต ${updated}) ชนะเด็คไหนได้เหรียญของเด็คนั้น`,
+              `The ${gyms.length} decks that rule the meta on Limitless over the last ${limitless.days} days (updated ${updated}). Beat one to earn its badge.`,
+            )
+          }
         </p>
       </div>
       <a class="btn" href={to('/decks/')}>{t('ดู list ทั้งหมด', 'See every list')}</a>
     </header>
     <div class="decks reveal">
       {
-        opponents.map((a, i) => (
+        gyms.map((a, i) => (
           <DeckCard
             href={to(`/decks/${a.slugs[0]}/`)}
             name={a.name}
@@ -172,6 +200,7 @@ const faq = [
             share={a.metaShare}
             {maxShare}
             art={artOf(a.slugs[0]!)}
+            badge={{ shape: a.shape, type: a.type }}
           />
         ))
       }
@@ -180,13 +209,18 @@ const faq = [
 
   <section class="section" aria-labelledby="how-title">
     <header class="section-head reveal">
-      <h2 id="how-title" class="heading-3">{t('ใช้งานยังไง', 'How it works')}</h2>
+      <div>
+        <p class="eyebrow">{t('โปรแกรมซ้อม', 'Training plan')}</p>
+        <h2 id="how-title" class="heading-3">{t('ซ้อมครบหนึ่งรอบในยิมเดียว', 'One full session, in one gym')}</h2>
+      </div>
     </header>
     <ol class="steps">
       {
         steps.map((s, i) => (
           <li class="reveal" style={`--i:${i}`}>
-            <span class="mono caption-4 step-no">{String(i + 1).padStart(2, '0')}</span>
+            <span class="caption-3 step-no">
+              <span class="mono">{String(i + 1).padStart(2, '0')}</span> · {s.phase}
+            </span>
             <h3 class="title-1">{s.title}</h3>
             <p class="body-6 muted">{s.text}</p>
           </li>
@@ -197,12 +231,13 @@ const faq = [
 
   <section class="section after" aria-labelledby="after-title">
     <div class="after-text reveal">
-      <h2 id="after-title" class="heading-3">{t('หลังเกม ดูว่าเทิร์นไหนเกมพลิก', 'After the game, see the turn it turned on')}</h2>
+      <p class="eyebrow">{t('โค้ชหลังเกม', 'Your coach')}</p>
+      <h2 id="after-title" class="heading-3">{t('หลังทุกเกม โค้ชบอกว่าเทิร์นไหนเกมพลิก', 'After every battle, see the turn it turned on')}</h2>
       <p class="body-3 muted">
         {
           t(
-            'ทุกเทิร์นของคุณถูกวิเคราะห์ในเบราว์เซอร์ บอกในประโยคเดียวว่าจุดไหนสำคัญที่สุด กราฟ win% แยกตาคุณกับตาบอท แล้วเปิดเทิร์นนั้นบนสนาม เทียบทางที่คุณเล่นกับทางที่บอทจะเล่นทีละการ์ด',
-            "Every turn of yours is analysed in your browser: one sentence on what mattered most, a win% chart with your turns and the bot's apart, then that turn on the table, your way and the bot's way, card by card.",
+            'ทุกเทิร์นของคุณถูกวิเคราะห์ในเบราว์เซอร์ กราฟ win% แยกตาคุณกับตาบอท เทิร์นที่ควรดูเปิดบนสนาม เทียบทางที่คุณเล่นกับทางที่บอทจะเล่น พร้อมบอกว่าทางนั้นได้อะไร และ play around อะไรในเทิร์นหน้า',
+            "Every turn of yours is analysed in your browser: a win% chart with your turns and the bot's apart, the turn worth a look on the table, your way next to the bot's, what that way gets you and what it plays around next turn.",
           )
         }
       </p>
@@ -254,9 +289,19 @@ const faq = [
   </section>
 
   <section class="final reveal" aria-labelledby="final-title">
-    <h2 id="final-title" class="heading-4">{t('พร้อมซ้อม matchup แรกของคุณ', 'Ready for your first matchup?')}</h2>
-    <p class="body-3 muted">{t('เลือกเด็ค เลือกคู่แข่ง แล้วเริ่มเกมได้ทันที', 'Pick a deck, pick an opponent, and start right away')}</p>
-    <a class="btn primary" href={to('/play/')}>{t('เริ่มเล่นกับบอท', 'Play the bot')}</a>
+    <ArenaLines class="final-arena" />
+    <ul class="badges" aria-label={t('เหรียญยิมทั้งหมด', 'Every gym badge')}>
+      {
+        gyms.map((g) => (
+          <li>
+            <GymBadge shape={g.shape} type={g.type} size={40} label={g.name} />
+          </li>
+        ))
+      }
+    </ul>
+    <h2 id="final-title" class="heading-4">{t('พร้อมท้าชิงยิมแรกของคุณ', 'Ready for your first gym battle?')}</h2>
+    <p class="body-3 muted">{t(`เลือกเด็ค เลือก Gym leader แล้วเริ่มได้ทันที เก็บให้ครบ ${gyms.length} เหรียญ`, `Pick a deck and a gym leader and start right away. Collect all ${gyms.length} badges.`)}</p>
+    <a class="btn primary" href={to('/play/')}>{t('เริ่มซ้อมกับบอท', 'Start training')}</a>
   </section>
 </Base>
 
@@ -293,11 +338,24 @@ const faq = [
     color: var(--ink-soft);
   }
   .hero {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 48px 0 0;
     text-align: center;
+  }
+  /* The gym's floor behind the headline: hairlines, the centre circle under the call to action. */
+  .hero :global(.hero-arena) {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 50%;
+    width: min(1200px, 100vw);
+    height: auto;
+    transform: translateX(-50%);
+    opacity: 0.55;
+    animation: none;
   }
   .hero > * {
     animation: hero-in 0.7s var(--ease) both;
@@ -327,8 +385,11 @@ const faq = [
     border-radius: 999px;
     color: var(--ink-soft);
   }
+  .proof {
+    background: var(--paper);
+  }
   .proof .mono {
-    color: var(--ink-strong);
+    color: var(--gym);
   }
   h1 {
     max-width: 680px;
@@ -410,7 +471,10 @@ const faq = [
     transition-delay: calc(var(--i) * 80ms);
   }
   .step-no {
-    color: var(--ink-faint);
+    color: var(--gym);
+  }
+  .steps li {
+    border-top-color: color-mix(in srgb, var(--gym) 40%, var(--line));
   }
   .steps h3 {
     margin: 8px 0 8px;
@@ -497,15 +561,42 @@ const faq = [
     padding: 0 32px 24px 0;
   }
   .final {
+    position: relative;
+    z-index: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-top: 96px;
     padding: 64px 24px;
+    overflow: hidden;
     border: 1px solid var(--rule);
     border-radius: 24px;
     background: var(--card-bg);
     text-align: center;
+  }
+  .final :global(.final-arena) {
+    position: absolute;
+    z-index: -1;
+    inset: 16px;
+    width: calc(100% - 32px);
+    height: calc(100% - 32px);
+    opacity: 0.6;
+  }
+  /* Every gym's badge in a row: what there is to win. */
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+  }
+  .badges li {
+    transition: transform 0.5s var(--ease);
+  }
+  .badges li:hover {
+    transform: translateY(-4px) rotate(-8deg);
   }
   .final h2 {
     margin: 0 0 8px;
@@ -532,6 +623,10 @@ const faq = [
   @media (max-width: 640px) {
     .hero {
       padding-top: 24px;
+    }
+    /* Too small to read as a court on a phone: it would only cut through the headline. */
+    .hero :global(.hero-arena) {
+      display: none;
     }
     .decks {
       gap: 8px;

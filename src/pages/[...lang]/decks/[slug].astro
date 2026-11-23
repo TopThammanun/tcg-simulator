@@ -5,15 +5,17 @@ import CardTile from '../../../components/CardTile.astro';
 import type { DeckSection } from '../../../data/decklist';
 import { langPaths, localePath, tFor, type Lang } from '../../../i18n';
 import Base from '../../../layouts/Base.astro';
-import { loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../../lib/decks';
+import GymBadge from '../../../components/GymBadge.svelte';
+import { gymLeaders, gymOf, loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../../lib/decks';
 import { breadcrumbLd, siteUrl } from '../../../lib/seo';
 
 export const getStaticPaths = (async () => {
   const decks = metaDecks(await loadDecks());
-  return langPaths().flatMap(({ params, props }) => decks.map((deck) => ({ params: { ...params, slug: deck.slug }, props: { ...props, deck } })));
+  const all = await loadDecks();
+  return langPaths().flatMap(({ params, props }) => decks.map((deck) => ({ params: { ...params, slug: deck.slug }, props: { ...props, deck, gym: gymOf(gymLeaders(all), deck.slug) } })));
 }) satisfies GetStaticPaths;
 
-const { deck, lang } = Astro.props as { deck: DeckView; lang: Lang };
+const { deck, lang, gym } = Astro.props as { deck: DeckView; lang: Lang; gym?: ReturnType<typeof gymOf> };
 const t = tFor(lang);
 const sections: DeckSection[] = ['pokemon', 'trainer', 'energy'];
 let tileIndex = 0;
@@ -38,9 +40,12 @@ const name = deck.meta.name;
   <a class="back" href={localePath(lang, '/decks/')}>← {t('เด็คทั้งหมด', 'All decks')}</a>
   <header class="deck-head">
     <p class="eyebrow">
-      {t('อันดับ', 'Rank')} {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> {t('ของ meta', 'of the meta')}
+      {t('Gym leader · อันดับ', 'Gym leader · rank')} {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> {t('ของ meta', 'of the meta')}
     </p>
-    <h1 class="heading-3">{deck.meta.name}</h1>
+    <h1 class="heading-3 title">
+      {gym && <GymBadge shape={gym.shape} type={gym.type} size={40} />}
+      {deck.meta.name}
+    </h1>
     <p class="source body-6">
       {deck.meta.listSource}
       {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">{t('list บน Limitless ↗', 'The list on Limitless ↗')}</a>}
@@ -163,6 +168,11 @@ const name = deck.meta.name;
   }
   h1 {
     margin: 0 0 8px;
+  }
+  .title {
+    display: flex;
+    gap: 12px;
+    align-items: center;
   }
   .source {
     margin: 0;

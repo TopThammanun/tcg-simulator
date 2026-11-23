@@ -208,7 +208,14 @@
   class:turn-theirs={s.phase === 'main' && s.winner === null && s.current === 1}
 >
   <div class="their-half" aria-hidden="true"></div>
-  <div class="midline" aria-hidden="true"><span class="emblem">◆</span></div>
+  <!-- The centre of the gym's floor, with its badge (BrandMark.astro's shape). -->
+  <div class="midline" aria-hidden="true">
+    <svg class="emblem" viewBox="0 0 32 32">
+      <path d="M16 2L28.12 9V23L16 30L3.88 23V9Z" fill="var(--gym)" />
+      <path d="M16 2L28.12 9V23L16 30Z" fill="var(--gym-deep)" />
+      <path d="M10.5 15.5L16 10.5L21.5 15.5M10.5 21.5L16 16.5L21.5 21.5" fill="none" stroke="var(--primary-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </div>
 
   <div class="their-hand" data-zone="hand-1" title={tx(`มือบอท ${s.players[1].hand.length} ใบ`, `Bot's hand: ${s.players[1].hand.length} cards`)}>
     <span class="fan">
@@ -376,16 +383,10 @@
     position: absolute;
     left: 50%;
     top: 0;
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     transform: translate(-50%, -50%);
-    border: 1px solid #ffffff40;
-    border-radius: 50%;
-    background: var(--card-bg);
-    color: var(--stamp);
-    font-size: var(--fs-card);
+    filter: drop-shadow(0 0 0 var(--card-bg)) drop-shadow(0 0 3px #000000);
   }
 
   .side {

@@ -2,12 +2,15 @@
 import Review from '../../components/review/Review.svelte';
 import { langPaths, tFor } from '../../i18n';
 import Base from '../../layouts/Base.astro';
+import { gymLeaders, loadDecks } from '../../lib/decks';
 
 export function getStaticPaths() {
   return langPaths();
 }
 
 const t = tFor(Astro.props.lang);
+// The gym's leaders and their badges, for your badge case (beat a deck, earn its badge).
+const gyms = gymLeaders(await loadDecks()).map(({ name, slugs, shape, type }) => ({ name, slugs, shape, type }));
 ---
 
 <Base
@@ -19,7 +22,7 @@ const t = tFor(Astro.props.lang);
   words={t('ทบทวนเกม,วิเคราะห์เกม Pokémon TCG,play around', 'game review,Pokémon TCG analysis,play around').split(',')}
 >
   <header class="page-head">
-    <p class="eyebrow">{t('หลังเกม · เทิร์นไหนที่เกมพลิก', 'After the game · the turn it turned on')}</p>
+    <p class="eyebrow">{t('โค้ชหลังเกม · เทิร์นไหนที่เกมพลิก', 'Your coach · the turn it turned on')}</p>
     <h1 class="heading-3">{t('ประวัติเกม', 'Game history')}</h1>
     <p class="how body-7">
       {
@@ -30,7 +33,7 @@ const t = tFor(Astro.props.lang);
       }
     </p>
   </header>
-  <Review client:only="svelte" />
+  <Review client:only="svelte" {gyms} />
 </Base>
 
 <style>

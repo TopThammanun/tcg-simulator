@@ -1,0 +1,14 @@
+---
+// MyTrainerGym's mark: a gym badge (a hexagon, the right half a shade deeper) with two rank chevrons, our own drawing.
+// The same shape is the favicon (public/favicon.svg) and the emblem on the play mat's centre line (Board.svelte).
+interface Props {
+  size?: number;
+}
+const { size = 20 } = Astro.props;
+---
+
+<svg class="brand-mark" viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
+  <path d="M16 2L28.12 9V23L16 30L3.88 23V9Z" fill="var(--gym)" />
+  <path d="M16 2L28.12 9V23L16 30Z" fill="var(--gym-deep)" />
+  <path d="M10.5 15.5L16 10.5L21.5 15.5M10.5 21.5L16 16.5L21.5 21.5" fill="none" stroke="var(--primary-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

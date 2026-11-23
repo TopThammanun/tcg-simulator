@@ -1,5 +1,6 @@
 ---
 import { LANG_KEY, langOfPath, localePath, stripLang, tFor } from '../i18n';
+import BrandMark from '../components/BrandMark.astro';
 import { BRAND, keywords, ldJson, siteUrl, websiteLd, type JsonLd } from '../lib/seo';
 
 interface Props {
@@ -125,11 +126,8 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     <header class="nav-wrap">
       <nav class="nav" aria-label={t('เมนูหลัก', 'Main menu')}>
         <a class="brand" href={localePath(lang, '/')}>
-          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <rect x="4" y="4" width="14" height="20" rx="3" fill="currentColor" opacity="0.35" />
-            <rect x="12" y="8" width="14" height="20" rx="3" fill="currentColor" />
-          </svg>
-          {brand}
+          <BrandMark />
+          <span class="wordmark">MyTrainer<span class="gym">Gym</span></span>
         </a>
         <div class="links" id="nav-links">
           {
@@ -155,17 +153,14 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
       <div class="footer-inner">
         <div>
           <a class="brand" href={localePath(lang, '/')}>
-            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-              <rect x="4" y="4" width="14" height="20" rx="3" fill="currentColor" opacity="0.35" />
-              <rect x="12" y="8" width="14" height="20" rx="3" fill="currentColor" />
-            </svg>
-            {brand}
+            <BrandMark size={24} />
+            <span class="wordmark">MyTrainer<span class="gym">Gym</span></span>
           </a>
           <p class="caption-5 legal">
             {
               t(
-                'เว็บแฟนเมด ไม่หากำไร ไม่เกี่ยวข้องกับ The Pokémon Company, Nintendo, Creatures หรือ GAME FREAK รูปและข้อความการ์ดเป็นของเจ้าของลิขสิทธิ์ ดึงจาก TCGdex และ pokemontcg.io',
-                'A non-profit fan site, not affiliated with The Pokémon Company, Nintendo, Creatures or GAME FREAK. Card images and text belong to their owners, loaded from TCGdex and pokemontcg.io.',
+                'ยิมซ้อม Pokémon TCG ของเทรนเนอร์ เว็บแฟนเมด ไม่หากำไร ไม่เกี่ยวข้องกับ The Pokémon Company, Nintendo, Creatures หรือ GAME FREAK รูปและข้อความการ์ดเป็นของเจ้าของลิขสิทธิ์ ดึงจาก TCGdex, pokemontcg.io และ Limitless',
+                'The Pokémon TCG training gym. A non-profit fan site, not affiliated with The Pokémon Company, Nintendo, Creatures or GAME FREAK. Card images and text belong to their owners, loaded from TCGdex, pokemontcg.io and Limitless.',
               )
             }
           </p>
@@ -241,10 +236,13 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     --line: #313131;
     --stamp: #e5484d;
     --teal: #4cc38a;
-    --primary: #ffffff;
-    --primary-ink: #000000;
-    --press: #d4d4d4;
-    --accent: #f0b429;
+    /* MyTrainerGym's colour: badge gold, for the one main action and what can be played or picked. */
+    --gym: #ffc845;
+    --gym-deep: #e5a91f;
+    --primary: var(--gym);
+    --primary-ink: #1a1300;
+    --press: #e8b52e;
+    --accent: var(--gym);
     --accent-ink: #1a1300;
     --radius: 8px;
     --radius-lg: 12px;
@@ -534,9 +532,13 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     white-space: nowrap;
   }
   .brand-mark {
-    width: 20px;
-    height: 20px;
     flex: none;
+  }
+  .wordmark {
+    letter-spacing: -0.01em;
+  }
+  .wordmark .gym {
+    color: var(--gym);
   }
   .links {
     display: flex;
@@ -560,7 +562,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
   }
   .links a[aria-current='page'] {
     background: var(--control);
-    color: var(--ink-strong);
+    color: var(--gym);
   }
   /* The other language, set apart from the pages. */
   .links .lang-switch {
@@ -705,14 +707,16 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     font-variant-numeric: tabular-nums;
   }
 
-  /* A small label over a heading. */
+  /* A small label over a heading, like a gym's signage: gold, spaced out. */
   .eyebrow {
     display: block;
     margin: 0 0 8px;
-    color: var(--ink-soft);
-    font-size: 14px;
-    line-height: 20px;
-    font-weight: 500;
+    color: var(--gym);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   /* Entrances: decelerate into place; plain fades when motion is reduced. */

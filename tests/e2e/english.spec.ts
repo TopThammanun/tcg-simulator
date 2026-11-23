@@ -3,6 +3,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const THAI = /[฀-๿]/;
+/** A page's address as the site writes it for search engines: absolute, on the site's domain (astro.config `site`). */
+const SITE = 'https://mytrainergym.com';
 
 /** The page's visible text without the link to the Thai site. */
 async function visibleText(page: Page): Promise<string> {
@@ -17,8 +19,8 @@ test('the English pages are built in English and point at their Thai versions', 
   for (const path of ['/en/', '/en/decks/', '/en/decks/dragapult-ex/', '/en/builder/', '/en/review/']) {
     await page.goto(path);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.locator('link[rel="alternate"][hreflang="th"]')).toHaveAttribute('href', path.replace(/^\/en/, ''));
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', path);
+    await expect(page.locator('link[rel="alternate"][hreflang="th"]')).toHaveAttribute('href', SITE + path.replace(/^\/en/, ''));
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', SITE + path);
     await page.waitForLoadState('networkidle');
     expect(await visibleText(page)).not.toMatch(THAI);
   }
@@ -40,7 +42,11 @@ test('every page has its keywords, its own description and schema.org data', asy
   await page.goto('/en/');
   expect(await ld()).toEqual(expect.arrayContaining(['WebApplication', 'FAQPage']));
   // Anyone whose language is neither gets the English page.
-  await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute('href', '/en/');
+  await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute('href', `${SITE}/en/`);
+  // The site's name in the title and on shared links.
+  await expect(page).toHaveTitle(/MyTrainerGym$/);
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'MyTrainerGym');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${SITE}/home/board-en.jpg`);
 });
 
 // A person's browser, not a headless one (Base.astro leaves crawlers and automated browsers where they are).
@@ -104,5 +110,8 @@ test('the sitemap lists every page in both languages, each with its other-langua
     expect(locs).toContain(path === '/' ? '/en/' : `/en${path}`);
   }
   expect(xml.match(/hreflang="en"/g)!.length).toBe(locs.length);
-  expect(await (await request.get('/robots.txt')).text()).toContain('Allow: /');
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Allow: /');
+  expect(robots).toContain(`Sitemap: ${SITE}/sitemap.xml`);
+  expect(xml).toContain(`<loc>${SITE}/</loc>`);
 });

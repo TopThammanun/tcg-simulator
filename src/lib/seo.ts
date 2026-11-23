@@ -6,12 +6,16 @@ import type { Lang } from '../i18n';
 
 export type JsonLd = Record<string, unknown>;
 
-/** The site's name in each language. */
-export const BRAND: Record<Lang, string> = { th: 'สนามซ้อม Matchup', en: 'Matchup Practice' };
+/** The site's name (the same in both languages; mytrainergym is its domain). */
+export const BRAND: Record<Lang, string> = { th: 'MyTrainerGym', en: 'MyTrainerGym' };
+/** What it is, in each language: the name's second line in titles, shared links and schema.org. */
+export const TAGLINE: Record<Lang, string> = { th: 'ยิมซ้อม Pokémon TCG ของเทรนเนอร์', en: 'The Pokémon TCG training gym' };
 
 /** Searches the site should be found by: the game's names, in English and as Thai players write them. */
 const KEYWORDS: Record<Lang, string[]> = {
   th: [
+    'MyTrainerGym',
+    'My Trainer Gym',
     'Pokémon TCG',
     'PTCG',
     'โปเกมอนการ์ดเกม',
@@ -24,10 +28,14 @@ const KEYWORDS: Record<Lang, string[]> = {
     'เมต้า',
     'จำลองเกม Pokémon TCG',
     'เล่นกับบอท',
+    'ยิมโปเกมอน',
+    'เทรนเนอร์โปเกมอน',
     'Pokémon TCG Live',
     'Limitless',
   ],
   en: [
+    'MyTrainerGym',
+    'My Trainer Gym',
     'Pokémon TCG',
     'PTCG',
     'Pokémon TCG simulator',
@@ -38,6 +46,8 @@ const KEYWORDS: Record<Lang, string[]> = {
     'decklist',
     'Pokémon TCG AI',
     'play Pokémon TCG online',
+    'Pokémon TCG gym',
+    'Pokémon TCG trainer',
     'Pokémon TCG Live',
     'Limitless',
     'Standard format',
@@ -57,7 +67,8 @@ export function websiteLd(lang: Lang, url: Url): JsonLd {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: BRAND[lang],
-    alternateName: BRAND[lang === 'th' ? 'en' : 'th'],
+    alternateName: ['My Trainer Gym', 'mytrainergym'],
+    description: TAGLINE[lang],
     url: url(lang === 'en' ? '/en/' : '/'),
     inLanguage: lang,
   };

@@ -5,7 +5,7 @@ import { formatDecklist } from '../../../data/decklist';
 import { deckKeys } from '../../../engine/db';
 import { langPaths, localePath, tFor } from '../../../i18n';
 import Base from '../../../layouts/Base.astro';
-import { headlines, loadDecks, metaDecks, sectionCount } from '../../../lib/decks';
+import { gymLeaders, gymOf, headlines, loadDecks, metaDecks, sectionCount } from '../../../lib/decks';
 import { breadcrumbLd, itemListLd, siteUrl } from '../../../lib/seo';
 
 export function getStaticPaths() {
@@ -15,7 +15,9 @@ export function getStaticPaths() {
 const t = tFor(Astro.props.lang);
 const lang = Astro.props.lang;
 
-const decks = metaDecks(await loadDecks());
+const all = await loadDecks();
+const decks = metaDecks(all);
+const gyms = gymLeaders(all);
 // For your own decks: the meta lists to start from, and their plans for lists near them.
 const lists = decks.map((d) => ({
   slug: d.slug,
@@ -46,13 +48,13 @@ const url = siteUrl(Astro.site);
   ]}
 >
   <header class="page-head">
-    <p class="eyebrow">{t('เด็คใน meta', 'Meta decks')}</p>
+    <p class="eyebrow">{t('Gym leaders · เด็คใน meta', 'Gym leaders · meta decks')}</p>
     <h1 class="heading-3">{t('เด็คทั้งหมด', 'All decks')}</h1>
     <p class="body-7 lede">
       {
         t(
-          'เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด เลือกเด็คเพื่อดูการ์ดทุกใบ หรือเพิ่ม list ของคุณเองด้านล่าง',
-          "The top decks of the meta by their share on Limitless, each playing a real list from a recent tournament. Pick one to see every card, or add your own list below.",
+          'เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless คือ Gym leader ของยิมนี้ แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด ชนะเด็คไหนได้เหรียญของเด็คนั้น เลือกเด็คเพื่อดูการ์ดทุกใบ หรือจัดเด็คของคุณเองด้านล่าง',
+          "The top decks of the meta by their share on Limitless are this gym's leaders, each playing a real list from a recent tournament. Beat one to earn its badge. Pick one to see every card, or build your own deck below.",
         )
       }
     </p>
@@ -70,6 +72,7 @@ const url = siteUrl(Astro.site);
           art={headlines(d)[0]?.print.image.high}
           note={d.meta.listSource}
           counts={`Pokémon ${sectionCount(d, 'pokemon')} · Trainer ${sectionCount(d, 'trainer')} · Energy ${sectionCount(d, 'energy')}`}
+          badge={gymOf(gyms, d.slug)}
         />
       ))
     }

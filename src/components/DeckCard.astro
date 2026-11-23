@@ -1,6 +1,8 @@
 ---
-// One meta deck as a card: its headline Pokémon's art (cropped from the card image), rank, name, meta share.
+// One meta deck as a Gym Leader's card: its headline Pokémon's art (cropped from the card image) with the gym's badge,
+// rank, name, meta share.
 import { langOfPath, tFor } from '../i18n';
+import GymBadge from './GymBadge.svelte';
 
 interface Props {
   href: string;
@@ -13,13 +15,24 @@ interface Props {
   art?: string;
   note?: string;
   counts?: string;
+  /** The Gym Leader's badge (lib/decks.ts gymLeaders). */
+  badge?: { shape: number; type: string };
 }
-const { href, name, rank, share, maxShare = 100, art, note, counts } = Astro.props;
+const { href, name, rank, share, maxShare = 100, art, note, counts, badge } = Astro.props;
 const t = tFor(langOfPath(Astro.url.pathname));
 ---
 
 <a class="deck-card" href={href}>
-  <span class="art" aria-hidden="true">{art && <img src={art} alt="" loading="lazy" decoding="async" width="600" height="825" />}</span>
+  <span class="art" aria-hidden="true">
+    {art && <img src={art} alt="" loading="lazy" decoding="async" width="600" height="825" />}
+    {
+      badge && (
+        <span class="badge">
+          <GymBadge shape={badge.shape} type={badge.type} size={36} />
+        </span>
+      )
+    }
+  </span>
   <span class="body">
     <span class="top">
       {rank !== undefined && <span class="caption-4 rank">{t('อันดับ', 'Rank')} {rank}</span>}
@@ -52,7 +65,7 @@ const t = tFor(langOfPath(Astro.url.pathname));
       transform 0.5s var(--ease);
   }
   .deck-card:hover {
-    border-color: var(--line-strong);
+    border-color: color-mix(in srgb, var(--gym) 55%, transparent);
     transform: translateY(-4px);
   }
   .deck-card:active {
@@ -76,6 +89,19 @@ const t = tFor(langOfPath(Astro.url.pathname));
   }
   .deck-card:hover .art img {
     transform: scale(1.04);
+  }
+  /* The gym's badge, pinned to the art's corner. */
+  .badge {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    padding: 4px;
+    border-radius: var(--radius);
+    background: #000000b3;
+    transition: transform 0.5s var(--ease);
+  }
+  .deck-card:hover .badge {
+    transform: rotate(-8deg) scale(1.08);
   }
   .body {
     display: flex;
@@ -116,7 +142,7 @@ const t = tFor(langOfPath(Astro.url.pathname));
   .bar span {
     display: block;
     height: 100%;
-    background: var(--ink-strong);
+    background: var(--gym);
   }
   @media (max-width: 640px) {
     .deck-card {
@@ -128,6 +154,10 @@ const t = tFor(langOfPath(Astro.url.pathname));
     .name {
       font-size: 16px;
       line-height: 24px;
+    }
+    .badge {
+      left: 8px;
+      bottom: 8px;
     }
   }
 </style>

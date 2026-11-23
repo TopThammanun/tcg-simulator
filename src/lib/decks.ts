@@ -64,3 +64,24 @@ export function headlines(deck: DeckView): DeckLine[] {
     .filter((l) => l.entry.section === 'pokemon' && l.print.image.source !== 'none')
     .sort((a, b) => score(b) - score(a));
 }
+
+/** A Gym Leader: one of the bots' archetypes, by meta share, with its badge (GymBadge.svelte: shape by rank). */
+export interface GymLeader {
+  name: string;
+  slugs: string[];
+  metaShare: number;
+  /** The badge's shape (its rank, 0 first) and colour (the headline Pokémon's type). */
+  shape: number;
+  type: string;
+}
+
+/** The Gym Leaders you train against: the meta decks' archetypes, most played first. */
+export function gymLeaders(decks: DeckView[]): GymLeader[] {
+  return archetypes(decks).map((a, i) => {
+    const head = headlines(decks.find((d) => d.slug === a.slugs[0])!)[0]?.card;
+    return { ...a, shape: i, type: head?.category === 'pokemon' ? (head.types[0] ?? 'Colorless') : 'Colorless' };
+  });
+}
+
+/** The Gym Leader a deck belongs to. */
+export const gymOf = (gyms: GymLeader[], slug: string): GymLeader | undefined => gyms.find((g) => g.slugs.includes(slug));

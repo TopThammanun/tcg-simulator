@@ -1,5 +1,16 @@
+<script lang="ts" module>
+  /** A Gym Leader (lib/decks.ts gymLeaders): beat one of its decks and its badge is yours. */
+  export interface Gym {
+    name: string;
+    slugs: string[];
+    shape: number;
+    type: string;
+  }
+</script>
+
 <script lang="ts">
-  // ประวัติเกม: your record (games, wins, a bar per opponent deck, and a link to practise the matchup you lose most),
+  // ประวัติเกม: your trainer card: your record (games, wins, a bar per opponent deck, and a link to practise the
+  // matchup you lose most) and your badge case (a gym's badge for a win over its deck, each a link to challenge it),
   // the saved games (each with what its review found, or that it hasn't been reviewed), filtered by your deck, the
   // opponent and the result; a file of them all to keep, and such files imported. A deleted game can be put back for
   // a few seconds.
@@ -16,8 +27,11 @@
     type Deleted,
     type StoredReview,
   } from '../../review/store';
+  import GymBadge from '../GymBadge.svelte';
   import Segmented from '../ui/Segmented.svelte';
   import Toast from '../ui/Toast.svelte';
+
+  let { gyms = [] }: { gyms?: Gym[] } = $props();
 
   let games = $state.raw<SavedGame[] | null>(null);
   let reviews = $state.raw(new Map<number, StoredReview>());
@@ -47,6 +61,11 @@
     const won = done.filter((g) => g.winner === 0).length;
     return { played: done.length, won, rows, worst };
   });
+
+  /** The gyms whose badge you hold: a win over one of their decks. */
+  const earned = $derived(new Set(gyms.filter((gym) => (games ?? []).some((g) => g.winner === 0 && gym.slugs.includes(g.opponent))).map((gym) => gym.name)));
+  /** The badge to go for next: the most played deck you haven't beaten. */
+  const nextGym = $derived(gyms.find((gym) => !earned.has(gym.name)));
 
   // Filters.
   let mineFilter = $state('');
@@ -150,13 +169,16 @@
       )}
     </p>
     <a class="cta" href={href('/play/')}>{tx('เล่นกับบอท', 'Play the bot')}</a>
+    {#if gyms.length}<div class="empty-case">{@render badgeCase()}</div>{/if}
   </div>
 {:else}
   {#if record.played}
-    <section class="record" aria-label={tx('สถิติของคุณ', 'Your record')}>
+    <section class="record" aria-label={tx('บัตรเทรนเนอร์ของคุณ', 'Your trainer card')}>
+      <p class="card-title">{tx('บัตรเทรนเนอร์', 'Trainer card')}</p>
       <div class="totals">
         <div><span class="num">{record.played}</span>{tx('เกม', 'games')}</div>
         <div><span class="num">{pct(record.won / record.played)}</span>{tx('ชนะ', 'won')}</div>
+        {#if gyms.length}<div><span class="num">{earned.size}/{gyms.length}</span>{tx('เหรียญยิม', 'badges')}</div>{/if}
       </div>
       <ol class="vs">
         {#each record.rows as r (r.name)}
@@ -168,6 +190,7 @@
           </li>
         {/each}
       </ol>
+      {#if gyms.length}{@render badgeCase()}{/if}
     </section>
   {/if}
 
@@ -229,6 +252,27 @@
     action={tx('เลิกทำ', 'Undo')} onaction={putBack} />
 {/if}
 
+{#snippet badgeCase()}
+  <div class="case">
+    <ul class="case-row" aria-label={tx(`เหรียญยิม ${earned.size} จาก ${gyms.length}`, `Gym badges: ${earned.size} of ${gyms.length}`)}>
+      {#each gyms as gym (gym.name)}
+        {@const has = earned.has(gym.name)}
+        <li>
+          <a
+            href={href(`/play/?opp=${gym.slugs[0]}`)}
+            title={has ? tx(`เหรียญของ ${gym.name}: ได้แล้ว`, `${gym.name}'s badge: earned`) : tx(`ท้าชิง ${gym.name}`, `Challenge ${gym.name}`)}
+          >
+            <GymBadge shape={gym.shape} type={gym.type} earned={has} size={36} label={has ? tx(`${gym.name} (ได้แล้ว)`, `${gym.name} (earned)`) : tx(`${gym.name} (ยังไม่ได้)`, `${gym.name} (not yet)`)} />
+          </a>
+        </li>
+      {/each}
+    </ul>
+    <p class="case-next">
+      {#if nextGym}{tx(`เหรียญถัดไป: ชนะ ${nextGym.name}`, `Next badge: beat ${nextGym.name}`)}{:else}{tx('เก็บครบทุกเหรียญแล้ว', 'Every badge collected')}{/if}
+    </p>
+  </div>
+{/snippet}
+
 <style>
   .muted {
     color: var(--ink-soft);
@@ -266,10 +310,11 @@
     border-color: var(--press);
     background: var(--press);
   }
+  /* Your trainer card: the record, the matchups and the badge case. */
   .record {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 32px;
+    gap: 24px 32px;
     align-items: center;
     margin-bottom: 24px;
     padding: 24px;
@@ -277,9 +322,57 @@
     border-radius: var(--radius-xl);
     background: var(--card-bg);
   }
+  .card-title {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--gym);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .totals {
     display: flex;
     gap: 32px;
+  }
+  .case {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  .case-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .case-row a {
+    display: block;
+    border-radius: var(--radius);
+    transition: transform 0.5s var(--ease);
+  }
+  .case-row a:hover {
+    transform: translateY(-2px) rotate(-8deg);
+  }
+  .case-next {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .empty-case {
+    margin-top: 24px;
+  }
+  .empty-case .case {
+    justify-content: center;
+    border-top: 0;
   }
   .totals div {
     display: flex;
@@ -322,7 +415,7 @@
     position: absolute;
     inset: 0 auto 0 0;
     width: var(--w);
-    background: var(--ink-strong);
+    background: var(--gym);
   }
   .wl {
     text-align: right;

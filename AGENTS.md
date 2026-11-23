@@ -1,6 +1,7 @@
 ## Project
 
-Pokémon TCG matchup simulator: the player's deck vs bots playing the top meta decks. The plan,
+MyTrainerGym (mytrainergym.com), a Pokémon TCG training gym: the player's deck vs bots playing the top meta decks
+(the gym's leaders), and a review of each game. The plan,
 phases and gates are in `PLAN.md` (Thai). Work one phase at a time; each phase starts only after
 the previous phase's gate passes and the user has checked it.
 
@@ -52,7 +53,7 @@ npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเท�
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
 npx tsx scripts/review-gate.ts --games 600 --stability 120   # review gate: win% (the network's value) vs results, same verdicts on other re-deals, time
 npm run dev        # dev server on :4321
-npm run build      # static site in dist/ (SITE_URL=https://… npm run build: absolute canonical/hreflang/sitemap/OG/JSON-LD addresses)
+npm run build      # static site in dist/; addresses for search engines on https://mytrainergym.com (SITE_URL=https://… to change it)
 ```
 
 `npm run cards` caches API responses in `.cache/http`; add `-- --refresh` to re-download. It reads the deck files and
@@ -150,7 +151,8 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   replay), `store.ts`
   (IndexedDB: games and their reviews, in memory when storage is blocked). The play screen saves every finished
   game; `/review/` exports them all as one file (`gamesFile`) and imports such files. `components/review/`:
-  `Review.svelte` routes to `GameList.svelte` (your record with a link to practise the matchup lost most, the games
+  `Review.svelte` routes to `GameList.svelte` (your trainer card: your record with a link to practise the matchup lost
+  most, and the badge case, a Gym Leader's badge for a win over its deck, each a link to challenge it; the games
   filtered by deck / opponent / result, each with what its review found, `listReviews()`) or `GameReview.svelte`
   (one game: the result and one sentence on what mattered most, a button going through the turns worth a look,
   `summary.ts` `keyTurns` / `reviewSummary`; `WinChart.svelte`, two points per turn of yours, your turns solid and
@@ -220,9 +222,10 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
-  Theme: one dark, flat theme, tokens on `:root` in `layouts/Base.astro` (black page, `--card-bg` #181818 /
-  `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` / `--rule` hairlines; `--primary` white for the one
-  main action, `--accent` amber for what can be played or picked, `--stamp` red for danger and the opponent;
+  Theme: MyTrainerGym's, a Pokémon trainer's gym in our own drawings: one dark, flat theme, tokens on `:root` in
+  `layouts/Base.astro` (black page, `--card-bg` #181818 / `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` /
+  `--rule` hairlines; `--gym` badge gold #FFC845 (`--gym-deep` its shade) is the brand: `--primary` for the one main
+  action and `--accent` for what can be played or picked are it, `--stamp` red for danger and the opponent;
   `--radius-sm` 4px, `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve; by meaning
   `--can`, `--mine`, `--theirs`, `--hp-ok` / `--hp-hurt` / `--hp-low`, `--control-hover`, `--line-strong`,
   `--stamp-press`, `--card-paper`). One type family: Geist
@@ -231,12 +234,19 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   a card), spacing on 4/8/12/16/24/32/40/48/64/80/96. `tests/ui/design-tokens.test.ts` fails on a component's text
   size off the scale, a colour that isn't a token (black and white shades aside) or a token that isn't defined; the
   drawn cards (`FxLayer`, `CardBack`, `CardFace`) are its exceptions.
-  No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. Header: a floating bar,
-  a full-height menu on phones. Home: hero with a real game screenshot (`public/home/board.jpg`, retake it after
-  restyling the play screen; it is also the shared link's `og:image`, an absolute URL once `site` is set in
-  astro.config), the meta decks as `DeckCard.astro` (art cropped from the headline Pokémon,
-  `headlines()` in `lib/decks.ts`), steps, the review beside its screenshot (`public/home/review.jpg`, retake it after
-  restyling the review), a tagline lit word by word on scroll, FAQ (facts only). The playmat is
+  No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. The gym's motifs:
+  `BrandMark.astro` (a hexagon badge with two rank chevrons; the favicon and the emblem on the play mat's centre line
+  are the same shape), the wordmark MyTrainer + gold Gym, `GymBadge.svelte` (one original shape per Gym Leader by
+  rank, in the type colour of its headline Pokémon, `gymLeaders()` in `lib/decks.ts`; earned = a flat layered medal,
+  not yet = an outline), `ArenaLines.astro` (a battle floor seen from above, hairlines; `frame` without the centre
+  circle where text sits), gold spaced-out eyebrows like a gym's signage; the copy speaks of trainers, Gym Leaders
+  (the meta decks), badges, a training plan (warm up, battle, cool down) and the coach (the review). Header: a
+  floating bar, a full-height menu on phones. Home: hero on the arena frame with a real game screenshot
+  (`public/home/board.jpg`, also the shared link's `og:image`), the Gym Leaders as `DeckCard.astro` (art cropped
+  from the headline Pokémon, `headlines()` in `lib/decks.ts`, the gym's badge on it), the training plan, the coach
+  beside the review's screenshot (`public/home/review.jpg`), a tagline lit word by word on scroll, FAQ (facts only),
+  every badge on the arena in the final call. Retake the screenshots (`-en` too) with `node scripts/home-shots.mjs`
+  against `astro preview --port 4330` after restyling the play screen or the review. The playmat is
   flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
   site's own design; the card images and back on the table are the real ones (the Energy symbols and the coin are our own flat drawings).
 
