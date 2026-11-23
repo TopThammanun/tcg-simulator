@@ -1,7 +1,7 @@
 // Attack planning: simulate short setup sequences (switch in an attacker, attach Energy, gust a target,
 // boost damage) followed by each attack, on a determinized state, and keep the best outcome.
 // Uses the engine itself, so damage, Weakness and every card effect are counted exactly.
-import { actor, apply, legalActions } from '../engine/actions';
+import { actor, apply, isLegal, legalActions } from '../engine/actions';
 import { isBasicEnergy } from '../engine/db';
 import { energyOf, hpLeft, provides, retreatCost } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef } from '../engine/state';
@@ -307,8 +307,11 @@ export function winLine(s: GameState, me: PlayerId, plan: DeckPlan, seed: number
   return dfs(root);
 }
 
-/** Prizes `steps` take from `s` on `checks` re-deals (the least), and whether they win on every one; null if they break. */
-function checkLine(s: GameState, me: PlayerId, plan: DeckPlan, steps: Step[], checks: number): { prizes: number; wins: boolean } | null {
+/**
+ * Prizes `steps` take from `s` on `checks` re-deals (the least), and whether they win on every one; null if they break.
+ * `strict`: every step must be a legal move when it comes (the planner's lines are; a line with steps taken out may not be).
+ */
+function checkLine(s: GameState, me: PlayerId, plan: DeckPlan, steps: Step[], checks: number, strict = false): { prizes: number; wins: boolean } | null {
   let prizes = Infinity;
   let wins = true;
   try {
@@ -316,6 +319,7 @@ function checkLine(s: GameState, me: PlayerId, plan: DeckPlan, steps: Step[], ch
       let st = determinize(s, me, 7919 * (k + 1));
       for (const step of steps) {
         if (st.winner !== null || st.current !== me || st.pending) break;
+        if (strict && !isLegal(st, step.action)) return null;
         st = runStep(st, step, plan);
       }
       prizes = Math.min(prizes, s.players[me].prizes.length - st.players[me].prizes.length);
@@ -349,4 +353,19 @@ export function sureLine(s: GameState, me: PlayerId, plan: DeckPlan, checks: num
     if (steps && r?.wins) best = { ...r, steps };
   }
   return best;
+}
+
+/**
+ * A sure line without the moves it doesn't need (the wider search keeps any move it tried on the way, a Pokémon
+ * benched or an Item played for nothing): each dropped in turn while the rest still wins, or takes as many Prizes,
+ * on the same re-deals. For showing the line to a player.
+ */
+export function trimLine(s: GameState, me: PlayerId, plan: DeckPlan, line: { prizes: number; wins: boolean; steps: Step[] }, checks: number): Step[] {
+  let steps = line.steps;
+  for (let i = steps.length - 1; i >= 0 && steps.length > 1; i--) {
+    const rest = [...steps.slice(0, i), ...steps.slice(i + 1)];
+    const r = checkLine(s, me, plan, rest, checks, true);
+    if (r && r.wins === line.wins && r.prizes >= line.prizes) steps = rest;
+  }
+  return steps;
 }

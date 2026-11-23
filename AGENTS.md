@@ -127,8 +127,10 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   turns reviewed: win% before and after it (`winOf`: netWin, the chance if both sides play on like the bot; each
   side's positions judged by the network its deck plays with, `Nets`: the experts of your deck's plan and of the
   opponent's, which the workers load), clear mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on
-  several re-deals), the bot's turn (your deck's network) on the real cards judged on the same re-deals, where it
-  parts from yours and why (`explain.ts`); run on several workers by `review-remote.ts` / `review-worker.ts`.
+  several re-deals, shown without the moves it doesn't need: `trimLine`), the bot's turn (your deck's network) on the
+  real cards judged on the same re-deals (when it gains, also played from re-deals of what you couldn't see, and the
+  lower counts: a lucky draw is not advice, `alt.lucky`), where it parts from yours and why (`explain.ts`); run on
+  several workers by `review-remote.ts` / `review-worker.ts`.
   Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions, your deck's plan `mine`, `mode`, and the undos'
   re-deals `redeals`; `replay()`, `turnsOf()`; a game keeps its `rules`, and `Rules.version` (`engine/state.ts`

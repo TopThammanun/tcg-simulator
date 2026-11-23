@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { reviewTurn, sureLine } from '../../src/analysis/review';
 import { estimateWin, merge, netWin, pairedDiff, summarize } from '../../src/analysis/winrate';
 import { makeBot } from '../../src/bots/core';
+import { trimLine } from '../../src/bots/finisher';
 import { randomModel } from '../../src/bots/learn/model';
 import { DEFAULT_POLICY, planFor } from '../../src/bots/plans';
 import { actor, apply } from '../../src/engine/actions';
@@ -10,7 +11,7 @@ import type { Action, GameState } from '../../src/engine/types';
 import { gamesFile, isFree, readGamesFile, replay, turnsOf, type SavedGame } from '../../src/review/record';
 import { playGame } from '../../src/sim/game';
 import { describeAction } from '../../src/ui/play';
-import { deck, scenario } from '../engine/helpers';
+import { deck, handCard, scenario } from '../engine/helpers';
 
 const plans = { mine: planFor('player'), theirs: planFor('dragapult-ex') };
 const FAST = { deals: 4 };
@@ -82,6 +83,19 @@ describe('clear mistakes (พลาดชัด)', () => {
     }
     expect(labels).toEqual(r.alt!.played);
     expect(st.winner === 0 || (st.current === 1 && !st.pending)).toBe(true);
+  });
+
+  it('a line is shown with only the moves it needs, and each of them legal when it comes', () => {
+    const s = scenario({
+      p0: { active: { card: 'dragapult-ex', under: ['dreepy', 'drakloak'] }, bench: ['meowth-ex'], hand: ['dreepy', 'psychic-energy'] },
+      p1: { active: 'dreepy', prizes: 6 },
+    });
+    const bench: Action = { t: 'bench', card: handCard(s, 0, 'dreepy') };
+    const energy: Action = { t: 'energy', card: handCard(s, 0, 'psychic-energy'), target: s.players[0].active!.uid };
+    const attack: Action = { t: 'attack', name: 'Jet Headbutt' };
+    const line = { prizes: 1, wins: true, steps: [{ action: bench }, { action: energy }, { action: attack }] };
+    // The Energy stays: without it the attack isn't legal (the check plays steps trusted, so it has to ask).
+    expect(trimLine(s, 0, plans.mine, line, 4).map((st) => st.action)).toEqual([energy, attack]);
   });
 
   it('a line counts only if it works on every re-deal, and the answer does not change between runs', () => {

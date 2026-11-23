@@ -3,7 +3,8 @@
 // each of its turns gets the review's check (review.ts sureLine): a line that wins, or takes more Prizes than
 // the turn took, on every re-deal of what the bot couldn't see. --fast: the network alone (no look-ahead, so no
 // sureLine guard either), as the simulator and the training games play it.
-//   npx tsx scripts/learn/blunders.ts --games 240 [--weights .cache/learn/x.json] [--fast] [--threads 4]
+// --deck: only that deck on the bot's side (against every deck).
+//   npx tsx scripts/learn/blunders.ts --games 240 [--weights .cache/learn/x.json] [--fast] [--deck <slug>] [--threads 4]
 import { readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -27,6 +28,7 @@ interface Job {
   games: number[];
   weights?: string;
   fast: boolean;
+  deck?: string;
 }
 interface Found {
   turns: number;
@@ -43,9 +45,10 @@ function run(job: Job): Found {
   const model = job.weights ? loadModel(JSON.parse(readFileSync(job.weights, 'utf8'))) : null;
   const out: Found = { turns: 0, win: 0, ko: 0, examples: [] };
   for (const g of job.games) {
-    const a = slugs[g % slugs.length]!;
-    const b = slugs[Math.floor(g / slugs.length) % slugs.length]!;
-    const me = (Math.floor(g / (slugs.length * slugs.length)) % 2) as PlayerId;
+    const n = slugs.length;
+    const a = job.deck ?? slugs[g % n]!;
+    const b = job.deck ? slugs[g % n]! : slugs[Math.floor(g / n) % n]!;
+    const me = (Math.floor(g / (job.deck ? n : n * n)) % 2) as PlayerId;
     const decks = me === 0 ? [a, b] : [b, a];
     const plans = { mine: planFor(a), theirs: planFor(b) };
     const names = [plans.mine.name, plans.theirs.name] as const;
@@ -94,7 +97,7 @@ if (!isMainThread) {
   const games = Number(opt('games') ?? 240);
   const threads = Number(opt('threads') ?? Math.max(1, cpus().length - 1));
   const t0 = Date.now();
-  const jobs: Job[] = Array.from({ length: threads }, (_, t) => ({ games: Array.from({ length: games }, (_, i) => i).filter((i) => i % threads === t), weights: opt('weights'), fast: process.argv.includes('--fast') }));
+  const jobs: Job[] = Array.from({ length: threads }, (_, t) => ({ games: Array.from({ length: games }, (_, i) => i).filter((i) => i % threads === t), weights: opt('weights'), fast: process.argv.includes('--fast'), deck: opt('deck') }));
   const parts = await Promise.all(jobs.map((j) => runTsWorker<Found>(import.meta.url, j)));
   const turns = parts.reduce((x, p) => x + p.turns, 0);
   const win = parts.reduce((x, p) => x + p.win, 0);

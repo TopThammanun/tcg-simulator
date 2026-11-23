@@ -7,13 +7,15 @@
 //   planner finds a line that wins or takes more Prizes than you took, on every re-deal of what you couldn't
 //   see ("พลาดชัด": engine-checked with fixed seeds, so it doesn't depend on luck or on how well bots play),
 // - the bot's turn from the same start, played on the real cards, judged on the same re-deals; where it
-//   parts from yours, and why (explain.ts). "น่าจะดีกว่า" when it gains at least BETTER_BY.
+//   parts from yours, and why (explain.ts). "น่าจะดีกว่า" when it gains at least BETTER_BY, also played from
+//   re-deals of what you couldn't see (a gain the real cards' draws gave it is luck, not advice).
 import { actor, apply } from '../engine/actions';
 import { keyOf } from '../engine/state';
+import { determinize } from '../engine/view';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { choosePicks } from '../bots/choose';
 import { explainAction, explainEnd } from '../bots/explain';
-import { sureLine as sureLineFor, type Step } from '../bots/finisher';
+import { sureLine as sureLineFor, trimLine, type Step } from '../bots/finisher';
 import { createBot, MODEL } from '../bots/index';
 import type { Model } from '../bots/learn/model';
 import { describeAction } from '../ui/play';
@@ -50,6 +52,12 @@ export interface TurnReview {
     win: { p: number; se: number };
     /** Its win% minus yours, on the same re-deals. */
     diff: number;
+    /**
+     * Its win% on the real cards, when its turn found better cards there than it does on average (the draws were
+     * kind to it): `win` and `diff` are then its turn played on re-deals of what you couldn't see. Its replay
+     * (`actions`) is the real-card one.
+     */
+    lucky?: number;
     /** The first of its actions that isn't yours (an index into `played` of both). */
     split: number;
     /** Why the bot plays that one (explain.ts). */
@@ -80,6 +88,9 @@ export interface Nets {
 export const BETTER_BY = 0.1;
 /** The bot's seed for the suggested turn (plus the turn number). */
 const ALT_SEED = 7331;
+/** Re-deals the bot's turn is also played on, and the win% deals for each, when it looks better than yours. */
+const ALT_REDEALS = 6;
+const ALT_REDEAL_DEALS = 4;
 
 /**
  * Win% of `me` in `s`, from what `me` could see: the chance if both sides play on like the bot, each side's
@@ -122,6 +133,18 @@ export function botTurn(s: GameState, me: PlayerId, plans: Plans, seed: number, 
   return { end: st, states, actions };
 }
 
+/** `me`'s win% after the bot plays the turn from re-deals of what `me` couldn't see at `s` (fixed seeds). */
+function redealtTurn(s: GameState, me: PlayerId, plans: Plans, seed: number, botSeed: number, nets: Nets): { p: number; se: number } {
+  const ps: number[] = [];
+  for (let k = 0; k < ALT_REDEALS; k++) {
+    const bot = botTurn(determinize(s, me, seed * 31 + k), me, plans, botSeed, nets);
+    ps.push(winOf(bot.end, me, plans, { deals: ALT_REDEAL_DEALS, seed: seed + k }, nets).p);
+  }
+  const p = ps.reduce((a, b) => a + b, 0) / ps.length;
+  const sd = Math.sqrt(ps.reduce((a, b) => a + (b - p) ** 2, 0) / Math.max(1, ps.length - 1));
+  return { p, se: sd / Math.sqrt(ps.length) };
+}
+
 /** The same moves (card names, not copies), ignoring answers to choices. */
 function sameMoves(sa: GameState[], aa: Action[], sb: GameState[], ab: Action[], me: PlayerId): boolean {
   const key = (states: GameState[], actions: Action[]) =>
@@ -151,7 +174,8 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
     const line = sureLine(s, me, plans, checks);
     const kind = line.wins && !wonThisTurn ? 'win' : !wonThisTurn && line.prizes > took && line.prizes > 0 ? 'ko' : null;
     if (kind) {
-      missed = { kind, at, prizes: line.prizes, took, line: line.steps.map((st) => describeAction(s, st.action)) };
+      const steps = trimLine(s, me, plans.mine, line, checks);
+      missed = { kind, at, prizes: line.prizes, took, line: steps.map((st) => describeAction(s, st.action)) };
       break;
     }
   }
@@ -163,7 +187,17 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
   let alt: TurnReview['alt'];
   const bot = botTurn(start, me, plans, ALT_SEED + span.turn, nets);
   if (!sameMoves(states.slice(span.start, span.end), actions.slice(span.start, span.end), bot.states, bot.actions, me)) {
-    const theirs = winOf(bot.end, me, plans, odds, nets);
+    let theirs: { p: number; se: number } = winOf(bot.end, me, plans, odds, nets);
+    // Played on the real cards, the bot's turn draws what you couldn't see: a gain may be a lucky draw. Then it
+    // also plays from re-deals of those cards, and the lower of the two counts.
+    let lucky: number | undefined;
+    if (theirs.p - win.p >= BETTER_BY) {
+      const dealt = redealtTurn(start, me, plans, odds.seed, ALT_SEED + span.turn, nets);
+      if (dealt.p < theirs.p) {
+        if (theirs.p - dealt.p >= BETTER_BY) lucky = theirs.p;
+        theirs = dealt;
+      }
+    }
     const its = moves(bot.states, bot.actions, 0, bot.actions.length, me);
     let split = 0;
     while (split < its.length && split < mine.length && its[split]!.label === mine[split]!.label) split++;
@@ -173,7 +207,7 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
         ? explainEnd(bot.states[at.at]!, me).why
         : explainAction(bot.states[at.at]!, me, { action: bot.actions[at.at]! }, plans.mine).why
       : '';
-    alt = { played: its.map((m) => m.label), actions: bot.actions, win: { p: theirs.p, se: theirs.se }, diff: theirs.p - win.p, split, why };
+    alt = { played: its.map((m) => m.label), actions: bot.actions, win: { p: theirs.p, se: theirs.se }, diff: theirs.p - win.p, split, why, ...(lucky === undefined ? {} : { lucky }) };
   }
 
   const verdict: Verdict = missed ? (missed.kind === 'win' ? 'missed-win' : 'missed-ko') : alt && alt.diff >= BETTER_BY ? 'better' : 'ok';

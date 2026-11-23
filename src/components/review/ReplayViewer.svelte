@@ -72,7 +72,7 @@
       ? tx('ชนะเกม', 'Game won')
       : shown.winner !== null
         ? tx('จบเกม', 'Game over')
-        : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? t.alt.win.p : t.win.p)}`),
+        : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`),
   );
   const hidden = $derived([
     [tx('มือบอท', "Bot's hand"), shown.players[1].hand],

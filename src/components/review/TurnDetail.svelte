@@ -50,6 +50,18 @@
   </li>
 {/snippet}
 
+<!-- The bot's turn did better on this game's real cards than on average: its replay drew well. -->
+{#snippet lucky()}
+  {#if t.alt?.lucky !== undefined}
+    <p class="muted">
+      {tx(
+        `บนไพ่จริงของเกมนี้ ทางของบอทได้ win% ${pct(t.alt.lucky)} เพราะจั่วได้ไพ่ที่ช่วย ซึ่งตอนนั้นคุณมองไม่เห็น ตัวเลขข้างบนจึงเฉลี่ยจากการสุ่มไพ่เหล่านั้นใหม่`,
+        `On this game's real cards the bot's way reaches a win% of ${pct(t.alt.lucky)}: it drew cards that helped, which you couldn't see then, so the figure above averages over re-deals of them`,
+      )}
+    </p>
+  {/if}
+{/snippet}
+
 <!-- A long turn shows its first moves; the rest open on a tap. -->
 {#snippet moves(list: Move[])}
   {@const all = list.length ? list : [{ label: tx('จบเทิร์นโดยไม่ทำอะไร', 'Ended the turn without a move'), key: null }]}
@@ -114,12 +126,16 @@
       {tx(`ถ้าเล่นแบบบอท win% ${pct(t.alt.win.p)}`, `The bot's way: win% ${pct(t.alt.win.p)}`)} ({t.alt.diff >= 0 ? '+' : '−'}{pts(t.alt.diff)}
       {tx('จุด', 'points')})
     </p>
+    {@render lucky()}
   {:else}
     <p class="one">
-      {#if t.alt}{tx('บอทเล่นต่างออกไปเล็กน้อย', 'The bot plays it a little differently')} ({tx(`ถ้าเล่นแบบบอท win% ${pct(t.alt.win.p)}`, `its way: win% ${pct(t.alt.win.p)}`)}, {t.alt.diff >= 0
+      {#if t.alt}{t.alt.diff >= 0
+          ? tx('บอทเล่นต่างออกไปเล็กน้อย', 'The bot plays it a little differently')
+          : tx('บอทเล่นอีกแบบ แต่ทางของคุณดีกว่า', 'The bot plays it another way, but yours is better')} ({tx(`ถ้าเล่นแบบบอท win% ${pct(t.alt.win.p)}`, `its way: win% ${pct(t.alt.win.p)}`)}, {t.alt.diff >= 0
           ? '+'
           : '−'}{pts(t.alt.diff)} {tx('จุด', 'points')}){:else}{tx('บอทก็เล่นแบบเดียวกัน', 'The bot plays it the same way')}{/if}
     </p>
+    {@render lucky()}
     {#if !t.missed}
       <details class="played">
         <summary>{tx(`ที่คุณเล่น (${myMoves.length} ขั้น)`, `What you played (${myMoves.length})`)}</summary>
