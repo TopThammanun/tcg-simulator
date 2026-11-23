@@ -1,5 +1,5 @@
 // The sitemap: every page in both languages, each with its other-language address (hreflang), so search engines
-// show the right one. Addresses are absolute once `site` is set in astro.config; until then they are paths.
+// show the right one (English to anyone whose language is neither). Addresses are absolute once `site` is set in astro.config; until then they are paths.
 import type { APIRoute } from 'astro';
 import { LANGS, localePath } from '../i18n';
 import { loadDecks, metaDecks } from '../lib/decks';
@@ -7,11 +7,11 @@ import { loadDecks, metaDecks } from '../lib/decks';
 export const GET: APIRoute = async ({ site }) => {
   const url = (p: string) => (site ? new URL(p, site).href : p);
   const decks = metaDecks(await loadDecks());
-  const pages = ['/', '/play/', '/decks/', ...decks.map((d) => `/decks/${d.slug}/`), '/review/'];
+  const pages = ['/', '/play/', '/decks/', ...decks.map((d) => `/decks/${d.slug}/`), '/builder/', '/review/'];
   const alternates = (p: string) =>
     [
       ...LANGS.map((l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${url(localePath(l, p))}"/>`),
-      `    <xhtml:link rel="alternate" hreflang="x-default" href="${url(localePath('th', p))}"/>`,
+      `    <xhtml:link rel="alternate" hreflang="x-default" href="${url(localePath('en', p))}"/>`,
     ].join('\n');
   const entries = pages.flatMap((p) => LANGS.map((l) => `  <url>\n    <loc>${url(localePath(l, p))}</loc>\n${alternates(p)}\n  </url>`));
   const xml = [

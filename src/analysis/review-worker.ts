@@ -30,7 +30,7 @@ self.onmessage = async (e: MessageEvent<ToReview>) => {
     const key = `${game.id}:${game.seed}:${game.actions.length}`;
     if (cached?.key !== key) cached = { key, states: replay(game) };
     const plans = { mine: planFor(game.mine ?? 'player', game.policy), theirs: planFor(game.opponent) };
-    const review = reviewTurn(cached.states, game.actions, span, plans, opts, nets);
+    const review = reviewTurn(cached.states, game.actions, span, plans, { theirDeck: game.opponent, ...opts }, nets);
     (self as unknown as Worker).postMessage({ type: 'turn', job, review } satisfies FromReview);
   } catch (err) {
     (self as unknown as Worker).postMessage({ type: 'error', job, message: String((err as Error).message ?? err) } satisfies FromReview);

@@ -7,6 +7,7 @@ import { def, imageFor } from '../../engine/db';
 import { topKey } from '../../engine/state';
 import type { CardId, GameState, PlayerId, SlotId } from '../../engine/types';
 import { CARD_BACK } from '../card-back';
+import { isLoaded } from '../images';
 import { COIN } from '../symbols';
 import { PHASES, type AnimEvent, type Phase, type Place } from './events';
 
@@ -168,18 +169,24 @@ export class Fx {
     Object.assign(n.style, { left: `${x}px`, top: `${y}px` });
   }
 
-  /** A card picture (front and back) that can flip; `sharp`: the large image (shown big, to be read). */
+  /**
+   * A card picture (front and back) that can flip; `sharp`: the large image (shown big, to be read), over the small one
+   * until it has loaded (images.ts fetches Trainers' large pictures ahead, so it usually has).
+   */
   private card(key: string | null, rect: DOMRect, faceUp: boolean, sharp = false): { node: HTMLElement; inner: HTMLElement } {
     const node = this.node('fx-card', rect);
     const inner = el('div', 'fx-inner');
     const front = el('div', 'fx-front');
-    const src = key ? (sharp ? (imageFor(key).high ?? imageFor(key).low) : imageFor(key).low) : undefined;
-    if (src) {
+    const { high, low } = key ? imageFor(key) : {};
+    const srcs = sharp && high ? (isLoaded(high) || !low ? [high] : [low, high]) : low ? [low] : [];
+    for (const src of srcs) {
       const img = el('img');
       img.src = src;
       img.alt = '';
+      img.decoding = 'sync';
       front.append(img);
-    } else if (key) front.textContent = def(key).name;
+    }
+    if (!srcs.length && key) front.textContent = def(key).name;
     const back = el('div', 'fx-back');
     const backImg = el('img');
     backImg.src = CARD_BACK;
@@ -315,23 +322,25 @@ export class Fx {
     const to = this.rectAt(e.to, e.card, c.after, c);
     if (!from || !to) return 0;
     const dest = this.destination(e, c);
-    const { node, inner } = this.card(e.key, from, e.faceUp[0], !!e.stage);
+    // A played Trainer goes up to the middle of the table, large enough to read. Its copy is laid out at that size
+    // and scaled down for the flight: a copy laid out small and scaled up is drawn blurred until the browser redraws it.
+    const w = Math.max(from.width * 1.5, Math.min(c.board.width * 0.3, c.board.height * 0.52 * CARD));
+    const mid = new DOMRect(c.board.left + (c.board.width - w) / 2, c.board.top + c.board.height / 2 - w / CARD / 2, w, w / CARD);
+    const box = e.stage ? new DOMRect(from.left, from.top, mid.width, mid.height) : from;
+    const { node, inner } = this.card(e.key, box, e.faceUp[0], !!e.stage);
     node.style.transformOrigin = '0 0';
     const at = (r: DOMRect, lift = 0, s = 1) =>
-      `translate(${r.left - from.left}px, ${r.top - from.top - lift}px) scale(${(r.width / from.width) * s})`;
+      `translate(${r.left - from.left}px, ${r.top - from.top - lift}px) scale(${(r.width / box.width) * s})`;
     const fades = !dest && e.to.zone !== 'discard' && e.to.zone !== 'stadium';
     let dur: number;
     let frames: Keyframe[];
     if (e.stage) {
-      // A played Trainer: up to the middle of the table, large enough to read and held there (the bot's longer: you
-      // didn't choose it), then to the discard pile.
-      const w = Math.max(from.width * 1.5, Math.min(c.board.width * 0.3, c.board.height * 0.52 * CARD));
-      const mid = new DOMRect(c.board.left + (c.board.width - w) / 2, c.board.top + c.board.height / 2 - w / CARD / 2, w, w / CARD);
+      // Held in the middle (the bot's longer: you didn't choose it), then to the discard pile.
       dur = (e.from.player === 0 ? 1300 : 2300) * k;
       frames = [
         { transform: at(from), offset: 0 },
-        { transform: at(mid), offset: 0.28 },
-        { transform: at(mid, 0, 1.02), offset: 0.72 },
+        { transform: at(mid, 0, 0.98), offset: 0.28 },
+        { transform: at(mid), offset: 0.72 },
         { transform: at(to), offset: 1 },
       ];
       const who = e.from.player === 0 ? tx('คุณ', 'You') : tx('บอท', 'Bot');
@@ -347,10 +356,10 @@ export class Fx {
     } else {
       dur = 430 * k;
       const lift = Math.min(60, Math.hypot(to.left - from.left, to.top - from.top) * 0.15);
-      const mid = new DOMRect((from.left + to.left) / 2, (from.top + to.top) / 2, (from.width + to.width) / 2, 0);
+      const half = new DOMRect((from.left + to.left) / 2, (from.top + to.top) / 2, (from.width + to.width) / 2, 0);
       frames = [
         { transform: at(from), opacity: 1 },
-        { transform: at(mid, lift, 1.08), opacity: 1, offset: 0.5 },
+        { transform: at(half, lift, 1.08), opacity: 1, offset: 0.5 },
         { transform: at(to), opacity: fades ? 0.2 : 1 },
       ];
     }

@@ -10,7 +10,14 @@ export function getStaticPaths() {
 const t = tFor(Astro.props.lang);
 ---
 
-<Base title={t('ประวัติเกม', 'Game history')}>
+<Base
+  title={t('ประวัติเกมและทบทวนเกม Pokémon TCG', 'Pokémon TCG game history and review')}
+  description={t(
+    'ทบทวนเกม Pokémon TCG ที่คุณเล่นกับบอท: win% ทุกเทิร์น เทิร์นที่พลาด ทางที่ดีกว่าได้อะไร และควร play around อะไรในเทิร์นหน้า',
+    'Review your Pokémon TCG games against the bot: win% on every turn, the turns you slipped, what the better way gets you and what to play around next turn.',
+  )}
+  words={t('ทบทวนเกม,วิเคราะห์เกม Pokémon TCG,play around', 'game review,Pokémon TCG analysis,play around').split(',')}
+>
   <header class="page-head">
     <p class="eyebrow">{t('หลังเกม · เทิร์นไหนที่เกมพลิก', 'After the game · the turn it turned on')}</p>
     <h1 class="heading-3">{t('ประวัติเกม', 'Game history')}</h1>

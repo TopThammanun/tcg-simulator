@@ -1,34 +1,49 @@
 ---
-import { langOfPath, localePath, stripLang, tFor } from '../i18n';
+import { LANG_KEY, langOfPath, localePath, stripLang, tFor } from '../i18n';
+import { BRAND, keywords, ldJson, siteUrl, websiteLd, type JsonLd } from '../lib/seo';
 
 interface Props {
   title: string;
   description?: string;
+  /** The page's own search words, before the site's (lib/seo.ts). */
+  words?: string[];
+  /** schema.org data for this page, besides the site's own. */
+  jsonLd?: JsonLd[];
+  /** Send a visitor to their language's version of this page (off for the 404 page, which has both). */
+  langRedirect?: boolean;
 }
 // The page's language comes from its path: /en/… is English (src/pages/[...lang]/), everything else Thai.
 const lang = langOfPath(Astro.url.pathname);
 const t = tFor(lang);
 const {
   title,
-  description = t('ซ้อม matchup Pokémon TCG กับบอทที่เล่นเด็คใน meta ในเบราว์เซอร์', 'Practise Pokémon TCG matchups against bots playing the meta decks, in your browser'),
+  description = t(
+    'เล่น Pokémon TCG (PTCG) ฟรีในเบราว์เซอร์ ซ้อม matchup กับบอท AI ที่ใช้ list เด็ค meta จริงจาก Limitless จัดเด็คของคุณเอง แล้วทบทวนเกมด้วย win% ทุกเทิร์น',
+    'Play the Pokémon TCG (PTCG) free in your browser: practise matchups against AI bots running real meta decklists from Limitless, build your own deck, and review every turn with win%.',
+  ),
+  words = [],
+  jsonLd = [],
+  langRedirect = true,
 } = Astro.props;
 const path = stripLang(Astro.url.pathname);
 const nav = [
   { href: '/', label: t('หน้าแรก', 'Home') },
   { href: '/play/', label: t('เล่น', 'Play') },
   { href: '/decks/', label: t('เด็ค', 'Decks') },
+  { href: '/builder/', label: t('จัดเด็ค', 'Deck builder') },
   { href: '/review/', label: t('ประวัติเกม', 'History') },
 ];
 const current = (href: string) => path === href || (href !== '/' && path.startsWith(href));
 const ISSUES = 'https://github.com/TopThammanun/tcg-simulator/issues';
-const brand = t('สนามซ้อม Matchup', 'Matchup Practice');
+const brand = BRAND[lang];
 const fullTitle = `${title} · ${brand}`;
-// Search engines: this page's address in each language (absolute once `site` is set in astro.config).
-const url = (p: string) => (Astro.site ? new URL(p, Astro.site).href : p);
+// Search engines: this page's address in each language (absolute once `site` is set in astro.config). A visitor
+// whose language is neither gets the English page.
+const url = siteUrl(Astro.site);
 const alternates = [
   { hreflang: 'th', href: url(localePath('th', path)) },
   { hreflang: 'en', href: url(localePath('en', path)) },
-  { hreflang: 'x-default', href: url(localePath('th', path)) },
+  { hreflang: 'x-default', href: url(localePath('en', path)) },
 ];
 const other = lang === 'th' ? 'en' : 'th';
 const switchTo = { lang: other, href: localePath(other, path), label: other === 'en' ? 'EN' : 'ไทย', title: other === 'en' ? 'English' : 'ภาษาไทย' };
@@ -40,14 +55,45 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
 <html lang={lang}>
   <head>
     <meta charset="utf-8" />
+    {
+      langRedirect && (
+        <script is:inline define:vars={{ pageLang: lang, key: LANG_KEY }}>
+          // The language a visitor reads (Thai at /, English at /en/): the one they picked with the language switch,
+          // else Thai for a browser set to Thai or a clock on Thai time, English for everyone else. Crawlers and
+          // automated browsers stay on the page they asked for: each language has its own address for search engines.
+          try {
+            var picked = localStorage.getItem(key);
+            if (picked !== 'th' && picked !== 'en') picked = null;
+            var robot = navigator.webdriver || /bot|crawl|spider|slurp|lighthouse|headless|preview/i.test(navigator.userAgent);
+            if (picked || !robot) {
+              var thai =
+                (navigator.languages || [navigator.language]).some(function (l) {
+                  return /^th\b/i.test(l || '');
+                }) || Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Bangkok';
+              var want = picked || (thai ? 'th' : 'en');
+              var p = location.pathname;
+              var bare = p === '/en' || p === '/en/' ? '/' : p.indexOf('/en/') === 0 ? p.slice(3) : p;
+              var to = want === 'en' ? (bare === '/' ? '/en/' : '/en' + bare) : bare;
+              if (want !== pageLang && to !== p) location.replace(to + location.search + location.hash);
+            }
+          } catch (e) {
+            /* storage or Intl blocked: stay on this page */
+          }
+        </script>
+      )
+    }
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="keywords" content={keywords(lang, words)} />
+    <meta name="application-name" content={brand} />
     <meta name="theme-color" content="#000000" />
     <!-- Already dark: a browser's own dark mode (Chrome's auto-dark) must not recolour it. -->
     <meta name="color-scheme" content="dark" />
     <link rel="canonical" href={url(localePath(lang, path))} />
     {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={brand} />
+    <meta property="og:url" content={url(localePath(lang, path))} />
     <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'th_TH'} />
     <meta property="og:locale:alternate" content={lang === 'en' ? 'th_TH' : 'en_US'} />
     <meta property="og:title" content={fullTitle} />
@@ -56,6 +102,10 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     <meta property="og:image:width" content="1440" />
     <meta property="og:image:height" content="900" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    {[websiteLd(lang, url), ...jsonLd].map((d) => <script type="application/ld+json" set:html={ldJson(d)} />)}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -131,6 +181,8 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
 </html>
 
 <script>
+  import { LANG_KEY } from '../i18n';
+
   // Phones: the menu opens as a full height panel; the toggle's two lines turn into a cross.
   const toggle = document.querySelector<HTMLButtonElement>('.nav .toggle');
   const root = document.documentElement;
@@ -140,8 +192,18 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     toggle?.setAttribute('aria-expanded', String(open));
     toggle?.setAttribute('aria-label', open ? (en ? 'Close the menu' : 'ปิดเมนู') : en ? 'Open the menu' : 'เปิดเมนู');
   };
-  // The other language's link keeps this page's query (/play/?opp=…) and anchor (/decks/#mine).
-  document.querySelectorAll<HTMLAnchorElement>('a.lang-switch').forEach((a) => (a.href = a.pathname + location.search + location.hash));
+  // The other language's link keeps this page's query (/play/?opp=…) and anchor (/decks/#mine), and the language
+  // picked is remembered: the head's script sends a visitor to it from then on, whatever their browser's language.
+  document.querySelectorAll<HTMLAnchorElement>('a.lang-switch').forEach((a) => {
+    a.href = a.pathname + location.search + location.hash;
+    a.addEventListener('click', () => {
+      try {
+        localStorage.setItem(LANG_KEY, a.hreflang);
+      } catch {
+        /* storage blocked: the browser's language decides next time */
+      }
+    });
+  });
   toggle?.addEventListener('click', () => setOpen(!root.classList.contains('menu-open')));
   document.querySelectorAll('#nav-links a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
   addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));

@@ -3,6 +3,7 @@ import DeckCard from '../../components/DeckCard.astro';
 import { langPaths, localePath, tFor } from '../../i18n';
 import Base from '../../layouts/Base.astro';
 import { archetypes, headlines, loadDecks } from '../../lib/decks';
+import { appLd, faqLd, siteUrl } from '../../lib/seo';
 import { SUPPORTED } from '../../ui/decklist';
 import limitless from '../../../data/meta/limitless.json';
 
@@ -27,8 +28,8 @@ const steps = [
   {
     title: t('เลือกเด็ค', 'Pick a deck'),
     text: t(
-      'เลือกเด็คใน meta หรือวาง list ที่ export จาก Limitless หรือ Pokémon TCG Live แล้วเลือกคู่แข่ง หรือสุ่มตามสัดส่วนที่เจอจริง',
-      'Pick a meta deck or paste a list exported from Limitless or Pokémon TCG Live, then pick an opponent, or let it be drawn by how often each deck is played',
+      'เลือกเด็คใน meta จัดเด็คเองด้วยการกดเลือกการ์ด หรือวาง list ที่ export จาก Limitless หรือ Pokémon TCG Live แล้วเลือกคู่แข่ง หรือสุ่มตามสัดส่วนที่เจอจริง',
+      'Pick a meta deck, build your own by clicking cards in, or paste a list exported from Limitless or Pokémon TCG Live, then pick an opponent, or let it be drawn by how often each deck is played',
     ),
   },
   {
@@ -41,8 +42,8 @@ const steps = [
   {
     title: t('ทบทวนเกม', 'Review the game'),
     text: t(
-      'ดู win% ทุกเทิร์น เทิร์นที่เกมพลิก และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่',
-      'See your win% on every turn, the turn the game turned on and where the bot would have played differently, then play that turn again',
+      'ดู win% ทุกเทิร์น เทิร์นที่เกมพลิก บอทจะเล่นต่างจากคุณตรงไหน ทางนั้นได้อะไร และ play around อะไรในเทิร์นหน้า แล้วลองเล่นเทิร์นนั้นใหม่',
+      'See your win% on every turn, the turn the game turned on, where the bot would have played differently, what that gets you and what it plays around next turn, then play that turn again',
     ),
   },
 ];
@@ -87,8 +88,8 @@ const faq = [
   {
     q: t('ใช้ list ของตัวเองได้ไหม', 'Can I use my own list?'),
     a: t(
-      `ได้ วาง list ที่หน้าเด็ค ตอนนี้รองรับการ์ด ${SUPPORTED.length} ใบที่เด็คใน meta ใช้ ถ้ามีใบที่ยังไม่รองรับ เว็บจะบอกว่าใบไหน`,
-      `Yes. Paste it on the decks page. The ${SUPPORTED.length} cards the meta decks play are supported; if a card isn't yet, the site tells you which.`,
+      `ได้ จัดเด็คที่หน้าเด็คแบบเดียวกับตัวจัดเด็คของ Limitless: ค้นการ์ด กดเพื่อเพิ่ม กด − เพื่อเอาออก หรือวาง list ที่ export มา ตอนนี้รองรับการ์ด ${SUPPORTED.length} ใบที่เด็คใน meta ใช้ ถ้ามีใบที่ยังไม่รองรับ เว็บจะบอกว่าใบไหน`,
+      `Yes. Build it on the decks page the way you would in Limitless's deck builder: search for cards, click to add one, − to take one out, or paste an exported list. The ${SUPPORTED.length} cards the meta decks play are supported; if a card isn't yet, the site tells you which.`,
     ),
   },
   {
@@ -108,7 +109,22 @@ const faq = [
 ];
 ---
 
-<Base title={t('หน้าแรก', 'Home')}>
+<Base
+  title={t('จำลองเกม Pokémon TCG ซ้อม matchup กับบอท AI', 'Pokémon TCG simulator: practise matchups against AI bots')}
+  words={t('จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG simulator,matchup practice,AI bot').split(',')}
+  jsonLd={[
+    appLd(
+      lang,
+      siteUrl(Astro.site),
+      t(
+        'ซ้อม matchup Pokémon TCG กับบอท AI ที่ใช้ list เด็ค meta จริง จัดเด็คของคุณเอง แล้วทบทวนเกมด้วย win% ทุกเทิร์น',
+        'Practise Pokémon TCG matchups against AI bots playing real meta decklists, build your own deck, and review every turn with win%.',
+      ),
+      siteUrl(Astro.site)(shot('board')),
+    ),
+    faqLd(faq),
+  ]}
+>
   <section class="hero">
     <p class="proof caption-4">
       {t('ข้อมูลจาก Limitless', 'Data from Limitless')} · <span class="mono">{num(limitless.tournaments)}</span> {t('ทัวร์นาเมนต์', 'tournaments')} ·
@@ -118,7 +134,7 @@ const faq = [
       {t('ซ้อมกับเด็คที่ครอง meta', 'Practise against the decks that rule the meta')}<br />{t('ก่อนเจอกันในทัวร์จริง', 'before you meet them at an event')}
     </h1>
     <p class="sub body-7">
-      {t('เลือกเด็คของคุณหรือวาง list เอง แล้วเล่นกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด', 'Pick your deck or paste your own list, then play bots running real lists from recent tournaments,')}<br />
+      {t('เลือกเด็ค Pokémon TCG ของคุณหรือจัดเด็คเอง แล้วเล่นกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด', 'Pick your Pokémon TCG deck or build your own, then play bots running real lists from recent tournaments,')}<br />
       {t('ตามกฎ Standard ในเบราว์เซอร์ ไม่ต้องสมัคร', 'under Standard rules, in your browser, with no sign-up')}
     </p>
     <a class="btn primary" href={to('/play/')}>{t('เริ่มเล่นกับบอท', 'Play the bot')}</a>

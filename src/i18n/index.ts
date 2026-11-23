@@ -5,6 +5,8 @@
 
 export type Lang = 'th' | 'en';
 export const LANGS: readonly Lang[] = ['th', 'en'];
+/** localStorage: the language the visitor picked with the language switch (Base.astro sends them to it). */
+export const LANG_KEY = 'tcg-sim:lang';
 
 let current: Lang = 'th';
 

@@ -7,17 +7,20 @@
 //   planner finds a line that wins or takes more Prizes than you took, on every re-deal of what you couldn't
 //   see ("พลาดชัด": engine-checked with fixed seeds, so it doesn't depend on luck or on how well bots play),
 // - the bot's turn from the same start, played on the real cards, judged on the same re-deals; where it
-//   parts from yours, and why (explain.ts). "น่าจะดีกว่า" when it gains at least BETTER_BY.
+//   parts from yours, and why (explain.ts). "น่าจะดีกว่า" when it gains at least BETTER_BY,
+// - for a turn worth a look, what the better way (the missed line, else the bot's turn) gets you next to yours and
+//   what it plays around on the opponent's next turn (gains.ts).
 import { actor, apply } from '../engine/actions';
 import { keyOf } from '../engine/state';
 import type { Action, GameState, PlayerId } from '../engine/types';
 import { choosePicks } from '../bots/choose';
 import { explainAction, explainEnd } from '../bots/explain';
-import { sureLine as sureLineFor, type Step } from '../bots/finisher';
+import { runStep, sureLine as sureLineFor, type Step } from '../bots/finisher';
 import { createBot, MODEL } from '../bots/index';
 import type { Model } from '../bots/learn/model';
 import { describeAction } from '../ui/play';
 import { isFree, type TurnSpan } from '../review/record';
+import { gainsOf, settle, type Gains } from './gains';
 import type { Plans } from './threat';
 import { estimateWin, netWin, type WinEstimate } from './winrate';
 
@@ -57,6 +60,8 @@ export interface TurnReview {
   };
   missed?: Missed;
   verdict: Verdict;
+  /** A turn worth a look: what the better way gets you and what it plays around (the missed line's, else the bot's). */
+  gains?: Gains;
 }
 
 export interface ReviewOptions {
@@ -64,6 +69,10 @@ export interface ReviewOptions {
   deals?: number;
   /** Re-deals a missed line must work on. */
   checks?: number;
+  /** Re-deals of the opponent's next turn for what the better way plays around (24 by default; 0: not looked at). */
+  threats?: number;
+  /** The opponent's deck slug: its correction of those chances (calibration.ts). */
+  theirDeck?: string;
   seed?: number;
 }
 
@@ -143,6 +152,7 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
 
   // Clear mistakes: first at the moment you ended the turn, then at its start.
   let missed: Missed | undefined;
+  let missedSteps: Step[] = [];
   const wonThisTurn = end.winner === me;
   for (const at of span.last === span.start ? [span.start] : [span.last, span.start]) {
     const s = states[at]!;
@@ -152,6 +162,7 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
     const kind = line.wins && !wonThisTurn ? 'win' : !wonThisTurn && line.prizes > took && line.prizes > 0 ? 'ko' : null;
     if (kind) {
       missed = { kind, at, prizes: line.prizes, took, line: line.steps.map((st) => describeAction(s, st.action)) };
+      missedSteps = line.steps;
       break;
     }
   }
@@ -177,5 +188,15 @@ export function reviewTurn(states: GameState[], actions: Action[], span: TurnSpa
   }
 
   const verdict: Verdict = missed ? (missed.kind === 'win' ? 'missed-win' : 'missed-ko') : alt && alt.diff >= BETTER_BY ? 'better' : 'ok';
-  return { turn: span.turn, span, played, before, win: { p: win.p, se: win.se }, alt, missed, verdict };
+
+  let gains: Gains | undefined;
+  if (verdict !== 'ok' && opts.threats !== 0) {
+    try {
+      const better = missed ? settle(missedSteps.reduce((st, step) => (st.winner === null ? runStep(st, step, plans.mine) : st), states[missed.at]!), me, plans) : bot.end;
+      gains = gainsOf(start, end, better, me, plans, missed ? 'missed' : 'bot', { samples: opts.threats, seed: odds.seed, theirDeck: opts.theirDeck });
+    } catch {
+      gains = undefined; // a line that doesn't replay on the real cards: the turn's review stands without it
+    }
+  }
+  return { turn: span.turn, span, played, before, win: { p: win.p, se: win.se }, alt, missed, verdict, gains };
 }

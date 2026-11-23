@@ -6,6 +6,7 @@ import type { DeckSection } from '../../../data/decklist';
 import { langPaths, localePath, tFor, type Lang } from '../../../i18n';
 import Base from '../../../layouts/Base.astro';
 import { loadDecks, metaDecks, SECTION_LABEL, sectionCount, type DeckView } from '../../../lib/decks';
+import { breadcrumbLd, siteUrl } from '../../../lib/seo';
 
 export const getStaticPaths = (async () => {
   const decks = metaDecks(await loadDecks());
@@ -16,9 +17,24 @@ const { deck, lang } = Astro.props as { deck: DeckView; lang: Lang };
 const t = tFor(lang);
 const sections: DeckSection[] = ['pokemon', 'trainer', 'energy'];
 let tileIndex = 0;
+const name = deck.meta.name;
 ---
 
-<Base title={deck.meta.name}>
+<Base
+  title={t(`${name}: list เด็ค Pokémon TCG และซ้อม matchup`, `${name} Pokémon TCG decklist and matchup practice`)}
+  description={t(
+    `list เด็ค Pokémon TCG ${name} (อันดับ ${deck.meta.rank} ของ meta) จากทัวร์นาเมนต์จริง การ์ดทุกใบพร้อมข้อความ เล่นด้วยเด็คนี้หรือซ้อมกับบอทที่ใช้เด็คนี้ในเบราว์เซอร์`,
+    `The ${name} Pokémon TCG decklist (number ${deck.meta.rank} in the meta) from a real tournament, every card with its text. Play it, or practise against a bot playing it, in your browser.`,
+  )}
+  words={[name, t(`เด็ค ${name}`, `${name} deck`), t(`list ${name}`, `${name} decklist`)]}
+  jsonLd={[
+    breadcrumbLd(siteUrl(Astro.site), [
+      { name: t('หน้าแรก', 'Home'), path: localePath(lang, '/') },
+      { name: t('เด็คทั้งหมด', 'All decks'), path: localePath(lang, '/decks/') },
+      { name, path: localePath(lang, `/decks/${deck.slug}/`) },
+    ]),
+  ]}
+>
   <a class="back" href={localePath(lang, '/decks/')}>← {t('เด็คทั้งหมด', 'All decks')}</a>
   <header class="deck-head">
     <p class="eyebrow">

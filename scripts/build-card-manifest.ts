@@ -169,6 +169,7 @@ async function resolvePrint(
     },
     () => basicEnergyImage(card),
     () => altPrintImage(raw, card),
+    () => limitlessImage(p),
   ]);
 
   return { key, ...p, name: card.name, card, image, tcgdexId: raw.id, ptcgioId: ptcg?.id };
@@ -184,6 +185,14 @@ async function basicEnergyImage(card: NormalizedCard): Promise<CardImage | undef
   return large && (await http.exists(large))
     ? { source: 'pokemontcg.io', high: large, low: hit.images?.small ?? large, altOf: hit.id }
     : undefined;
+}
+
+// Limitless's own scans, by the set code and number our lists use (they are Limitless exports): the last resort for a
+// print neither API has a picture of yet, such as a new promo (Grookey MEP 52).
+async function limitlessImage(p: { set: string; number: string }): Promise<CardImage | undefined> {
+  const n = /^\d+$/.test(p.number) ? p.number.padStart(3, '0') : p.number;
+  const url = (size: 'LG' | 'SM') => `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${p.set}/${p.set}_${n}_R_EN_${size}.png`;
+  return (await http.exists(url('LG'))) && (await http.exists(url('SM'))) ? { source: 'limitless', high: url('LG'), low: url('SM') } : undefined;
 }
 
 // A reprint with the same name and identical gameplay text shows the same card.
