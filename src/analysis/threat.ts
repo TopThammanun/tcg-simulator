@@ -93,23 +93,24 @@ export type Deal = (s: GameState, me: PlayerId, seed: number) => GameState;
 
 /**
  * Play one version of the opponent's next turn. `ending` is the action that ends your turn (default:
- * ending it without attacking); its choices are answered by `ending.picks`, then your deck plan.
+ * ending it without attacking); its choices are answered by `ending.picks`, then your deck plan. With `ending`
+ * null, `s` is a position after your turn has passed (the review's, gains.ts).
  */
 export function sampleNextTurn(
   s: GameState,
   me: PlayerId,
   plans: Plans,
   seed: number,
-  ending: Step = { action: { t: 'end' } },
+  ending: Step | null = { action: { t: 'end' } },
   deal: Deal = determinize,
 ): TurnSample {
   const o = opp(me);
   const bot = makeBot(plans.theirs, { seed: seed ^ 0x5bd1e995 });
   const ko: SlotId[] = [];
   const trail: string[] = [];
-  const forced = (ending.picks ?? []).slice();
+  const forced = (ending?.picks ?? []).slice();
   let settled = deal(s, me, seed);
-  let st = apply(settled, ending.action, { trusted: true });
+  let st = ending ? apply(settled, ending.action, { trusted: true }) : settled;
   let n = 0;
   while (st.winner === null && n++ < MAX_ACTIONS) {
     if (!st.pending) {
@@ -220,8 +221,8 @@ export interface ThreatInput {
   plans: Plans;
   /** The opponent's deck slug, for its correction (calibration.ts); without it the chances are the raw shares. */
   theirDeck?: string;
-  /** The action that ends your turn (default: ending it without attacking). */
-  ending?: Step;
+  /** The action that ends your turn (default: ending it without attacking); null: `state` is after your turn. */
+  ending?: Step | null;
   /** Re-deals the hidden cards instead of determinize (diagnostics). */
   deal?: Deal;
 }
@@ -254,7 +255,7 @@ export interface ThreatOptions {
   samples?: number;
   seed?: number;
   theirDeck?: string;
-  ending?: Step;
+  ending?: Step | null;
   deal?: Deal;
 }
 

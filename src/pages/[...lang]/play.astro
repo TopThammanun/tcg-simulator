@@ -22,6 +22,13 @@ const decks: MetaDeck[] = metaDecks(await loadDecks()).map((d) => ({
 }));
 ---
 
-<Base title={t('เล่นกับบอท', 'Play the bot')}>
+<Base
+  title={t('เล่น Pokémon TCG กับบอท', 'Play Pokémon TCG against the bot')}
+  description={t(
+    'เล่น Pokémon TCG กับบอท AI ในเบราว์เซอร์ ฟรี ไม่ต้องสมัคร เลือกเด็คของคุณกับเด็คใน meta แล้วเล่นตามกฎ Standard เหมือนที่โต๊ะ',
+    'Play the Pokémon TCG against an AI bot in your browser, free and with no sign-up: pick your deck and a meta deck, and play under Standard rules as at a real table.',
+  )}
+  words={t('เล่น Pokémon TCG ออนไลน์,เล่นการ์ดโปเกมอนกับบอท', 'play Pokémon TCG online,Pokémon TCG bot').split(',')}
+>
   <Game client:only="svelte" {decks} />
 </Base>

@@ -1066,7 +1066,7 @@
             {/if}
           </select>
         </label>
-        <a class="more" href={href('/decks/#mine')}>{tx('+ ใช้ list ของคุณเอง', '+ Use your own list')}</a>
+        <a class="more" href={href('/builder/')}>{tx('+ จัดเด็คของคุณเอง', '+ Build your own deck')}</a>
       </div>
 
       <div class="vs" aria-hidden="true"><span>VS</span></div>

@@ -6,6 +6,7 @@ import { deckKeys } from '../../../engine/db';
 import { langPaths, localePath, tFor } from '../../../i18n';
 import Base from '../../../layouts/Base.astro';
 import { headlines, loadDecks, metaDecks, sectionCount } from '../../../lib/decks';
+import { breadcrumbLd, itemListLd, siteUrl } from '../../../lib/seo';
 
 export function getStaticPaths() {
   return langPaths();
@@ -26,9 +27,24 @@ const lists = decks.map((d) => ({
   text: formatDecklist(d.lines.map((l) => l.entry)),
 }));
 const maxShare = Math.max(...decks.map((d) => d.meta.metaShare ?? 0));
+const url = siteUrl(Astro.site);
 ---
 
-<Base title={t('เด็คทั้งหมด', 'All decks')}>
+<Base
+  title={t('เด็ค Pokémon TCG ใน meta และตัวจัดเด็ค', 'Pokémon TCG meta decks and deck builder')}
+  description={t(
+    'list เด็ค Pokémon TCG ที่ครอง meta จากทัวร์นาเมนต์จริงบน Limitless พร้อมตัวจัดเด็คแบบ Limitless: ค้นการ์ด กดเพิ่ม ดูจำนวนครบ 60 ใบ แล้วเอาไปเล่นกับบอท',
+    "The Pokémon TCG decks that rule the meta, with real tournament lists from Limitless, and a deck builder that works like Limitless's: search, click to add, watch the count reach 60, then play the bot with it.",
+  )}
+  words={t('list เด็ค,ตัวจัดเด็ค,deck builder,เด็คติดอันดับ', 'decklists,deck builder,top decks,meta decklists').split(',')}
+  jsonLd={[
+    breadcrumbLd(url, [
+      { name: t('หน้าแรก', 'Home'), path: localePath(lang, '/') },
+      { name: t('เด็คทั้งหมด', 'All decks'), path: localePath(lang, '/decks/') },
+    ]),
+    itemListLd(url, decks.map((d) => ({ name: d.meta.name, path: localePath(lang, `/decks/${d.slug}/`) }))),
+  ]}
+>
   <header class="page-head">
     <p class="eyebrow">{t('เด็คใน meta', 'Meta decks')}</p>
     <h1 class="heading-3">{t('เด็คทั้งหมด', 'All decks')}</h1>

@@ -1,7 +1,7 @@
 // Card pictures fetched before they are needed, so on a slow connection a deck's cards are there by the time
 // they are drawn. A few at a time at low priority, so the pictures already on screen still come first; the
 // latest batch asked for goes to the front (the decks picked last, then the game's).
-import { imageFor } from '../engine/db';
+import { def, imageFor } from '../engine/db';
 import { CARD_BACK } from './card-back';
 
 const PARALLEL = 4;
@@ -47,7 +47,11 @@ export function preload(urls: Iterable<string | undefined>): void {
   next();
 }
 
-/** The card back, then the small picture of each card in these lists (card keys), the first list first. */
+/**
+ * The card back, then the small picture of each card in these lists (card keys), the first list first, then the large
+ * picture of their Trainers: a played Trainer is shown large in the middle of the table (anim/fx.ts).
+ */
 export function preloadDecks(...decks: string[][]): void {
-  preload([CARD_BACK, ...decks.flat().map((k) => imageFor(k).low)]);
+  const keys = decks.flat();
+  preload([CARD_BACK, ...keys.map((k) => imageFor(k).low), ...keys.filter((k) => def(k).category === 'trainer').map((k) => imageFor(k).high)]);
 }

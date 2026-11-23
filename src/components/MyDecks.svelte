@@ -1,12 +1,11 @@
 <script lang="ts">
-  // เด็คของฉัน: your own lists, kept in this browser (ui/my-decks.ts). Paste a Limitless export; the check
-  // names every card the engine can't play yet. A list plays with the plan of the meta deck nearest to it.
-  import { slide } from 'svelte/transition';
+  // เด็คของฉัน: your own lists, kept in this browser (ui/my-decks.ts). They are built and changed in the deck builder
+  // (/builder/, like Limitless's): a new one, one of these, or a meta list to start from. A list plays with the plan
+  // of the meta deck nearest to it; one that isn't a legal 60 yet (a saved draft) says what is missing.
   import { href, langOfPath, setLang, tx } from '../i18n';
-  import { checkList, SUPPORTED } from '../ui/decklist';
+  import { checkList } from '../ui/decklist';
   import { headline, nearestDeck, type MetaDeck } from '../ui/decks';
-  import { deleteMyDeck, loadMyDecks, saveMyDeck, type MyDeck } from '../ui/my-decks';
-  import { motion } from '../ui/anim/motion';
+  import { deleteMyDeck, loadMyDecks, type MyDeck } from '../ui/my-decks';
   import CardFace from './game/CardFace.svelte';
 
   setLang(langOfPath(location.pathname));
@@ -14,27 +13,7 @@
   let { decks }: { decks: (MetaDeck & { text: string })[] } = $props();
 
   let mine = $state<MyDeck[]>(loadMyDecks());
-  /** The deck being edited: a new one (no id) or a saved one. */
-  let editing = $state<{ id?: string; name: string; text: string } | null>(null);
-  const result = $derived(editing ? checkList(editing.text) : null);
   const near = (cards: string[]) => nearestDeck(cards, decks);
-
-  const CATEGORY = { pokemon: 'Pokémon', trainer: 'Trainer', energy: 'Energy' } as const;
-  const supported = (['pokemon', 'trainer', 'energy'] as const).map((c) => ({
-    label: CATEGORY[c],
-    names: [...new Set(SUPPORTED.filter((d) => d.category === c).map((d) => d.name))],
-  }));
-
-  function start(from?: MetaDeck & { text: string }) {
-    editing = { name: from ? tx(`${from.name} (ของฉัน)`, `${from.name} (mine)`) : '', text: from?.text ?? '' };
-  }
-
-  function save() {
-    if (!editing || !result?.cards) return;
-    saveMyDeck(editing);
-    mine = loadMyDecks();
-    editing = null;
-  }
 
   function remove(d: MyDeck) {
     deleteMyDeck(d.id);
@@ -48,48 +27,8 @@
       <p class="eyebrow">{tx('เก็บไว้ในเบราว์เซอร์นี้', 'Kept in this browser')}</p>
       <h2 id="mine-title">{tx('เด็คของฉัน', 'My decks')}</h2>
     </div>
-    {#if !editing}
-      <button type="button" class="primary" onclick={() => start()}>{tx('+ วาง list ใหม่', '+ Paste a new list')}</button>
-    {/if}
+    <a class="button" href={href('/builder/')}>{tx('+ จัดเด็คใหม่', '+ Build a new deck')}</a>
   </header>
-
-  {#if editing}
-    <div class="editor" transition:slide={{ duration: motion(220) }}>
-      <label>
-        {tx('ชื่อเด็ค', 'Deck name')}
-        <input type="text" bind:value={editing.name} placeholder={tx('เช่น Dragapult ของฉัน', 'e.g. My Dragapult')} />
-      </label>
-      <label>
-        decklist
-        <textarea bind:value={editing.text} rows="14" spellcheck="false" aria-label="decklist" placeholder={tx('วาง list ที่ export จาก Limitless หรือ Pokémon TCG Live', 'Paste a list exported from Limitless or Pokémon TCG Live')}></textarea>
-      </label>
-      <p class="starts">
-        {tx('หรือเริ่มจาก list ของ:', 'Or start from the list of:')}
-        {#each decks as d}<button type="button" class="link" onclick={() => (editing!.text = d.text)}>{d.name}</button>{/each}
-      </p>
-      {#if editing.text.trim() && result}
-        {#if result.cards}
-          <p class="ok">{tx(`ใช้ได้ · 60 ใบ · บอทจะเล่น list นี้แบบ ${near(result.cards).name}`, `Playable · 60 cards · the bot plays it like ${near(result.cards).name}`)}</p>
-        {:else}
-          <ul class="errors">
-            {#each result.errors as e}<li>{e}</li>{/each}
-          </ul>
-          {#if result.unsupported.length}
-            <p class="hint">
-              {tx(
-                `เว็บนี้เล่นได้เฉพาะการ์ดที่เขียนกฎไว้แล้ว (${SUPPORTED.length} ใบจากเด็คใน meta) ลองแทนการ์ดที่ยังไม่รองรับด้วยใบที่ใช้ได้ด้านล่าง`,
-                `The site plays only cards whose rules are written (${SUPPORTED.length} cards from the meta decks). Try swapping the unsupported ones for cards listed below.`,
-              )}
-            </p>
-          {/if}
-        {/if}
-      {/if}
-      <div class="actions">
-        <button type="button" class="primary" onclick={save} disabled={!result?.cards}>{tx('บันทึก', 'Save')}</button>
-        <button type="button" onclick={() => (editing = null)}>{tx('ยกเลิก', 'Cancel')}</button>
-      </div>
-    </div>
-  {/if}
 
   {#if mine.length}
     <ul class="list">
@@ -107,34 +46,30 @@
               <span class="muted">{tx('เล่นแบบ', 'Plays like')} {near(r.cards).name}</span>
             {:else}
               <span class="bad"
-                >{tx('ใช้ไม่ได้', 'Not playable')}: {r.errors[0]}{r.errors.length > 1 ? tx(` และอีก ${r.errors.length - 1} ข้อ`, ` and ${r.errors.length - 1} more`) : ''}</span
+                >{tx('ยังเล่นไม่ได้', 'Not playable yet')}: {r.errors[0]}{r.errors.length > 1 ? tx(` และอีก ${r.errors.length - 1} ข้อ`, ` and ${r.errors.length - 1} more`) : ''}</span
               >
             {/if}
           </span>
           <span class="acts">
             {#if r.cards}<a class="button" href={href(`/play/?me=my:${d.id}`)}>{tx('เล่น', 'Play')}</a>{/if}
-            <button type="button" onclick={() => (editing = { id: d.id, name: d.name, text: d.text })}>{tx('แก้', 'Edit')}</button>
+            <a class="button quiet" href={href(`/builder/?id=${d.id}`)}>{tx('แก้', 'Edit')}</a>
             <button type="button" class="link" onclick={() => remove(d)}>{tx('ลบ', 'Delete')}</button>
           </span>
         </li>
       {/each}
     </ul>
-  {:else if !editing}
+  {:else}
     <p class="empty">
       {tx(
-        'ยังไม่มี วาง list ของคุณเพื่อเล่นกับบอทด้วยเด็คที่คุณใช้จริง หรือเริ่มจาก list ของเด็คใน meta แล้วปรับการ์ด',
-        'None yet. Paste your list to play the bot with the deck you really play, or start from a meta list and change the cards.',
+        'ยังไม่มี จัดเด็คของคุณในตัวจัดเด็ค (ใช้แบบเดียวกับ Limitless: ค้นการ์ดแล้วกด +) หรือนำเข้า list ที่ export มา แล้วเล่นกับบอทด้วยเด็คที่คุณใช้จริง',
+        "None yet. Build yours in the deck builder (it works like Limitless's: search for a card and press +) or import an exported list, then play the bot with the deck you really play.",
       )}
     </p>
   {/if}
-
-  <details class="cards">
-    <summary>{tx(`การ์ดที่ใช้ได้ (${SUPPORTED.length} ใบ)`, `Supported cards (${SUPPORTED.length})`)}</summary>
-    {#each supported as g}
-      <h3>{g.label}</h3>
-      <p class="names">{g.names.join(' · ')}</p>
-    {/each}
-  </details>
+  <p class="starts">
+    {tx('หรือเริ่มจาก list ของ:', 'Or start from the list of:')}
+    {#each decks as d (d.slug)}<a href={href(`/builder/?from=${d.slug}`)}>{d.name}</a>{/each}
+  </p>
 </section>
 
 <style>
@@ -159,6 +94,8 @@
   }
   button,
   .button {
+    display: inline-flex;
+    align-items: center;
     padding: 8px 12px;
     border: 1px solid var(--line);
     background: var(--control);
@@ -184,17 +121,24 @@
     opacity: 0.4;
     cursor: default;
   }
-  .primary,
   .button {
     border-color: var(--primary);
     background: var(--primary);
     color: var(--primary-ink);
     font-weight: 600;
   }
-  .primary:hover:not(:disabled),
   .button:hover {
     border-color: var(--press);
     background: var(--press);
+  }
+  .button.quiet {
+    border-color: var(--line);
+    background: var(--control);
+    color: var(--ink-strong);
+    font-weight: 500;
+  }
+  .button.quiet:hover {
+    background: var(--control-hover);
   }
   .link,
   .link:hover:not(:disabled) {
@@ -205,69 +149,18 @@
     text-underline-offset: 4px;
     color: inherit;
   }
-  .editor {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-    border: 1px solid var(--rule);
-    background: var(--card-bg);
-    border-radius: var(--radius-xl);
-  }
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-weight: 500;
-  }
-  input,
-  textarea {
-    padding: 8px 12px;
-    border: 1px solid var(--line);
-    background: var(--paper);
-    color: var(--ink-strong);
-    font: inherit;
-    border-radius: var(--radius);
-  }
-  textarea {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 16px;
-  }
   .starts {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 12px;
-    margin: 0;
+    margin: 16px 0 0;
     font-size: 14px;
     line-height: 20px;
     color: var(--ink-soft);
   }
-  .starts .link {
+  .starts a {
     color: var(--ink);
-  }
-  .errors {
-    margin: 0;
-    padding-left: 16px;
-    color: var(--stamp);
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .ok {
-    margin: 0;
-    color: var(--teal);
-    font-weight: 600;
-  }
-  .hint {
-    margin: 0;
-    font-size: 14px;
-    line-height: 20px;
-    color: var(--ink-soft);
-  }
-  .actions {
-    display: flex;
-    gap: 8px;
+    text-underline-offset: 4px;
   }
   .list {
     list-style: none;
@@ -331,30 +224,6 @@
     border-radius: var(--radius-xl);
     color: var(--ink-soft);
     text-align: center;
-  }
-  .cards {
-    margin-top: 24px;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .cards summary {
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-weight: 500;
-    transition: color 0.3s var(--ease);
-  }
-  .cards summary:hover {
-    color: var(--ink-strong);
-  }
-  .cards h3 {
-    margin: 16px 0 4px;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  .names {
-    margin: 0;
-    color: var(--ink-soft);
-    line-height: 24px;
   }
   @media (max-width: 640px) {
     .list li {

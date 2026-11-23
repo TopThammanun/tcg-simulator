@@ -71,7 +71,7 @@ export function buildReport(input: ReportInput): { markdown: string; summary: st
 
   L.push('## แหล่งรูป', '');
   L.push('| แหล่ง | จำนวน print |', '| --- | --- |');
-  for (const s of ['tcgdex', 'pokemontcg.io', 'alt-print', 'none'] as ImageSource[]) {
+  for (const s of ['tcgdex', 'pokemontcg.io', 'alt-print', 'limitless', 'none'] as ImageSource[]) {
     L.push(`| ${SOURCE_LABEL[s]} | ${bySource.get(s) ?? 0} |`);
   }
   const notTcgdex = prints.filter((p) => p.image.source !== 'tcgdex');
@@ -154,6 +154,7 @@ const SOURCE_LABEL: Record<ImageSource, string> = {
   tcgdex: 'TCGdex',
   'pokemontcg.io': 'pokemontcg.io',
   'alt-print': 'รูปจาก print อื่นที่ข้อความเหมือนกัน',
+  limitless: 'รูปสแกนของ Limitless (ชุดและเลขเดียวกัน)',
   none: 'ไม่มีรูป (กรอบข้อความ)',
 };
 

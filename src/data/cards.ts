@@ -78,7 +78,7 @@ export interface EnergyCard extends CardCommon {
 
 export type CardDef = PokemonCard | TrainerCard | EnergyCard;
 
-export type ImageSource = 'tcgdex' | 'pokemontcg.io' | 'alt-print' | 'none';
+export type ImageSource = 'tcgdex' | 'pokemontcg.io' | 'alt-print' | 'limitless' | 'none';
 
 export interface CardImage {
   source: ImageSource;

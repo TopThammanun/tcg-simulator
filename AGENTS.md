@@ -52,12 +52,14 @@ npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเท�
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
 npx tsx scripts/review-gate.ts --games 600 --stability 120   # review gate: win% (the network's value) vs results, same verdicts on other re-deals, time
 npm run dev        # dev server on :4321
-npm run build      # static site in dist/
+npm run build      # static site in dist/ (SITE_URL=https://… npm run build: absolute canonical/hreflang/sitemap/OG/JSON-LD addresses)
 ```
 
 `npm run cards` caches API responses in `.cache/http`; add `-- --refresh` to re-download. It reads the deck files and
 `data/card-pool.txt` (cards real lists of our archetypes play that no deck file has; each needs an engine effect too).
-pokemontcg.io fails often (502/500); the script retries and treats it as a secondary source.
+pokemontcg.io fails often (502/500); the script retries and treats it as a secondary source. A print's picture comes from
+TCGdex, else pokemontcg.io, else (Basic Energy) the SVE art, else another print with the same text, else Limitless's
+own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither API has yet).
 
 ## Layout
 
@@ -71,7 +73,12 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   / `href` for links that keep the language, `langPaths()` for pages under `src/pages/[...lang]/` (built at `/…` and
   `/en/…`; `Base.astro` writes `<html lang>`, the canonical and hreflang links once `site` is set, and the switch to the
   other language; `sitemap.xml.ts` / `robots.txt.ts` list every page in both). Islands read the language from
-  `location.pathname`; Web Workers from their `name` (`remote.ts`).
+  `location.pathname`; Web Workers from their `name` (`remote.ts`). A visitor is sent to their language by an inline
+  script at the top of `Base.astro`'s head: the language picked with the switch (localStorage `LANG_KEY`), else Thai for
+  a browser set to Thai or on Thai time (Asia/Bangkok), English for everyone else; crawlers and automated browsers
+  (`navigator.webdriver`, a bot or headless user agent) stay where they are, and `x-default` is the English page.
+  Search: `lib/seo.ts` (each language's keywords, schema.org JSON-LD: WebSite on every page, WebApplication + FAQPage
+  on the home page, BreadcrumbList / ItemList on the deck pages); pages pass `words` and `jsonLd` to `Base.astro`.
   English log verbs agree with the player's name (`verb`, `possessive`: "You draw", "Bot draws"); the play screen
   reads log lines in either language (`ui/anim/events.ts`, `ui/recap.ts`). A stored review keeps its language
   (`review/store.ts`); a saved game's end reason is shown in the page's (`reasonText`). `404.astro` has both.
@@ -129,8 +136,13 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   opponent's, which the workers load), clear mistakes (`sureLine`: the attack planner's line, fixed seeds, checked on
   several re-deals, shown without the moves it doesn't need: `trimLine`), the bot's turn (your deck's network) on the
   real cards judged on the same re-deals (when it gains, also played from re-deals of what you couldn't see, and the
-  lower counts: a lucky draw is not advice, `alt.lucky`), where it parts from yours and why (`explain.ts`); run on
-  several workers by `review-remote.ts` / `review-worker.ts`.
+  lower counts: a lucky draw is not advice, `alt.lucky`), where it parts from yours and why (`explain.ts`); for a turn
+  worth a look (`gains.ts`; not for a lucky bot's turn), what the better way (the missed
+  line, else the bot's turn) gets you next to yours, read off both positions once the turn has passed (Prizes and
+  Knock Outs, damage left on theirs, attackers set for next turn, Pokémon and Energy in play, cards kept, their hand),
+  and what it plays around: the opponent's next turn sampled from both positions (`threat.ts` with `ending: null`,
+  calibrated per deck: their chance to win, the Prizes they are expected to take, your Pokémon much safer, with the
+  line that takes them in yours), and what your way had going for it; run on several workers by `review-remote.ts` / `review-worker.ts`.
   Changing the analysis: bump `REVIEW_VERSION` in `src/review/store.ts`.
 - `src/review/` — `record.ts` (a finished game: seed + lists + actions, your deck's plan `mine`, `mode`, and the undos'
   re-deals `redeals`; `replay()`, `turnsOf()`; a game keeps its `rules`, and `Rules.version` (`engine/state.ts`
@@ -152,7 +164,9 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   sheet offers "เล่นต่อเกมที่ค้างไว้"; cleared when the game ends or is left.
 - `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
   its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,
-  managed by `MyDecks.svelte` on `/decks/`; `decklist.ts` checks them and names unsupported cards),
+  listed by `MyDecks.svelte` on `/decks/`, built in the deck builder; `decklist.ts` checks them and names unsupported
+  cards), `builder.ts` (the deck builder's rules, like Limitless's: counts with the 4-of-a-name and 1 ACE SPEC limits,
+  Limitless's sort, problems until a legal 60, the card search with its chips, the list to and from export text),
   `play.ts` (labels, hand actions), `action-bar.ts` (the command bar under the table: what it says and its buttons
   for every situation, which one is the main one), `tips.ts` (one-time tips shown in the command bar when their
   moment comes, instead of a manual read before the first game), `drag.ts` (drop zones: `data-drop` =
@@ -177,7 +191,10 @@ pokemontcg.io fails often (502/500); the script retries and treats it as a secon
   opponent — then the game, played as at a real table; `?me=…&opp=…` preselect, `?seed=…` fixes the deal,
   `?watch=1&…` lets the rule-based bot play your side (end-to-end tests; `&save=1` saves it), `?pierce=1` the other
   Twin Shotels ruling; `HowTo.svelte` from the match sheet and the game menu), `/review/` (ประวัติเกม: your record, saved games, one
-  game's review), `/decks/` (meta decks, your own lists). No hints, threat panel or undo. The game screen: `TopBar`
+  game's review), `/decks/` (meta decks, your own lists), `/builder/` (`components/builder/DeckBuilder.svelte`, laid out
+  and used like Limitless's builder: the deck as pictures with counts on the left, the card search on the right; + / −
+  on hover, right-click, Ctrl+right-click for four, drag and drop, keys + − 0–9 on the card under the mouse, Space,
+  H, Ctrl+Z; `?id=` one of yours, `?from=` a meta list; phones get the two halves as tabs). No hints, threat panel or undo. The game screen: `TopBar`
   (☰ the game menu — a `Sheet` with new game, how to play, bot speed, animations, sound, hand order, links —, whose
   turn, the decks; on a phone the log button), the table, the dock, and on a computer the side column: `Inspector`
   (the card under the mouse for a moment, any face-up card carrying `data-inspect`, else the card picked up, with a

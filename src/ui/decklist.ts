@@ -7,7 +7,7 @@ import { parseDecklist, printKey } from '../data/decklist';
 
 const manifest = manifestJson as CardManifest;
 
-const norm = (s: string) =>
+export const norm = (s: string) =>
   s
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -31,6 +31,17 @@ export interface ListCheck {
 
 /** Every card the engine can play, by name (the decks page lists them for building a list). */
 export const SUPPORTED: readonly CardDef[] = Object.values(manifest.cards).sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * The supported card a list line names: its exact print, else the only card with that name (prints of one card share
+ * text); 'ambiguous' when several cards with different text have that name.
+ */
+export function cardFor(e: { name: string; set?: string; number?: string }): CardDef | 'ambiguous' | undefined {
+  const print = e.set && e.number ? manifest.prints[printKey({ set: e.set, number: e.number })] : undefined;
+  if (print) return manifest.cards[print.card];
+  const sameName = byName.get(norm(e.name)) ?? [];
+  return sameName.length === 1 ? sameName[0] : sameName.length > 1 ? 'ambiguous' : undefined;
+}
 
 /** The parser's message (data/decklist.ts) in the page's language. */
 function thai(message: string, shift: number): string {
@@ -61,12 +72,9 @@ export function checkList(text: string): ListCheck {
   const unsupported: string[] = [];
   const cards: string[] = [];
   for (const e of entries) {
-    const print = manifest.prints[printKey(e)];
-    const sameName = byName.get(norm(e.name)) ?? [];
-    // An exact print, else the only card with this name (prints of one card share text).
-    const card = print ? manifest.cards[print.card] : sameName.length === 1 ? sameName[0] : undefined;
-    if (!card) {
-      if (sameName.length > 1) errors.push(tx(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`, `${e.name} ${e.set} ${e.number}: several versions with different text; give the set and card number`));
+    const card = cardFor(e);
+    if (!card || card === 'ambiguous') {
+      if (card === 'ambiguous') errors.push(tx(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`, `${e.name} ${e.set} ${e.number}: several versions with different text; give the set and card number`));
       else {
         unsupported.push(e.name);
         errors.push(tx(`${e.name}: ยังไม่รองรับ`, `${e.name}: not supported yet`));

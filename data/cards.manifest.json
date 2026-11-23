@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T17:48:56.792Z",
+  "generatedAt": "2026-11-23T18:29:42.763Z",
   "cards": {
     "mew-ex": {
       "name": "Mew ex",
@@ -5082,7 +5082,9 @@
       "card": "grookey-mep-52",
       "tcgdexId": "mep-052",
       "image": {
-        "source": "none"
+        "source": "limitless",
+        "high": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEP/MEP_052_R_EN_LG.png",
+        "low": "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEP/MEP_052_R_EN_SM.png"
       }
     },
     "TWM-14": {

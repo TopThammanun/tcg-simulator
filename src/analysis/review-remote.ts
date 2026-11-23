@@ -45,7 +45,7 @@ export function reviewGame(
       if (!span || stopped) return;
       const { reviewTurn, nets } = await loaded;
       try {
-        onturn(reviewTurn(states, game.actions, span, plans, opts, nets));
+        onturn(reviewTurn(states, game.actions, span, plans, { theirDeck: game.opponent, ...opts }, nets));
       } catch (e) {
         errors.push((e as Error).message);
       }

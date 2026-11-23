@@ -1,7 +1,9 @@
 <script lang="ts">
   // One reviewed turn, read at a glance: its verdict and win% before → after (with what win% means a tap away), a clear
   // mistake's line, and where your turn and the bot's part: the moves you both made alike folded into one line, then
-  // the two ways from there as cards, and why the bot plays its way. A turn with nothing to see is one line.
+  // the two ways from there as cards, and why the bot plays its way; then what the better way gets you and what it
+  // plays around on the opponent's next turn (analysis/gains.ts), what yours had going for it a tap away. A turn
+  // with nothing to see is one line.
   import { BETTER_BY, type TurnReview, type Verdict } from '../../analysis/review';
   import { href, tx } from '../../i18n';
   import type { Line, Move } from '../../review/summary';
@@ -41,6 +43,7 @@
   /** Win% fell a lot this turn although the bot had nothing clearly better. */
   const fell = $derived(t.verdict === 'ok' && t.before - t.win.p >= BETTER_BY ? pts(t.before - t.win.p) : 0);
   const botFirst = $derived(botMoves[split]);
+  const g = $derived(t.gains);
 </script>
 
 {#snippet move(m: Move)}
@@ -92,8 +95,8 @@
     <summary>{tx('win% คืออะไร', 'What is win%?')}</summary>
     <p>
       {tx(
-        'โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่ 16 แบบ · พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มใหม่ · น่าจะมีทางที่ดีกว่า = ถ้าเล่นเทิร์นนั้นแบบบอท win% สูงกว่าอย่างน้อย 10 จุด · เป็นค่าประมาณ ใช้เป็นจุดที่ควรลองดูซ้ำ',
-        "The chance to win if both sides play on from there like the bot, as the bot's network (the one you played against) judges it, averaged over 16 re-deals of the cards you couldn't see · Clear slip = the attack planner found a line that wins or takes more Prize cards, and it works on every re-deal · Likely a better way = playing that turn the bot's way gives a win% at least 10 points higher · It's an estimate, for finding turns worth another look",
+        'โอกาสชนะถ้าจากตรงนั้นทั้งสองฝั่งเล่นแบบบอท ตามที่ network ของบอท (ตัวเดียวกับที่คุณเล่นด้วย) ประเมิน เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่ 16 แบบ · พลาดชัด = ตัววางแผนโจมตีหาทางที่ชนะหรือได้ Prize มากกว่า และทางนั้นใช้ได้ทุกแบบที่สุ่มใหม่ · น่าจะมีทางที่ดีกว่า = ถ้าเล่นเทิร์นนั้นแบบบอท win% สูงกว่าอย่างน้อย 10 จุด · ได้อะไร = เทียบตำแหน่งหลังจบเทิร์นของทั้งสองทาง · play around = ให้อีกฝั่งเล่นเทิร์นถัดไปจากทั้งสองตำแหน่ง สุ่มการ์ดที่คุณมองไม่เห็นใหม่หลายแบบ · เป็นค่าประมาณ ใช้เป็นจุดที่ควรลองดูซ้ำ',
+        "The chance to win if both sides play on from there like the bot, as the bot's network (the one you played against) judges it, averaged over 16 re-deals of the cards you couldn't see · Clear slip = the attack planner found a line that wins or takes more Prize cards, and it works on every re-deal · Likely a better way = playing that turn the bot's way gives a win% at least 10 points higher · What it gets you = both ways compared once the turn has passed · Playing around = their next turn played out from both positions, over many re-deals of the cards you couldn't see · It's an estimate, for finding turns worth another look",
       )}
     </p>
   </details>
@@ -127,7 +130,42 @@
       {tx('จุด', 'points')})
     </p>
     {@render lucky()}
-  {:else}
+  {/if}
+
+  {#if g && (g.now.length || g.around.length || g.even !== undefined)}
+    <section class="gains" aria-label={tx('ทางที่ดีกว่าได้อะไร', 'What the better way gets you')}>
+      <h3>{g.of === 'missed' ? tx('ถ้าเล่นตามทางที่พลาดไป จะได้อะไร', 'What the missed line gets you') : tx('ถ้าเล่นแบบบอท จะได้อะไร', "What the bot's way gets you")}</h3>
+      {#if g.now.length}
+        <ul class="facts now">
+          {#each g.now as f, i (i)}<li>{f}</li>{/each}
+        </ul>
+      {/if}
+      <h4>{tx('Play around เทิร์นหน้าของอีกฝั่ง', 'Playing around their next turn')}</h4>
+      {#if g.around.length}
+        <ul class="facts around">
+          {#each g.around as f, i (i)}<li>{f}</li>{/each}
+        </ul>
+      {:else if g.even !== undefined}
+        <p class="even">
+          {g.even < 0.2
+            ? tx('ทั้งสองทาง อีกฝั่งแทบไม่มีทาง KO ในเทิร์นถัดไป', 'Either way they have next to no Knock Out on their next turn')
+            : tx(`ทั้งสองทาง อีกฝั่งน่าจะได้ Prize ใกล้เคียงกันในเทิร์นถัดไป (~${g.even} ใบ)`, `About the same either way: they are expected to take ~${g.even} Prize cards on their next turn`)}
+        </p>
+      {:else}
+        <p class="even">{tx('เกมจบในเทิร์นนี้ ไม่มีเทิร์นหน้าให้อีกฝั่ง', 'The game ends this turn: they get no next turn')}</p>
+      {/if}
+      {#if g.yours.length}
+        <details class="yours">
+          <summary>{tx('ทางของคุณดีกว่าตรงไหน', 'Where your way was better')}</summary>
+          <ul class="facts">
+            {#each g.yours as f, i (i)}<li>{f}</li>{/each}
+          </ul>
+        </details>
+      {/if}
+    </section>
+  {/if}
+
+  {#if !t.alt || quiet}
     <p class="one">
       {#if t.alt}{t.alt.diff >= 0
           ? tx('บอทเล่นต่างออกไปเล็กน้อย', 'The bot plays it a little differently')
@@ -302,6 +340,65 @@
     margin: 10px 0 0;
     color: var(--ink);
   }
+  /* What the better way gets you: the point of the turn's review, so it stands out from the moves above. */
+  .gains {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .gains h3 {
+    margin: 0;
+    color: var(--ink-strong);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+  .gains h4 {
+    margin: 12px 0 0;
+    color: var(--accent);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .facts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .facts li {
+    position: relative;
+    padding-left: 18px;
+    color: var(--ink);
+  }
+  .facts li::before {
+    position: absolute;
+    left: 0;
+    color: var(--ink-soft);
+    content: '•';
+  }
+  .facts.now li::before {
+    color: var(--accent);
+    content: '+';
+    font-weight: 600;
+  }
+  .facts.around li::before {
+    color: var(--teal);
+    content: '↺';
+  }
+  .even {
+    margin: 6px 0 0;
+    color: var(--ink-soft);
+  }
+  .yours {
+    margin-top: 10px;
+  }
+
   .muted {
     margin: 8px 0 0;
     color: var(--ink-soft);

@@ -1,0 +1,61 @@
+---
+import DeckBuilder from '../../components/builder/DeckBuilder.svelte';
+import { formatDecklist } from '../../data/decklist';
+import { deckKeys } from '../../engine/db';
+import { langPaths, localePath, tFor } from '../../i18n';
+import Base from '../../layouts/Base.astro';
+import { loadDecks, metaDecks } from '../../lib/decks';
+import { breadcrumbLd, siteUrl } from '../../lib/seo';
+
+export function getStaticPaths() {
+  return langPaths();
+}
+
+const lang = Astro.props.lang;
+const t = tFor(lang);
+
+// The meta lists to start from, and their plans for a list near them.
+const decks = metaDecks(await loadDecks()).map((d) => ({
+  slug: d.slug,
+  name: d.meta.name,
+  rank: d.meta.rank,
+  metaShare: d.meta.metaShare,
+  archetype: d.meta.limitless ?? d.slug,
+  cards: deckKeys(d.lines.map((l) => l.entry)),
+  text: formatDecklist(d.lines.map((l) => l.entry)),
+}));
+---
+
+<Base
+  title={t('จัดเด็ค Pokémon TCG (Deck Builder)', 'Pokémon TCG deck builder')}
+  description={t(
+    'จัดเด็ค Pokémon TCG ในเบราว์เซอร์แบบเดียวกับตัวจัดเด็คของ Limitless: ค้นการ์ด กด + เพื่อใส่ คลิกขวาหรือลากมาวาง นับครบ 60 ใบ เช็กกติกาให้ คัดลอก list ไป Pokémon TCG Live แล้วเล่นกับบอทได้ทันที',
+    "Build a Pokémon TCG deck in your browser the way you would in Limitless's deck builder: search, press + or right-click or drag to add, count to 60 with the rules checked, copy the list into Pokémon TCG Live, then play the bot with it.",
+  )}
+  words={t('จัดเด็ค,ตัวจัดเด็ค,deck builder,จัดเด็คโปเกมอน', 'deck builder,Pokémon TCG deck builder,build a deck,decklist editor').split(',')}
+  jsonLd={[
+    breadcrumbLd(siteUrl(Astro.site), [
+      { name: t('หน้าแรก', 'Home'), path: localePath(lang, '/') },
+      { name: t('จัดเด็ค', 'Deck builder'), path: localePath(lang, '/builder/') },
+    ]),
+  ]}
+>
+  <h1 class="visually-hidden">{t('จัดเด็ค Pokémon TCG', 'Pokémon TCG deck builder')}</h1>
+  <DeckBuilder client:only="svelte" {decks} />
+</Base>
+
+<style>
+  /* The builder is an app: the whole width, little space around it. */
+  :global(main:has(.builder)) {
+    width: 100%;
+    padding: 16px 16px 24px;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>

@@ -48,26 +48,55 @@ for (const [i, me] of DECKS.entries()) {
   });
 }
 
-test('your own list: unsupported cards are named, a good list is saved and can be played', async ({ page }) => {
+test('the deck builder works like Limitless: +, right-click, limits, import, undo; the deck is saved and played', async ({ page }) => {
   await page.goto('/decks/');
-  await page.getByRole('button', { name: '+ วาง list ใหม่' }).click();
-  await page.locator('.starts').getByRole('button', { name: 'Basic Box' }).click();
-  const area = page.getByRole('textbox', { name: 'decklist' });
-  const original = await area.inputValue();
-  await area.fill(original.replace(/^(\d+) Boss's Orders .*$/m, '$1 Iono PAL 185'));
-  await expect(page.locator('.errors')).toContainText('Iono');
-  await expect(page.locator('.editor button.primary')).toBeDisabled();
-  await area.fill(original);
-  await expect(page.locator('.ok')).toContainText('Basic Box');
-  await page.getByLabel('ชื่อเด็ค').fill('Box ของฉัน');
-  await page.getByRole('button', { name: 'บันทึก' }).click();
-  await expect(page.locator('.list li')).toContainText('Box ของฉัน');
+  await page.getByRole('link', { name: '+ จัดเด็คใหม่' }).click();
+  await expect(page).toHaveURL(/\/builder\/$/);
+  const total = page.locator('.deck-bar .total');
+  const results = page.locator('.results');
+  const search = page.getByRole('searchbox', { name: 'ค้นการ์ด' });
 
-  await page.locator('.list li').getByRole('link', { name: /เล่น/ }).click();
+  // + on a search result adds one; Ctrl+right-click adds four, stopped at 4 with the reason.
+  await search.fill('dreepy');
+  await results.locator('.tile').first().hover();
+  await results.getByRole('button', { name: 'เพิ่ม Dreepy 1 ใบ' }).click();
+  await expect(total).toHaveText('1/60');
+  await results.locator('.tile').first().click({ button: 'right', modifiers: ['Control'] });
+  await expect(total).toHaveText('4/60');
+  await expect(page.locator('.ui-toast')).toContainText('ไม่เกิน 4');
+  // Right-click in the deck takes one out; the filter chips narrow the search.
+  await page.locator('.deck-grid .tile').first().click({ button: 'right' });
+  await expect(total).toHaveText('3/60');
+  await search.fill('');
+  await page.getByRole('button', { name: 'Supporter', exact: true }).click();
+  expect(await results.locator('.tile').count()).toBeLessThan(20);
+
+  // A meta list to start from, an import that names what it left out, and undo.
+  await page.locator('.from select').selectOption('basic-box');
+  await expect(total).toHaveText('60/60');
+  await expect(page.locator('.deck-bar .state')).toContainText('บอทจะเล่น list นี้แบบ Basic Box');
+  await page.getByRole('button', { name: 'นำเข้า list' }).click();
+  await page.getByRole('textbox', { name: 'decklist' }).fill('4 Dreepy TWM 128\n1 Iono PAL 185');
+  await page.getByRole('dialog').getByRole('button', { name: 'นำเข้า', exact: true }).click();
+  await expect(total).toHaveText('4/60');
+  await expect(page.locator('.report')).toContainText('Iono');
+  await page.getByRole('button', { name: 'เลิกทำ' }).first().click();
+  await expect(total).toHaveText('60/60');
+
+  // Saved under its name, then played.
+  await page.getByRole('textbox', { name: 'ชื่อเด็ค' }).fill('Box ของฉัน');
+  await page.getByRole('button', { name: 'บันทึก' }).click();
+  await expect(page).toHaveURL(/\/builder\/\?id=/);
+  await page.getByRole('button', { name: /เล่นกับบอท/ }).click();
   await expect(page.getByLabel('เด็คของคุณ')).toHaveValue(/^my:/);
   await page.getByRole('combobox', { name: /^คู่แข่ง/ }).selectOption('basic-box');
   await page.getByRole('button', { name: /เริ่มเกม/ }).click();
   await expect(page.locator('.status')).toContainText('Box ของฉัน vs Basic Box');
+
+  // The decks page lists it, with a link back to the builder.
+  await page.goto('/decks/');
+  await expect(page.locator('.list li')).toContainText('Box ของฉัน');
+  await expect(page.locator('.list li').getByRole('link', { name: 'แก้' })).toHaveAttribute('href', /\/builder\/\?id=/);
 });
 
 test('you can set up, attach Energy and end the turn; the bot then plays', async ({ page }) => {
@@ -687,9 +716,10 @@ test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
   test('a review is short and opens a turn on the table full screen', async ({ page }) => {
-    // UI-PLAN.md's gate: the seed 7 game it measured at 3,794px.
+    // UI-PLAN.md's gate: the seed 7 game it measured at 3,794px, brought under 1,600; since then the turn worth a look
+    // also shows what the better way gets you and plays around (TurnDetail's gains box, ~280px here).
     await reviewedGame(page, 'dragapult-ex', 'basic-box');
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1600);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1850);
     await expect(page.locator('.stage-card')).toHaveCount(0);
     await page.locator('.turn-detail').getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
     const viewer = page.getByRole('dialog', { name: /รีเพลย์เทิร์น/ });
