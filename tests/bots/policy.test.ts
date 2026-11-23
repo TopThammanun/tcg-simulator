@@ -1,5 +1,6 @@
 // The policy/value network's input (encode.ts), forward pass (model.ts) and the bot that plays from it.
 import { describe, expect, it } from 'vitest';
+import { choosePicks } from '../../src/bots/choose';
 import { suggestNet } from '../../src/bots/coach';
 import { makeBot } from '../../src/bots/core';
 import { createBot } from '../../src/bots/index';
@@ -231,6 +232,20 @@ describe('what the bot checks before it plays', () => {
       // Budew needs 1 counter and Drakloak 3: 2 Prizes, with 2 counters to spare.
       expect(6 - apply(s, bot.act(s)).players[0].prizes.length).toBe(2);
     }
+  });
+
+  it('spreads them for the most Prizes, not the biggest Knock Out first (three 1-Prize Pokémon over one ex)', () => {
+    let s = scenario({
+      p0: { active: { card: 'dragapult-ex', under: ['dreepy', 'drakloak'], energy: ['fire-energy', 'psychic-energy'] } },
+      p1: {
+        active: 'fezandipiti-ex',
+        bench: [{ card: 'fezandipiti-ex', damage: 150 }, { card: 'dreepy', damage: 50 }, { card: 'dreepy', damage: 50 }, { card: 'dreepy', damage: 50 }],
+      },
+    });
+    s = apply(s, { t: 'attack', name: 'Phantom Dive' });
+    // The benched ex needs all 6 counters for 2 Prizes; each Dreepy needs 2: 3 Prizes.
+    const after = apply(s, { t: 'choose', picks: choosePicks(s, s.pending!.request, planFor('dragapult-ex')) });
+    expect(6 - after.players[0].prizes.length).toBe(3);
   });
 });
 

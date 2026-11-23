@@ -624,6 +624,31 @@ look-ahead (โหมดหน้าเล่น) เจอ network + เช็�
   - เทิร์นที่ทางของบอทแย่กว่าไม่ใช้คำว่า "เล่นต่างออกไปเล็กน้อย" แล้ว
   - ด่าน 600 เกม: 1a ผ่านทุกกลุ่ม Brier 0.1437, คำตัดสินตรงกัน 97.8% (เดิม 98.3%), 0.22 วินาทีต่อเทิร์น
 
+### Champions League 2027 Chiba (22–23 พ.ย.): ดูการเล่นของผู้เล่นจริง
+
+แหล่ง: ถ่ายทอดสดของช่อง 【公式】ポケモンカードチャンネル 3 คลิป (วันที่ 1 `Lri2BevKuTU` 5.3 ชม., วันที่ 2 ช่วงแรก `fIyVtiIJO38`
+4 ชม., ช่วงหลัง `lUTsmDjCjhM` 8.5 ชม.) อ่านจากคำบรรยายอัตโนมัติภาษาญี่ปุ่นของ YouTube (ดึงด้วย Playwright) ไม่ได้ดูภาพ
+คำบรรยายไม่บอกสนามครบทุกใบ จึงทำเป็นข้อมูลฝึกหรือตำแหน่งเริ่มเกมตรง ๆ ไม่ได้ ใช้ได้เป็นบทเรียนที่นำมาเทียบกับบอท
+
+- **meta:** ฟอร์แมตญี่ปุ่น (มีการ์ด 30th Celebration แล้ว) Dragapult ex ครองรอบตัด ชนะเลิศคือ Sasaki Hiromu (Dragapult ex)
+  ชนะ Suzuki Kanji (Festival Lead, ตัว Seaking) ในนัดชิง เด็คอื่นในรอบลึก: Alakazam, Cynthia's Pokémon, Lillie's Clefairy ex +
+  Teal Mask Ogerpon ex, Crustle, Hydrapple ex (Crustle, Hydrapple ex ยังไม่มีใน engine)
+- **นัดชิง (Dragapult เจอ Festival Lead):** Festival Lead ลง Rellor → Rabsca 2 ตัว (Spherical Shield กัน Phantom Dive บน Bench)
+  และใช้ Mist Energy กันตัวนับดาเมจ ฝั่ง Dragapult เริ่มด้วย Budew (Itchy Pollen ล็อก Item) จุดตัดสินคือ Festival Lead เลือก KO Budew
+  ด้วย Quick Draw ตอนมือไม่ดี ซึ่งเปิดให้ Unfair Stamp (ACE SPEC ใช้ได้เมื่อเทิร์นก่อนโดน KO) ลดมือเหลือ 2 Dragapult จึงใช้
+  Boss's Orders เก็บ Rabsca ตัวที่ 2 แล้ว Phantom Dive 200 + ตัวนับ 6 ตัวพอดี KO ทุกตัวที่เหลือ ผู้ชนะบอกว่าแผนเดิมคือ Risky Ruins
+  + Fezandipiti/Munkidori ไล่ KO Rabsca พอเห็น Rabsca 2 ตัวจึงเปลี่ยนเป็นกดมือด้วย Unfair Stamp
+- **Festival Lead เจอ Dragapult (วันที่ 2 รอบ 2):** Dragapult วางตัวนับ KO Rellor ก่อนวิวัฒนาการเป็น Rabsca และ Shaymin พร้อมกัน
+  (KO 2 ตัวต่อ Phantom Dive) ฝั่ง Festival Lead ใช้ Dipplin + Brave Bangle ตี 160 สองครั้งพอดี 320 KO Dragapult ex
+- **Dragapult เจอ Alakazam (รอบ 16 คน):** Fezandipiti ex (Cruel Arrow ยิง Bench) และ Boss's Orders ไล่ KO Abra ทุกตัวก่อนวิวัฒนาการ
+  Shaymin กันดาเมจบน Bench แต่ไม่กันตัวนับ Risky Ruins วางตัวนับบน Basic ทุกตัว แล้ว Phantom Dive 5 ตัวพอ KO Abra (50 HP)
+- **นำมาใช้แล้ว:** `choose.ts distributeCounters` เดิมเลือก KO ที่ได้ Prize มากที่สุดก่อนทีละตัว (ex ตัวเดียว 2 Prize ชนะ Pokémon
+  1 Prize สามตัว) เปลี่ยนเป็นลองทุกชุดที่ KO ได้ (Bench มีไม่เกิน 8 ตัว) เลือกชุดที่ได้ Prize รวมมากสุด แล้ว KO ได้หลายตัวสุด
+  บอทในเกมใช้คำตอบนี้แทนของ network เมื่อได้ Prize มากกว่า (`search.ts morePrizes`) ตัววางแผนโจมตีกับบอทกฎก็ใช้ตัวนี้
+- **ที่ยังไม่ได้ทำ:** บอทควรระวังการ KO ที่เปิดให้คู่แข่งใช้ Unfair Stamp ตอนมือตัวเองไม่ดี และควรเลือก KO ตัวที่จะวิวัฒนาการเป็นตัวกัน
+  หรือตัวตีหลัก (Rellor, Abra) ก่อน ทั้งสองอย่างเป็นการตัดสินของ network ที่ self-play ควรเรียนเอง ถ้าจะเร่งต้องทำตำแหน่งเริ่มเกม
+  จากสถานการณ์แบบนี้ (`positions.ts`) ซึ่งต้องจัดสนามเอง
+
 ## แหล่งที่มา
 
 writeup บน Kaggle (อ่านทั้งฉบับ 21 พ.ย. 2026 ด้วยเบราว์เซอร์อัตโนมัติ (Playwright) เพราะหน้าโหลดด้วย JavaScript; รายชื่อผู้ชนะ:

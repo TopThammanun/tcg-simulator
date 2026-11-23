@@ -161,24 +161,34 @@ export function gustTarget(s: GameState, me: PlayerId, options: Slot[], plan: De
   return best;
 }
 
-/** Damage counters on the opponent's Bench: Knock Out what can be Knocked Out, best Prize value first. */
+/**
+ * Damage counters on the opponent's Bench: the Knock Outs that take the most Prizes together (then the most
+ * Pokémon, then the fewest counters), every set tried (a Bench is at most 8); the rest on the best Prize value left.
+ */
 function distributeCounters(s: GameState, targets: Slot[], n: number): number[] {
   const usable = targets.filter((sl) => !sl.energy.some((e) => keyOf(s, e) === 'mist-energy'));
   const pool = usable.length > 0 ? usable : targets;
-  const picks: number[] = [];
-  let left = n;
-  const remaining = pool.slice();
-  for (;;) {
-    const koable = remaining
-      .map((sl) => ({ sl, need: Math.ceil(hpLeft(s, sl) / 10) }))
-      .filter((x) => x.need <= left)
-      .sort((a, b) => topDef(s, b.sl).prizes - topDef(s, a.sl).prizes || a.need - b.need);
-    const pick = koable[0];
-    if (!pick) break;
-    for (let i = 0; i < pick.need; i++) picks.push(pick.sl.uid);
-    left -= pick.need;
-    remaining.splice(remaining.indexOf(pick.sl), 1);
+  const koable = pool.map((sl) => ({ sl, need: Math.ceil(hpLeft(s, sl) / 10), prizes: topDef(s, sl).prizes })).filter((x) => x.need <= n);
+  let best = { mask: 0, prizes: 0, kos: 0, used: 0 };
+  for (let mask = 1; mask < 1 << koable.length; mask++) {
+    let prizes = 0;
+    let kos = 0;
+    let used = 0;
+    koable.forEach((x, i) => {
+      if (mask & (1 << i)) {
+        prizes += x.prizes;
+        kos++;
+        used += x.need;
+      }
+    });
+    if (used > n) continue;
+    if (prizes > best.prizes || (prizes === best.prizes && (kos > best.kos || (kos === best.kos && used < best.used)))) best = { mask, prizes, kos, used };
   }
+  const picks: number[] = [];
+  const chosen = koable.filter((_, i) => best.mask & (1 << i));
+  for (const x of chosen) for (let i = 0; i < x.need; i++) picks.push(x.sl.uid);
+  const left = n - best.used;
+  const remaining = pool.filter((sl) => !chosen.some((x) => x.sl === sl));
   if (left > 0) {
     const rest = (remaining.length ? remaining : pool)
       .slice()
