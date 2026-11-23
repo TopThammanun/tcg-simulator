@@ -247,7 +247,7 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
       const attacked = byAttack.has(slot.uid);
       let prizes = d.prizes;
       if (attacked && toolKey(s, slot) === 'lillies-pearl' && isLilliesPokemon(topKey(s, slot))) prizes -= 1;
-      ctx.log(tx(`${d.name} ของ${ctx.who(p)} ถูก Knock Out`, `${possessive(ctx.who(p))} ${d.name} is Knocked Out`), p);
+      ctx.log(tx(`${d.name} ของ${ctx.who(p)} ถูก Knock Out`, `${possessive(ctx.who(p))} ${d.name} is Knocked Out`), p, slot.uid);
       ctx.discardSlot(p, slot);
       if (s.current !== p) {
         s.players[p].koThisTurn = true;
@@ -269,6 +269,15 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
   promote(ctx, opp(s.current));
   promote(ctx, s.current);
   trimBenches(ctx, [s.current, opp(s.current)]);
+}
+
+/**
+ * The Pokémon Knocked Out from `prev` to `next` (checkKOs marks their log lines; a Pokémon discarded from play another
+ * way, such as from a Bench over its limit, gives no Prize and is not one). Null when `next` keeps no log (look-ahead).
+ */
+export function knockedOut(prev: GameState, next: GameState): Set<SlotId> | null {
+  if (next.quiet) return null;
+  return new Set(next.log.slice(prev.log.length).flatMap((l) => (l.ko === undefined ? [] : [l.ko])));
 }
 
 function takePrizes(ctx: Ctx, p: PlayerId, n: number): void {

@@ -141,7 +141,7 @@
     color: #fff;
   }
 
-  /* Coins: a real Pokémon coin (src/ui/symbols.ts), Pikachu heads and the Poké Ball back tails. */
+  /* Coins (src/ui/symbols.ts): gold heads, silver tails. */
   .fx-layer :global(.fx-coin) {
     perspective: 500px;
   }
@@ -155,12 +155,9 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: #2a2a2a center / cover no-repeat;
+    background: center / cover no-repeat;
     backface-visibility: hidden;
-    /* A faint rim, so the black back stands out on the dark playmat. */
-    box-shadow:
-      inset 0 0 0 1px #ffffff2e,
-      0 8px 18px -6px #000c;
+    box-shadow: 0 8px 18px -6px #000c;
   }
   .fx-layer :global(.fx-coin-spin .tails) {
     transform: rotateY(180deg);

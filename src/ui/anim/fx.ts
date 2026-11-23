@@ -446,7 +446,7 @@ export class Fx {
     const y = c.board.top + c.board.height / 2 - size / 2;
     const coin = this.node('fx-coin', new DOMRect(x, y, size, size));
     const spin = el('div', 'fx-coin-spin');
-    // A real coin: Pikachu is heads, the Poké Ball back is tails; the word shows once it lands.
+    // Gold heads, silver tails; the word shows once it lands.
     const face = (side: 'heads' | 'tails') => {
       const n = el('span', side);
       n.style.backgroundImage = `url(${COIN[side]})`;

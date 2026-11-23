@@ -4,7 +4,7 @@
 // Only what the viewer may see is named: cards in a deck, a Prize pile or the other hand stay face down,
 // and so do the other side's Pokémon while setup is still going.
 import { def } from '../../engine/db';
-import { maxHp } from '../../engine/rules';
+import { knockedOut, maxHp } from '../../engine/rules';
 import { slotsOf, topDef, topKey } from '../../engine/state';
 import type { Action, CardId, GameState, PlayerId, Slot, SlotId } from '../../engine/types';
 
@@ -101,6 +101,7 @@ export function animEvents(prev: GameState | null, next: GameState, action?: Act
   const before = slotMap(prev);
   const after = slotMap(next);
   const at = locate(next);
+  const kos = knockedOut(prev, next);
   const knocked = new Set<SlotId>();
   for (const [uid, { player, slot }] of before) {
     const now = after.get(uid);
@@ -114,6 +115,8 @@ export function animEvents(prev: GameState | null, next: GameState, action?: Act
     }
     const top = slot.stack[slot.stack.length - 1]!;
     if (at.get(top)?.zone !== 'discard') continue;
+    // Discarded without a Knock Out (a Bench over its limit): its cards just move to the discard pile.
+    if (kos && !kos.has(uid)) continue;
     knocked.add(uid);
     const name = topDef(prev, slot).name;
     const hit = [`${name} โดน `, `${name} takes `];

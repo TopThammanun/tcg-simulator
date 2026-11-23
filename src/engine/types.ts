@@ -103,6 +103,8 @@ export interface LogEntry {
   text: string;
   /** Number of actions applied before this entry was written; lets the UI rebuild the board at that point. */
   step: number;
+  /** The slot of the Pokémon this line reports Knocked Out (rules.ts checkKOs); a Pokémon discarded otherwise has none. */
+  ko?: SlotId;
 }
 
 export interface ChoiceOption {

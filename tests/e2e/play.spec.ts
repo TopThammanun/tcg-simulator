@@ -359,6 +359,40 @@ test('the keyboard: 1–9 picks up a hand card, A opens the attacks, E asks then
   await expect.poll(async () => (await state(page)).turn).toBeGreaterThan(5);
 });
 
+test('Area Zero Underdepths leaving play: the Bench over 5 stays in one row on the table, each Pokémon can be tapped', async ({ page }) => {
+  await loadPosition(page);
+  // Dragapult ex (Tera) with 7 on the Bench under the bot's Underdepths; Gravity Mountain in hand replaces it.
+  await page.evaluate(() => {
+    const t = (window as unknown as { __tcg: { state: () => any; load: (s: unknown) => void } }).__tcg;
+    const s = structuredClone(t.state());
+    const me = s.players[0];
+    const add = (key: string, owner: 0 | 1) => (s.cards.push({ id: s.cards.length, key, owner }), s.cards.length - 1);
+    while (me.bench.length < 7) {
+      me.bench.push({ ...structuredClone(me.bench[0]), uid: s.nextUid++, stack: [add('dreepy', 0)], energy: [] });
+    }
+    me.hand = [add('gravity-mountain', 0)];
+    s.stadium = { card: add('area-zero-underdepths', 1), owner: 1 };
+    t.load(s);
+  });
+  await page.locator('.hcard').filter({ has: page.locator('img[alt="Gravity Mountain"]') }).click();
+  await page.locator('.dock').getByRole('button', { name: 'ใช้ Gravity Mountain' }).click();
+  await expect(page.locator('.dock')).toContainText('ทิ้ง Pokémon บน Bench 2 ตัว');
+  const bench = page.locator('.side.mine .bench .slot');
+  await expect(bench).toHaveCount(7);
+  const board = (await page.locator('.board').boundingBox())!;
+  const tops = new Set<number>();
+  for (const b of await bench.all()) {
+    const box = (await b.boundingBox())!;
+    tops.add(Math.round(box.y));
+    expect(box.y + box.height, 'a Benched Pokémon runs off the table').toBeLessThanOrEqual(board.y + board.height + 1);
+  }
+  expect(tops.size, 'the Bench wraps to a second row').toBe(1);
+  await bench.nth(5).locator('.card').click();
+  await bench.nth(6).locator('.card').click();
+  await page.locator('.dock').getByRole('button', { name: 'ยืนยัน' }).click();
+  await expect.poll(async () => (await state(page)).players[0].bench.length).toBe(5);
+});
+
 test('a hand card is read before it is played; Energy Switch is answered on the table; you pick your Prize card', async ({ page }) => {
   await loadPosition(page);
   // The hand is shown sorted: the Supporter first, then the Items by name.

@@ -41,6 +41,20 @@ describe('why attack', () => {
   });
 });
 
+describe('why play a Stadium', () => {
+  it('does not call the Pokémon the opponent discards from a smaller Bench Knocked Out: no Prize is taken', () => {
+    // Area Zero Underdepths replaced: the opponent's Bench of 6 goes down to 5.
+    const s = scenario({
+      p0: { active: 'dreepy', hand: ['risky-ruins'] },
+      p1: { active: 'teal-mask-ogerpon-ex', bench: ['budew', 'dreepy', 'latias-ex', 'budew', 'dreepy', 'budew'] },
+      stadium: { card: 'area-zero-underdepths', owner: 1 },
+    });
+    const e = explainAction(s, 0, { action: { t: 'trainer', card: handCard(s, 0, 'risky-ruins') } }, plan);
+    expect([e.why, ...e.facts].filter((f) => f.startsWith('KO '))).toEqual([]);
+    expect(e.facts).toContain('Budew ถูกทิ้งจากสนาม ไม่ใช่ KO จึงไม่ได้ Prize');
+  });
+});
+
 describe("why Boss's Orders", () => {
   it('names the Pokémon it brings up and what the attack then does', () => {
     const s = scenario({
