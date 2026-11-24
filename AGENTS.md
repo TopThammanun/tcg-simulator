@@ -223,10 +223,11 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
   Theme: MyTrainerGym's, a Pokémon trainer's gym in a Pokémon Center's colours (our own drawings, none of its
-  logos): one light, flat theme, tokens on `:root` in `layouts/Base.astro` (white page, `--card-bg` #F6F6F6 /
-  `--raised` white / `--control` #ECECEC surfaces, `--line` / `--rule` hairlines, near black ink; `--brand` red #E3121F
-  (`--brand-deep` its shade) is the brand: `--primary` for the one main action, `--accent` for what can be played or
-  picked and `--mine` your side are it; `--theirs` = `--rival` blue for the bot, your rival (its dots, log lines, turn
+  logos): one light, flat theme, softened (white glares), tokens on `:root` in `layouts/Base.astro` (light grey page
+  `--paper` #E3E5E8, `--card-bg` #EEF0F2 / `--raised` #F6F7F8 / `--control` #D8DBDF surfaces, `--line` / `--rule`
+  hairlines, near black ink; the red, blue, green and amber read at 4.5:1 as text on the page and `--card-bg`); `--brand` red #C8101B is
+  the brand: `--primary` for the one main action, `--accent` for what can be played or picked and `--mine` your side
+  are it; `--theirs` = `--rival` blue for the bot, your rival (its dots, log lines, turn
   glow, a lost game); `--stamp` a deeper red for danger, mistakes and damage; `--warn` amber for a warning (a turn
   worth a look, the bot's better way and what it gets you). The play mat is dark: `.dark` (Base.astro) puts the dark
   surfaces and light ink back on the mat (`.board`), a Pokémon's menu and the Prize pick;
@@ -239,8 +240,9 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   size off the scale, a colour that isn't a token (black and white shades aside) or a token that isn't defined; the
   drawn cards (`FxLayer`, `CardBack`, `CardFace`) are its exceptions.
   No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. The gym's motifs:
-  `BrandMark.astro` (a red hexagon badge with two white rank chevrons; the favicon and the emblem on the play mat's
-  centre line are the same shape), the wordmark MyTrainer + red Gym, `GymBadge.svelte` (one original shape per Gym Leader by
+  `BrandMark.astro` (a trainer's ball drawn as a gym badge, our own and not the Poké Ball: a flat-topped hexagon, red
+  above and white below a dark band, `--mark-ink`, with a hexagonal button; the favicon, `favicon.ico` and the emblem
+  on the play mat's centre line are the same shape), the wordmark MyTrainer + red Gym, `GymBadge.svelte` (one original shape per Gym Leader by
   rank, in the type colour of its headline Pokémon, `gymLeaders()` in `lib/decks.ts`; earned = a flat layered medal,
   not yet = an outline), `ArenaLines.astro` (a battle floor seen from above, hairlines; `frame` without the centre
   circle where text sits), red spaced-out eyebrows like a gym's signage; the copy speaks of trainers, Gym Leaders

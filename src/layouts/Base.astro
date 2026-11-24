@@ -87,7 +87,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     <meta name="description" content={description} />
     <meta name="keywords" content={keywords(lang, words)} />
     <meta name="application-name" content={brand} />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#e3e5e8" />
     <!-- Light only: a browser's own dark mode (Chrome's auto-dark) must not recolour it. -->
     <meta name="color-scheme" content="only light" />
     <link rel="canonical" href={url(localePath(lang, path))} />
@@ -219,35 +219,37 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
 </script>
 
 <style is:global>
-  /* One light, flat theme in a Pokémon Center's colours: a white page, #F6F6F6 surfaces, hairline borders, near
-     black ink, and one red. Card art brings the other colours; red is the brand, the one main action, what can be
-     played or picked and your side; blue is the bot, your rival; a deeper red is for danger, amber for a warning.
-     The play mat stays dark (.dark below), like a mat on the shop's white table, so the cards stand out.
+  /* One light, flat theme in a Pokémon Center's colours, softened: a light grey page (white glares), lighter grey
+     surfaces, hairline borders, near black ink, and one red. Card art brings the other colours; red is the brand,
+     the one main action, what can be played or picked and your side; blue is the bot, your rival; a deeper red is
+     for danger, amber for a warning; each deep enough to read on the page and the surfaces.
+     The play mat stays dark (.dark below), like a mat on the shop's table, so the cards stand out.
      One type family: Geist for Latin and figures, Noto Sans Thai for Thai (the browser picks per glyph). */
   :root {
-    --paper: #ffffff;
-    --paper-deep: #f2f2f2;
-    --card-bg: #f6f6f6;
-    --raised: #ffffff;
-    --control: #ececec;
-    --ink: #2b2b2b;
-    --ink-strong: #111111;
-    --ink-soft: #626262;
-    --ink-faint: #8a8a8a;
-    --rule: #ebebeb;
-    --line: #dedede;
-    --stamp: #cf1f2b;
-    --teal: #1e874b;
+    --paper: #e3e5e8;
+    --paper-deep: #d9dce0;
+    --card-bg: #eef0f2;
+    --raised: #f6f7f8;
+    --control: #d8dbdf;
+    --ink: #26282b;
+    --ink-strong: #111214;
+    --ink-soft: #5c5f64;
+    --ink-faint: #74777c;
+    --rule: #d6d9dd;
+    --line: #c9cdd2;
+    --stamp: #b51a25;
+    --teal: #16703d;
     /* MyTrainerGym's colour: a Pokémon Center red, for the brand, the one main action and what can be played. */
-    --brand: #e3121f;
-    --brand-deep: #b30d18;
+    --brand: #c8101b;
+    /* The mark's outline, band and button (BrandMark.astro): dark on the page and on the mat alike. */
+    --mark-ink: #1c1d20;
     --primary: var(--brand);
     --primary-ink: #ffffff;
-    --press: #c40f1b;
+    --press: #a90d17;
     --accent: var(--brand);
     --accent-ink: #ffffff;
-    /* A warning (a turn worth a look, a gamble): amber, deep enough to read on white. */
-    --warn: #9c6600;
+    /* A warning (a turn worth a look, a gamble): amber, deep enough to read. */
+    --warn: #805400;
     --warn-ink: #ffffff;
     --radius: 8px;
     --radius-lg: 12px;
@@ -255,13 +257,13 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     --radius-sm: 4px;
     /* The one size under the text scale: numbers and labels drawn on a card (HP, a Tool's name). */
     --fs-card: 11px;
-    --control-hover: #e1e1e1;
-    --line-strong: #c6c6c6;
-    --stamp-press: #ad1822;
+    --control-hover: #cdd1d6;
+    --line-strong: #adb2b9;
+    --stamp-press: #96151e;
     /* By meaning: what can be played or picked, your side, the bot's side (the rival's blue), HP left. */
     --can: var(--accent);
     --mine: var(--brand);
-    --rival: #2a6fdb;
+    --rival: #2360c4;
     --theirs: var(--rival);
     --hp-ok: #3f9b5a;
     --hp-hurt: #c8941f;
@@ -269,8 +271,8 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     /* A card's own paper (a Tool's tab peeking out of a Pokémon in play). */
     --card-paper: #e4ddcc;
     --card-paper-ink: #2a261e;
-    --shadow: 0 1px 2px #0000001f;
-    --shadow-lg: 0 24px 48px -16px #00000040;
+    --shadow: 0 1px 2px #00000024;
+    --shadow-lg: 0 24px 48px -16px #00000047;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
     --font-body: 'Geist', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
     --font-heading: var(--font-body);
@@ -549,7 +551,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    background: #ffffffcc;
+    background: color-mix(in srgb, var(--card-bg) 85%, transparent);
     box-shadow: var(--shadow);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
     backdrop-filter: blur(16px) saturate(140%);
@@ -653,7 +655,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
       flex-direction: column;
       gap: 8px;
       padding: 96px 24px 32px;
-      background: #ffffffeb;
+      background: color-mix(in srgb, var(--paper) 94%, transparent);
       -webkit-backdrop-filter: blur(24px);
       backdrop-filter: blur(24px);
       opacity: 0;

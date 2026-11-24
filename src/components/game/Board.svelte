@@ -211,9 +211,12 @@
   <!-- The centre of the gym's floor, with its badge (BrandMark.astro's shape). -->
   <div class="midline" aria-hidden="true">
     <svg class="emblem" viewBox="0 0 32 32">
-      <path d="M16 2L28.12 9V23L16 30L3.88 23V9Z" fill="var(--brand)" />
-      <path d="M16 2L28.12 9V23L16 30Z" fill="var(--brand-deep)" />
-      <path d="M10.5 15.5L16 10.5L21.5 15.5M10.5 21.5L16 16.5L21.5 21.5" fill="none" stroke="var(--primary-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M2 16L9 3.88H23L30 16Z" fill="var(--brand)" />
+      <path d="M2 16L9 28.12H23L30 16Z" fill="#ffffff" />
+      <path d="M2 16H30" stroke="var(--mark-ink)" stroke-width="3" />
+      <path d="M30 16L23 28.12H9L2 16L9 3.88H23Z" fill="none" stroke="var(--mark-ink)" stroke-width="2" stroke-linejoin="round" />
+      <path d="M21.2 16L18.6 20.5H13.4L10.8 16L13.4 11.5H18.6Z" fill="var(--mark-ink)" />
+      <path d="M18.6 16L17.3 18.25H14.7L13.4 16L14.7 13.75H17.3Z" fill="#ffffff" />
     </svg>
   </div>
 
