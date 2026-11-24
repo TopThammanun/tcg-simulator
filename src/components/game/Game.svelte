@@ -1400,10 +1400,10 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--ink-strong);
+    background: var(--mine);
   }
   .them .who::before {
-    background: var(--stamp);
+    background: var(--theirs);
   }
   .fan {
     position: relative;
@@ -1895,7 +1895,7 @@
       width: min(360px, 88vw);
       padding: 12px;
       background: var(--paper);
-      box-shadow: -12px 0 30px -12px #000c;
+      box-shadow: -12px 0 30px -12px #0004;
       transform: translateX(105%);
       transition: transform 0.25s ease;
     }

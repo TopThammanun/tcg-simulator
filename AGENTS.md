@@ -202,8 +202,8 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   (the card under the mouse for a moment, any face-up card carrying `data-inspect`, else the card picked up, with a
   Pokémon's state in play from `SlotState.svelte`) over the log (the bot's last turn marked). Under the table the
   command bar (`ActionBar.svelte`, from `ui/action-bar.ts`; `ChoiceBar.svelte` for a choice on the table) is always
-  there at one height, so the table never moves: what is going on at the left, its buttons at the right (white =
-  the main one; "จบเทิร์น" turns white when nothing else can be done; red only for leaving a game). A choice in a box
+  there at one height, so the table never moves: what is going on at the left, its buttons at the right (red =
+  the main one; "จบเทิร์น" turns red when nothing else can be done; the danger red only for leaving a game). A choice in a box
   over the table (`ChoicePanel`) is confirmed there too. A tap picks a hand card up: its text in the `Inspector` on a
   computer, in `HandDetail.svelte` over the opponent's half on a phone (whole, no scroll box); a second tap or the
   bar's button plays it, a drag plays it at once. On a phone the bot's last turn is a button in the bar (a sheet).
@@ -222,10 +222,15 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   A running game fills the screen (nothing scrolls but the side column / drawer): Board.svelte sizes its
   cards from its box (`.table`, container query units), and the hand overlaps in a fan instead of scrolling.
   Setup (Active Spot, Bench) is done on the table with a confirm button in the dock, not a choice box.
-  Theme: MyTrainerGym's, a Pokémon trainer's gym in our own drawings: one dark, flat theme, tokens on `:root` in
-  `layouts/Base.astro` (black page, `--card-bg` #181818 / `--raised` #1F1F1F / `--control` #272727 surfaces, `--line` /
-  `--rule` hairlines; `--gym` badge gold #FFC845 (`--gym-deep` its shade) is the brand: `--primary` for the one main
-  action and `--accent` for what can be played or picked are it, `--stamp` red for danger and the opponent;
+  Theme: MyTrainerGym's, a Pokémon trainer's gym in a Pokémon Center's colours (our own drawings, none of its
+  logos): one light, flat theme, softened (white glares), tokens on `:root` in `layouts/Base.astro` (light grey page
+  `--paper` #E3E5E8, `--card-bg` #EEF0F2 / `--raised` #F6F7F8 / `--control` #D8DBDF surfaces, `--line` / `--rule`
+  hairlines, near black ink; the red, blue, green and amber read at 4.5:1 as text on the page and `--card-bg`); `--brand` red #C8101B is
+  the brand: `--primary` for the one main action, `--accent` for what can be played or picked and `--mine` your side
+  are it; `--theirs` = `--rival` blue for the bot, your rival (its dots, log lines, turn
+  glow, a lost game); `--stamp` a deeper red for danger, mistakes and damage; `--warn` amber for a warning (a turn
+  worth a look, the bot's better way and what it gets you). The play mat is dark: `.dark` (Base.astro) puts the dark
+  surfaces and light ink back on the mat (`.board`), a Pokémon's menu and the Prize pick;
   `--radius-sm` 4px, `--radius` 8px, `--radius-lg` 12px, `--radius-xl` 16px; `--ease` the one motion curve; by meaning
   `--can`, `--mine`, `--theirs`, `--hp-ok` / `--hp-hurt` / `--hp-low`, `--control-hover`, `--line-strong`,
   `--stamp-press`, `--card-paper`). One type family: Geist
@@ -235,19 +240,20 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   size off the scale, a colour that isn't a token (black and white shades aside) or a token that isn't defined; the
   drawn cards (`FxLayer`, `CardBack`, `CardFace`) are its exceptions.
   No background gradients, one-sided card borders, pill buttons, sticker labels or confetti. The gym's motifs:
-  `BrandMark.astro` (a hexagon badge with two rank chevrons; the favicon and the emblem on the play mat's centre line
-  are the same shape), the wordmark MyTrainer + gold Gym, `GymBadge.svelte` (one original shape per Gym Leader by
+  `BrandMark.astro` (a trainer's ball drawn as a gym badge, our own and not the Poké Ball: a flat-topped hexagon, red
+  above and white below a dark band, `--mark-ink`, with a hexagonal button; the favicon, `favicon.ico` and the emblem
+  on the play mat's centre line are the same shape), the wordmark MyTrainer + red Gym, `GymBadge.svelte` (one original shape per Gym Leader by
   rank, in the type colour of its headline Pokémon, `gymLeaders()` in `lib/decks.ts`; earned = a flat layered medal,
   not yet = an outline), `ArenaLines.astro` (a battle floor seen from above, hairlines; `frame` without the centre
-  circle where text sits), gold spaced-out eyebrows like a gym's signage; the copy speaks of trainers, Gym Leaders
+  circle where text sits), red spaced-out eyebrows like a gym's signage; the copy speaks of trainers, Gym Leaders
   (the meta decks), badges, a training plan (warm up, battle, cool down) and the coach (the review). Header: a
   floating bar, a full-height menu on phones. Home: hero on the arena frame with a real game screenshot
   (`public/home/board.jpg`, also the shared link's `og:image`), the Gym Leaders as `DeckCard.astro` (art cropped
   from the headline Pokémon, `headlines()` in `lib/decks.ts`, the gym's badge on it), the training plan, the coach
   beside the review's screenshot (`public/home/review.jpg`), a tagline lit word by word on scroll, FAQ (facts only),
-  every badge on the arena in the final call. Retake the screenshots (`-en` too) with `node scripts/home-shots.mjs`
-  against `astro preview --port 4330` after restyling the play screen or the review. The playmat is
-  flat #181818 (`.board` in Board.svelte). Original styling only: no official logos or game trade dress in the
+  every badge on the arena in the final call; the hero heading's gradient is black to grey. Retake the screenshots
+  (`-en` too) with `node scripts/home-shots.mjs` against `astro preview --port 4330` after restyling the play screen or
+  the review. The playmat is flat #181818 (`.board` in Board.svelte, a `.dark` scope on the white page). Original styling only: no official logos or game trade dress in the
   site's own design; the card images and back on the table are the real ones (the Energy symbols and the coin are our own flat drawings).
 
 ## Versions

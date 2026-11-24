@@ -344,7 +344,7 @@
       0 1px 3px #000c;
     pointer-events: auto;
   }
-  /* Something to do here (an attack or an Ability): a slow gold glow; tap for the pop-up. */
+  /* Something to do here (an attack or an Ability): a slow glow in the accent; tap for the pop-up. */
   .ready .card {
     animation: ready 1.8s ease-in-out infinite;
   }

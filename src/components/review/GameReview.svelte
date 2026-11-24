@@ -335,8 +335,8 @@
     color: var(--primary-ink);
   }
   .res.lost {
-    border-color: color-mix(in srgb, var(--stamp) 50%, transparent);
-    color: var(--stamp);
+    border-color: color-mix(in srgb, var(--theirs) 50%, transparent);
+    color: var(--theirs);
   }
   .vs-word {
     color: var(--ink-soft);
@@ -380,7 +380,7 @@
     color: var(--stamp);
   }
   .warn {
-    color: var(--accent);
+    color: var(--warn);
   }
 
   /* A computer: the table on the left, the chart, the turns and the turn's detail on the right (it scrolls itself). */
@@ -448,7 +448,7 @@
     color: var(--stamp);
   }
   .turn-chip.better .v {
-    color: var(--accent);
+    color: var(--warn);
   }
   .turn-chip .d {
     color: var(--ink-soft);

@@ -87,9 +87,9 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     <meta name="description" content={description} />
     <meta name="keywords" content={keywords(lang, words)} />
     <meta name="application-name" content={brand} />
-    <meta name="theme-color" content="#000000" />
-    <!-- Already dark: a browser's own dark mode (Chrome's auto-dark) must not recolour it. -->
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#e3e5e8" />
+    <!-- Light only: a browser's own dark mode (Chrome's auto-dark) must not recolour it. -->
+    <meta name="color-scheme" content="only light" />
     <link rel="canonical" href={url(localePath(lang, path))} />
     {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     <meta property="og:type" content="website" />
@@ -219,52 +219,60 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
 </script>
 
 <style is:global>
-  /* One dark, flat theme: black page, #181818 / #1F1F1F surfaces, hairline borders. Card art brings the colour;
-     white is the main action, amber marks what can be played or picked, red is for danger and the opponent.
+  /* One light, flat theme in a Pokémon Center's colours, softened: a light grey page (white glares), lighter grey
+     surfaces, hairline borders, near black ink, and one red. Card art brings the other colours; red is the brand,
+     the one main action, what can be played or picked and your side; blue is the bot, your rival; a deeper red is
+     for danger, amber for a warning; each deep enough to read on the page and the surfaces.
+     The play mat stays dark (.dark below), like a mat on the shop's table, so the cards stand out.
      One type family: Geist for Latin and figures, Noto Sans Thai for Thai (the browser picks per glyph). */
   :root {
-    --paper: #000000;
-    --paper-deep: #1f1f1f;
-    --card-bg: #181818;
-    --raised: #1f1f1f;
-    --control: #272727;
-    --ink: #ededed;
-    --ink-strong: #ffffff;
-    --ink-soft: #9b9b9b;
-    --ink-faint: #6e6e6e;
-    --rule: #272727;
-    --line: #313131;
-    --stamp: #e5484d;
-    --teal: #4cc38a;
-    /* MyTrainerGym's colour: badge gold, for the one main action and what can be played or picked. */
-    --gym: #ffc845;
-    --gym-deep: #e5a91f;
-    --primary: var(--gym);
-    --primary-ink: #1a1300;
-    --press: #e8b52e;
-    --accent: var(--gym);
-    --accent-ink: #1a1300;
+    --paper: #e3e5e8;
+    --paper-deep: #d9dce0;
+    --card-bg: #eef0f2;
+    --raised: #f6f7f8;
+    --control: #d8dbdf;
+    --ink: #26282b;
+    --ink-strong: #111214;
+    --ink-soft: #5c5f64;
+    --ink-faint: #74777c;
+    --rule: #d6d9dd;
+    --line: #c9cdd2;
+    --stamp: #b51a25;
+    --teal: #16703d;
+    /* MyTrainerGym's colour: a Pokémon Center red, for the brand, the one main action and what can be played. */
+    --brand: #c8101b;
+    /* The mark's outline, band and button (BrandMark.astro): dark on the page and on the mat alike. */
+    --mark-ink: #1c1d20;
+    --primary: var(--brand);
+    --primary-ink: #ffffff;
+    --press: #a90d17;
+    --accent: var(--brand);
+    --accent-ink: #ffffff;
+    /* A warning (a turn worth a look, a gamble): amber, deep enough to read. */
+    --warn: #805400;
+    --warn-ink: #ffffff;
     --radius: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
     --radius-sm: 4px;
     /* The one size under the text scale: numbers and labels drawn on a card (HP, a Tool's name). */
     --fs-card: 11px;
-    --control-hover: #313131;
-    --line-strong: #4a4a4a;
-    --stamp-press: #c93c41;
-    /* By meaning: what can be played or picked, your side, the bot's side, HP left. */
+    --control-hover: #cdd1d6;
+    --line-strong: #adb2b9;
+    --stamp-press: #96151e;
+    /* By meaning: what can be played or picked, your side, the bot's side (the rival's blue), HP left. */
     --can: var(--accent);
-    --mine: #ffffff;
-    --theirs: var(--stamp);
+    --mine: var(--brand);
+    --rival: #2360c4;
+    --theirs: var(--rival);
     --hp-ok: #3f9b5a;
     --hp-hurt: #c8941f;
     --hp-low: #c3352b;
     /* A card's own paper (a Tool's tab peeking out of a Pokémon in play). */
     --card-paper: #e4ddcc;
     --card-paper-ink: #2a261e;
-    --shadow: 0 1px 2px #0009;
-    --shadow-lg: 0 24px 48px -16px #000;
+    --shadow: 0 1px 2px #00000024;
+    --shadow-lg: 0 24px 48px -16px #00000047;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
     --font-body: 'Geist', 'Noto Sans Thai', 'Leelawadee UI', sans-serif;
     --font-heading: var(--font-body);
@@ -282,7 +290,35 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     --t-dragon: #a9842b;
     --t-fairy: #d27aab;
     --t-colorless: #c9c3b3;
+    color-scheme: light;
+  }
+  /* The play mat and what opens over it (a Pokémon's menu, the Prize pick, the full screen replay): the dark
+     surfaces and light ink they were drawn for. */
+  .dark {
+    --paper: #000000;
+    --paper-deep: #1f1f1f;
+    --card-bg: #181818;
+    --raised: #1f1f1f;
+    --control: #272727;
+    --control-hover: #313131;
+    --ink: #ededed;
+    --ink-strong: #ffffff;
+    --ink-soft: #9b9b9b;
+    --ink-faint: #6e6e6e;
+    --rule: #272727;
+    --line: #313131;
+    --line-strong: #4a4a4a;
+    --stamp: #e5484d;
+    --stamp-press: #c93c41;
+    --teal: #4cc38a;
+    --warn: #ffc845;
+    --warn-ink: #1a1300;
+    --rival: #5b9bff;
+    --theirs: var(--rival);
+    --shadow: 0 1px 2px #0009;
+    --shadow-lg: 0 24px 48px -16px #000;
     color-scheme: dark;
+    color: var(--ink);
   }
 
   *,
@@ -329,7 +365,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
   }
 
   ::selection {
-    background: #ffffff33;
+    background: color-mix(in srgb, var(--brand) 22%, transparent);
   }
 
   :focus-visible {
@@ -428,7 +464,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     }
   }
 
-  /* Buttons: white for the one main action, dark for the rest. */
+  /* Buttons: red for the one main action, grey for the rest. */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -451,7 +487,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
       transform 0.3s var(--ease);
   }
   .btn:hover {
-    background: #313131;
+    background: var(--control-hover);
   }
   .btn:active {
     transform: scale(0.98);
@@ -515,7 +551,8 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    background: #181818b8;
+    background: color-mix(in srgb, var(--card-bg) 85%, transparent);
+    box-shadow: var(--shadow);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
     backdrop-filter: blur(16px) saturate(140%);
   }
@@ -538,7 +575,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     letter-spacing: -0.01em;
   }
   .wordmark .gym {
-    color: var(--gym);
+    color: var(--brand);
   }
   .links {
     display: flex;
@@ -562,7 +599,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
   }
   .links a[aria-current='page'] {
     background: var(--control);
-    color: var(--gym);
+    color: var(--brand);
   }
   /* The other language, set apart from the pages. */
   .links .lang-switch {
@@ -618,7 +655,7 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
       flex-direction: column;
       gap: 8px;
       padding: 96px 24px 32px;
-      background: #000000eb;
+      background: color-mix(in srgb, var(--paper) 94%, transparent);
       -webkit-backdrop-filter: blur(24px);
       backdrop-filter: blur(24px);
       opacity: 0;
@@ -707,11 +744,11 @@ const ogImage = url(lang === 'en' ? '/home/board-en.jpg' : '/home/board.jpg');
     font-variant-numeric: tabular-nums;
   }
 
-  /* A small label over a heading, like a gym's signage: gold, spaced out. */
+  /* A small label over a heading, like a gym's signage: red, spaced out. */
   .eyebrow {
     display: block;
     margin: 0 0 8px;
-    color: var(--gym);
+    color: var(--brand);
     font-size: 12px;
     line-height: 16px;
     font-weight: 600;

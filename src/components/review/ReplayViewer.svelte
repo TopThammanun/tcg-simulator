@@ -303,8 +303,8 @@
     color: #fff;
   }
   .badge.warn {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--warn);
+    color: var(--warn-ink);
   }
   .badge.ok {
     border: 1px solid var(--line);
@@ -409,7 +409,7 @@
     color: var(--stamp);
   }
   .seg .diff.up {
-    color: var(--accent);
+    color: var(--teal);
   }
   .same {
     padding: 4px 12px;

@@ -74,7 +74,7 @@
     border-radius: var(--radius-xl);
   }
   .lost .title {
-    color: var(--stamp);
+    color: var(--theirs);
   }
   .title {
     margin: 0;

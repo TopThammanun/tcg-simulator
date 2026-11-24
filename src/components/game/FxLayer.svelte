@@ -134,7 +134,7 @@
   }
   .fx-layer :global(.fx-tag.gold) {
     background: var(--accent);
-    color: #15181d;
+    color: var(--accent-ink);
   }
   .fx-layer :global(.fx-tag.cond) {
     background: #6b2f8a;
@@ -261,9 +261,9 @@
     color: var(--accent);
   }
   .fx-layer :global(.fx-turn.theirs) {
-    border-color: #e2574b66;
+    border-color: #5b9bff66;
   }
   .fx-layer :global(.fx-turn.theirs strong) {
-    color: #ffb3aa;
+    color: #a9c9ff;
   }
 </style>

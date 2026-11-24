@@ -325,7 +325,7 @@
   .card-title {
     grid-column: 1 / -1;
     margin: 0;
-    color: var(--gym);
+    color: var(--brand);
     font-size: 12px;
     line-height: 16px;
     font-weight: 600;
@@ -408,14 +408,14 @@
     height: 4px;
     overflow: hidden;
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--stamp) 55%, var(--control));
+    background: color-mix(in srgb, var(--theirs) 55%, var(--control));
   }
   .vs .bar::before {
     content: '';
     position: absolute;
     inset: 0 auto 0 0;
     width: var(--w);
-    background: var(--gym);
+    background: var(--brand);
   }
   .wl {
     text-align: right;
@@ -457,8 +457,8 @@
     color: var(--primary-ink);
   }
   .res.lost {
-    border-color: color-mix(in srgb, var(--stamp) 50%, transparent);
-    color: var(--stamp);
+    border-color: color-mix(in srgb, var(--theirs) 50%, transparent);
+    color: var(--theirs);
   }
   .match {
     display: flex;
@@ -620,7 +620,7 @@
     color: var(--stamp);
   }
   .warn {
-    color: var(--accent);
+    color: var(--warn);
   }
   .nothing {
     color: var(--ink-soft);
