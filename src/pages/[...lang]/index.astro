@@ -74,7 +74,7 @@ const faq = [
   {
     q: t('MyTrainerGym คืออะไร', 'What is MyTrainerGym?'),
     a: t(
-      'ยิมซ้อม Pokémon TCG ที่เล่นได้ในเบราว์เซอร์ จัดเด็คของคุณ ดวลกับบอทที่ใช้เด็คตัวท็อปใน meta (หัวหน้ายิม) แล้วรีวิวเกมกับโค้ชที่บอกว่าคุณพลาดเทิร์นไหน เล่นอีกทางจะได้อะไร และควรเผื่ออะไรไว้ ใช้ฟรี ไม่ต้องสมัคร',
+      'สนามซ้อม Pokémon TCG ที่เล่นได้ในเบราว์เซอร์ จัดเด็คของคุณ ดวลกับบอทที่ใช้เด็คตัวท็อปใน meta (หัวหน้ายิม) แล้วรีวิวเกมกับโค้ชที่บอกว่าคุณพลาดเทิร์นไหน เล่นอีกทางจะได้อะไร และควรเผื่ออะไรไว้ ใช้ฟรี ไม่ต้องสมัคร',
       'A Pokémon TCG training gym in your browser: build a deck, battle bots playing the decks that rule the meta (the gym leaders), then review the game with a coach that shows which turns slipped, what the better way gets you and what to play around. Free, no sign-up.',
     ),
   },
@@ -131,8 +131,8 @@ const faq = [
 ---
 
 <Base
-  title={t('ยิมซ้อม Pokémon TCG ฝึก matchup กับบอท AI', 'Pokémon TCG training gym: practise matchups against AI bots')}
-  words={t('ยิมซ้อม Pokémon TCG,จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG training gym,Pokémon TCG simulator,matchup practice,AI bot').split(',')}
+  title={t('สนามซ้อม Pokémon TCG ออนไลน์ ฝึก matchup กับบอท AI', 'Pokémon TCG training gym: practise matchups against AI bots')}
+  words={t('สนามซ้อม Pokémon TCG,จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG training gym,Pokémon TCG simulator,matchup practice,AI bot').split(',')}
   jsonLd={[
     appLd(
       lang,
@@ -153,7 +153,7 @@ const faq = [
       <span class="mono">{num(limitless.players)}</span> {t('ผู้เล่น', 'players')} · {t('', 'last')} <span class="mono">{limitless.days}</span> {t('วันล่าสุด', 'days')}
     </p>
     <h1 class="heading-1">
-      {t('ยิมซ้อม Pokémon TCG', 'Your Pokémon TCG gym.')}<br />{t('ท้าดวลเด็คท็อปของ meta', 'Train against the meta.')}
+      {t('ยิม Pokémon TCG ของคุณ', 'Your Pokémon TCG gym.')}<br />{t('ท้าดวลเด็คท็อปของ meta', 'Train against the meta.')}
     </h1>
     <p class="sub body-7">
       {t('เลือกเด็คที่ชอบหรือจัดเอง แล้วลงสนามกับบอทที่ใช้ลิสต์จริงจากทัวร์ล่าสุด', 'Pick your deck or build your own, then battle bots running real lists from recent tournaments,')}<br />

@@ -9,7 +9,7 @@ export type JsonLd = Record<string, unknown>;
 /** The site's name (the same in both languages; mytrainergym is its domain). */
 export const BRAND: Record<Lang, string> = { th: 'MyTrainerGym', en: 'MyTrainerGym' };
 /** What it is, in each language: the name's second line in titles, shared links and schema.org. */
-export const TAGLINE: Record<Lang, string> = { th: 'ยิมซ้อม Pokémon TCG สำหรับเทรนเนอร์', en: 'The Pokémon TCG training gym' };
+export const TAGLINE: Record<Lang, string> = { th: 'สนามซ้อม Pokémon TCG สำหรับเทรนเนอร์', en: 'The Pokémon TCG training gym' };
 
 /** Searches the site should be found by: the game's names, in English and as Thai players write them. */
 const KEYWORDS: Record<Lang, string[]> = {
