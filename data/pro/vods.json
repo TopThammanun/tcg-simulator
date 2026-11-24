@@ -1,0 +1,185 @@
+{
+ "about": "Play Pokémon stream VODs of the events in data/pro/majors.json read by scripts/pro/streams.ts: Day 1/Day 2 and Feature Station streams, and the cut videos of events without them (top-cut cuts repeat Day 2 games). Current season first.",
+ "videos": [
+  {
+   "event": 584,
+   "id": "L_MAV72GVyg",
+   "title": "TCG Day 2 | 2027 Pokémon Gdask Regional Championships",
+   "hours": 8.91
+  },
+  {
+   "event": 584,
+   "id": "rWsK4plWGM4",
+   "title": "TCG Day 1 | 2027 Pokémon Gdask Regional Championships",
+   "hours": 8.28
+  },
+  {
+   "event": 583,
+   "id": "bQZCF3_X6KA",
+   "title": "Andrew Hedrick Vs Caleb Rogerson - Pokémon TCG Masters Finals | 2027 Puebla Regional Championships",
+   "hours": 0.89
+  },
+  {
+   "event": 583,
+   "id": "TnNgdVVlepQ",
+   "title": "Andrew Hedrick Vs Yoshiyuki Yamaguchi - Pokémon TCG Top 4 | 2027 Puebla Regional Championships",
+   "hours": 1.3
+  },
+  {
+   "event": 583,
+   "id": "FLwx-9hf8Ow",
+   "title": "Nathan Ginsburg Vs Caleb Rogerson - Pokémon TCG Top 4 | 2027 Puebla Regional Championships",
+   "hours": 0.96
+  },
+  {
+   "event": 582,
+   "id": "iiIWuBMBqBg",
+   "title": "TCG Day 2 | 2027 Pokémon Nice Regional Championships",
+   "hours": 9.96
+  },
+  {
+   "event": 582,
+   "id": "kc2byiqDYYY",
+   "title": "TCG Day 1 | 2027 Pokémon Nice Regional Championships",
+   "hours": 9.52
+  },
+  {
+   "event": 581,
+   "id": "pMvICOudxvQ",
+   "title": "TCG Day 2 | 2027 Pokémon Louisville Regional Championships",
+   "hours": 9.65
+  },
+  {
+   "event": 581,
+   "id": "s_dGpQQ7pXM",
+   "title": "TCG Feature Station Day 2 | 2027 Pokémon Louisville Regional Championships",
+   "hours": 3.11
+  },
+  {
+   "event": 581,
+   "id": "IzbLJvhwy98",
+   "title": "TCG Day 1 | 2027 Pokémon Louisville Regional Championships",
+   "hours": 8.26
+  },
+  {
+   "event": 581,
+   "id": "OctXgLh0B_A",
+   "title": "TCG Feature Station Day 1 | 2027 Pokémon Louisville Regional Championships",
+   "hours": 3.74
+  },
+  {
+   "event": 579,
+   "id": "NOi0qAFjnME",
+   "title": "TCG Day 2 | 2027 Pokémon Frankfurt Regional Championships",
+   "hours": 8.79
+  },
+  {
+   "event": 579,
+   "id": "8TMRgaIe7LQ",
+   "title": "TCG Day 1 | 2027 Pokémon Frankfurt Regional Championships",
+   "hours": 9.43
+  },
+  {
+   "event": 577,
+   "id": "nLkFmtXdXGE",
+   "title": "TCG Day 2 | 2027 Pokémon Baltimore Regional Championships",
+   "hours": 9.18
+  },
+  {
+   "event": 577,
+   "id": "XNbKnvdrNoY",
+   "title": "TCG Feature Station Day 2 | 2027 Pokémon Baltimore Regional Championships",
+   "hours": 2.51
+  },
+  {
+   "event": 577,
+   "id": "ac63uWSOEQQ",
+   "title": "TCG Feature Station Day 1 | 2027 Pokémon Baltimore Regional Championships",
+   "hours": 2.89
+  },
+  {
+   "event": 577,
+   "id": "Gq_tjemCPs8",
+   "title": "TCG Day 1 | 2027 Pokémon Baltimore Regional Championships",
+   "hours": 7.74
+  },
+  {
+   "event": 574,
+   "id": "f9-iobf6-6c",
+   "title": "TCG Day 2 | 2027 Pokémon Latin America International Championships",
+   "hours": 11.81
+  },
+  {
+   "event": 574,
+   "id": "QhU5wZGstIA",
+   "title": "TCG Day 1 | 2027 Pokémon Latin America International Championships",
+   "hours": 11.92
+  },
+  {
+   "event": 559,
+   "id": "6Nl_UgEEXM8",
+   "title": "TCG Day 2 | 2026 Pokémon Indianapolis Regional Championships",
+   "hours": 8.53
+  },
+  {
+   "event": 559,
+   "id": "1Z6jmnN6-Ks",
+   "title": "TCG Day 1 | 2026 Pokémon Indianapolis Regional Championships",
+   "hours": 7.92
+  },
+  {
+   "event": 540,
+   "id": "WuXEbywON7g",
+   "title": "TCG Day 2 | 2026 Pokémon Turin Special Championships",
+   "hours": 8.22
+  },
+  {
+   "event": 540,
+   "id": "NJB0ycdqzMU",
+   "title": "TCG Day 1 | 2026 Pokémon Turin Special Championships",
+   "hours": 8.04
+  },
+  {
+   "event": 535,
+   "id": "WVxM21wwog8",
+   "title": "TCG Day 2 | 2026 Pokémon Utrecht Regional Championships",
+   "hours": 9.64
+  },
+  {
+   "event": 535,
+   "id": "mKkqlfldyvI",
+   "title": "TCG Day 1 | 2026 Pokémon Utrecht Regional Championships",
+   "hours": 8.03
+  },
+  {
+   "event": 518,
+   "id": "pz4kUF2bnl8",
+   "title": "TCG Day 2 | 2026 Pokémon North America International Championships",
+   "hours": 11.92
+  },
+  {
+   "event": 518,
+   "id": "UOCabX5Hqrw",
+   "title": "TCG Day 1 | 2026 Pokémon North America International Championships",
+   "hours": 11.92
+  },
+  {
+   "event": 515,
+   "id": "KQ-32rHXKM8",
+   "title": "Andrew Hedrick vs Diego Cassiraga - Pokémon TCG Masters Finals | 2026 Pokémon World Championships",
+   "hours": 0.93
+  },
+  {
+   "event": 515,
+   "id": "qwBID2ApsOY",
+   "title": "TCG Day 2 | 2026 Pokémon World Championships",
+   "hours": 11.42
+  },
+  {
+   "event": 515,
+   "id": "iEM8bQbnA90",
+   "title": "TCG Day 1 | 2026 Pokémon World Championships",
+   "hours": 11.63
+  }
+ ]
+}
