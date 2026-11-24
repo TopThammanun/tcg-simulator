@@ -54,6 +54,9 @@ export function determinize(s: GameState, viewer: PlayerId, seed: number): GameS
   them.hand = [...seen, ...hidden];
   them.knownTop = [];
   d.rng = { shuffle: [derive(seed, 11), derive(seed, 12)], coin: derive(seed, 13) };
+  // A re-dealt future is a hypothetical, not the transcript (script.ts).
+  delete d.script;
+  delete d.scriptPos;
   d.quiet = true;
   // Bots look ahead taking Prize cards in order (a pick by position changes nothing they can know).
   if (d.rules.pickPrizes) d.rules = { ...d.rules, pickPrizes: false };
@@ -86,6 +89,8 @@ export function redeal(s: GameState, viewer: PlayerId, seed: number): GameState 
     ps.deck = [...known, ...rest];
   }
   d.rng = { shuffle: [derive(seed, 21), derive(seed, 22)], coin: derive(seed, 23) };
+  delete d.script;
+  delete d.scriptPos;
   return d;
 }
 

@@ -4,6 +4,7 @@
 import { tx, verb } from '../i18n';
 import { def } from './db';
 import { next, shuffleInPlace } from './rng';
+import { forceMulligan, orderDeck, withOrder } from './script';
 import { keyOf, nameOf } from './state';
 import type { CardId, ChoiceRequest, GameState, PlayerId, PlayerState, Purpose, Slot, SlotId } from './types';
 
@@ -170,17 +171,37 @@ export class Ctx {
 
   // ---------- randomness ----------
 
+  // A transcribed game (types.ts DealScript) flips and shuffles as the script says, and records what the seed made
+  // past the script's end while transcribing.
   flip(): boolean {
-    const [r, st] = next(this.s.rng.coin);
-    this.s.rng.coin = st;
-    const heads = r < 0.5;
+    let heads: boolean;
+    const sc = this.s.script;
+    const i = sc ? this.s.scriptPos!.coins++ : -1;
+    if (sc && i < sc.coins.length) heads = sc.coins[i]!;
+    else {
+      const [r, st] = next(this.s.rng.coin);
+      this.s.rng.coin = st;
+      heads = r < 0.5;
+      if (sc?.record) this.s.script = { ...sc, coins: [...sc.coins, heads] };
+    }
     this.log(tx(`โยนเหรียญ: ${heads ? 'หัว' : 'ก้อย'}`, `Coin flip: ${heads ? 'heads' : 'tails'}`));
     return heads;
   }
 
   shuffle(p: PlayerId): void {
-    this.s.rng.shuffle[p] = shuffleInPlace(this.ps(p).deck, this.s.rng.shuffle[p]);
-    this.ps(p).knownTop = [];
+    const ps = this.ps(p);
+    const sc = this.s.script;
+    if (sc) {
+      const k = this.s.scriptPos!.shuffles[p]++;
+      const order = sc.orders[p][k];
+      if (order) ps.deck = orderDeck(ps.deck, order, p, k);
+      else {
+        this.s.rng.shuffle[p] = shuffleInPlace(ps.deck, this.s.rng.shuffle[p]);
+        if (this.s.phase === 'setup' && sc.mulligans) forceMulligan(this.s, p, k < sc.mulligans[p]);
+        if (sc.record) this.s.script = withOrder(sc, p, k, ps.deck.slice());
+      }
+    } else this.s.rng.shuffle[p] = shuffleInPlace(ps.deck, this.s.rng.shuffle[p]);
+    ps.knownTop = [];
   }
 
   // ---------- zones (deck index 0 is the top) ----------

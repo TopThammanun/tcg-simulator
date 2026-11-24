@@ -95,6 +95,11 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   cards the opponent knows are in that hand; this and the last turn's cards played, attack and Prizes taken:
   `played` / `lastPlayed`, `attacked` / `lastAttack`, `turnPrizes` / `lastPrizes`); `determinize()` keeps what is known.
   `tests/engine/coverage.test.ts` fails if a card with effect text has no implementation.
+  A real game transcribed from a broadcast (BOT-PRO.md) has no seed: `script.ts` / `DealScript` on the state keeps the
+  order of each deck after each shuffle and every coin flip (`ctx.shuffle` / `flip` read it, and record what the seed
+  made while transcribing); the cards the broadcast never showed are stand-ins (`known` lists the ones seen), `nameCard()`
+  turns a stand-in into the card seen by trading identities with an unseen copy everywhere at once, and `redealUnknown()`
+  deals the never-seen cards again for measuring; `determinize()` / `redeal()` drop the script.
 - `src/bots/` — the one bot (there are no difficulty levels): `index.ts` `createBot()` is always the strongest
   version measured: the policy/value network (`learn/weights.json`) with look-ahead (`learn/search.ts`: the
   policy's best few options plus the attack planner's line, played out on determinized deals and scored by the
@@ -164,6 +169,14 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   `/play/?resume=<id>&at=<state index>` plays a saved game on from that point. `current.ts`: the game being played,
   kept in localStorage after every move (the same record, so `replay()` rebuilds the very same position); the match
   sheet offers "เล่นต่อเกมที่ค้างไว้"; cleared when the game ends or is left.
+- `/transcribe/` (`components/transcribe/Transcribe.svelte`, `ui/transcribe.ts`; not in the sitemap, `noindex`) — a real
+  game from a broadcast entered move by move (BOT-PRO.md P0): both lists pasted as Limitless export text, the engine
+  plays as the transcriber picks from lists of the legal moves and the pending choice's options, a card the video
+  never showed is a `?` until it is played or picked ("play an unseen card" / "pick an unseen option" / a `?` chip in a
+  hand, in play or in the discard pile names it; a naming during a choice is done on the position the action started
+  from and the action re-run), coin flips of the move can be toggled to what really happened, notes per turn, the game
+  in progress kept in localStorage, exported as a games file with its `script` and `pro` metadata (`SavedGame.pro`:
+  event, players, video, source) and checked by replaying it.
 - `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
   its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,
   listed by `MyDecks.svelte` on `/decks/`, built in the deck builder; `decklist.ts` checks them and names unsupported

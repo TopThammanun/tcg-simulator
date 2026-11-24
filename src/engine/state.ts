@@ -1,7 +1,7 @@
 import type { PokemonCard } from '../data/cards';
 import { def, pokemon } from './db';
 import { derive } from './rng';
-import type { CardId, CardInst, DeckSpec, GameState, PlayerId, PlayerState, Rules, Slot, SlotId } from './types';
+import type { CardId, CardInst, DealScript, DeckSpec, GameState, PlayerId, PlayerState, Rules, Slot, SlotId } from './types';
 
 export const opp = (p: PlayerId): PlayerId => (p === 0 ? 1 : 0);
 
@@ -110,6 +110,8 @@ export function newState(opts: {
   decks: [DeckSpec, DeckSpec];
   names?: [string, string];
   rules?: Partial<Rules>;
+  /** A transcribed game's deal (types.ts DealScript): its shuffles and coins instead of the seed's. */
+  script?: DealScript;
 }): GameState {
   const cards: CardInst[] = [];
   const decks: [CardId[], CardId[]] = [[], []];
@@ -123,6 +125,7 @@ export function newState(opts: {
   }
   return {
     seed: opts.seed,
+    ...(opts.script ? { script: opts.script, scriptPos: { shuffles: [0, 0] as [number, number], coins: 0 } } : {}),
     turn: 0,
     current: 0,
     first: 0,
@@ -179,5 +182,6 @@ export function cloneState(s: GameState): GameState {
     players: [clonePlayer(s.players[0]), clonePlayer(s.players[1])],
     stadium: s.stadium && { ...s.stadium },
     rng: { shuffle: [s.rng.shuffle[0], s.rng.shuffle[1]], coin: s.rng.coin },
+    ...(s.scriptPos ? { scriptPos: { shuffles: [s.scriptPos.shuffles[0], s.scriptPos.shuffles[1]] as [number, number], coins: s.scriptPos.coins } } : {}),
   };
 }

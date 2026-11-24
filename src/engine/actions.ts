@@ -22,7 +22,7 @@ import {
   usableAttacks,
 } from './rules';
 import { cloneState, keyOf, knownTopCards, mustSlot, newState, opp, rulesBefore, slotsOf, topDef } from './state';
-import type { Action, CardId, DeckSpec, GameState, PlayerId, Rules, Slot } from './types';
+import type { Action, CardId, DealScript, DeckSpec, GameState, PlayerId, Rules, Slot } from './types';
 
 export function createGame(opts: {
   seed: number;
@@ -30,6 +30,8 @@ export function createGame(opts: {
   names?: [string, string];
   rules?: Partial<Rules>;
   quiet?: boolean;
+  /** A transcribed game's deal (types.ts DealScript): its shuffles and coins instead of the seed's. */
+  script?: DealScript;
 }): GameState {
   const s = newState(opts);
   s.quiet = !!opts.quiet;

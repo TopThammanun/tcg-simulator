@@ -3,8 +3,21 @@
 import { botName, tx, youName } from '../i18n';
 import { actor, apply, createGame } from '../engine/actions';
 import type { PlayerPolicy } from '../bots/plans';
-import type { Action, GameState, PlayerId, Rules } from '../engine/types';
+import type { Action, DealScript, GameState, PlayerId, Rules } from '../engine/types';
 import { redeal } from '../engine/view';
+
+/** Where a transcribed game comes from (BOT-PRO.md): the event and round, the players by seat, the video and when it starts. */
+export interface ProMeta {
+  event: string;
+  round?: string;
+  players: [string, string];
+  /** YouTube video id or URL, and the second the game starts at. */
+  video?: string;
+  at?: number;
+  source: 'stream-en' | 'stream-jp' | 'ptcgl' | 'other';
+  /** Notes by turn number: what the commentary or the player said. */
+  notes?: Record<string, string>;
+}
 
 /** Practice mode (hints, the threat panel, undo) or a real game (none of them). */
 export type PlayMode = 'practice' | 'real';
@@ -40,6 +53,9 @@ export interface SavedGame {
   winner: PlayerId | 'draw' | null;
   reason: string;
   turns: number;
+  /** A transcribed real game (BOT-PRO.md): its deal, since it has no seed, and where it comes from. */
+  script?: DealScript;
+  pro?: ProMeta;
 }
 
 /** A file of saved games (the review page's export; scripts/analyze-games.ts reads it). */
@@ -83,16 +99,19 @@ export function readGamesFile(text: string): SavedGame[] {
 
 /** states[0] is the new game; states[i + 1] = apply(states[i], actions[i]), each dealt again where `g.redeals` says. */
 export function replay(g: SavedGame): GameState[] {
+  const names: [string, string] = g.pro ? g.pro.players : [youName(), botName()];
   const states = [
     createGame({
       seed: g.seed,
       decks: [
-        { name: youName(), cards: g.decks[0] },
-        { name: botName(), cards: g.decks[1] },
+        { name: names[0], cards: g.decks[0] },
+        { name: names[1], cards: g.decks[1] },
       ],
-      names: [youName(), botName()],
+      names,
       // Games saved before rules had a version replay under version 1's (engine/types.ts Rules.version).
       rules: { version: 1, ...g.rules },
+      // A transcribed game deals as the transcript says (engine/script.ts).
+      ...(g.script ? { script: { ...g.script, record: false } } : {}),
     }),
   ];
   const redeals = g.redeals ?? [];

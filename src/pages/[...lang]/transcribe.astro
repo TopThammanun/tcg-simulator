@@ -1,0 +1,28 @@
+---
+// ถอดเกมจริง (BOT-PRO.md P0): a tool, not a page for visitors; it is left out of the sitemap.
+import Transcribe from '../../components/transcribe/Transcribe.svelte';
+import { deckKeys } from '../../engine/db';
+import { langPaths, tFor } from '../../i18n';
+import Base from '../../layouts/Base.astro';
+import { loadDecks, metaDecks } from '../../lib/decks';
+import type { MetaDeck } from '../../ui/decks';
+
+export function getStaticPaths() {
+  return langPaths();
+}
+
+const t = tFor(Astro.props.lang);
+
+const decks: MetaDeck[] = metaDecks(await loadDecks()).map((d) => ({
+  slug: d.slug,
+  name: d.meta.name,
+  rank: d.meta.rank,
+  metaShare: d.meta.metaShare,
+  archetype: d.meta.limitless ?? d.slug,
+  cards: deckKeys(d.lines.map((l) => l.entry)),
+}));
+---
+
+<Base title={t('ถอดเกมจริง', 'Transcribe a real game')} description={t('เครื่องมือถอดเกมจากคลิปถ่ายทอดสดเป็นเกมใน engine', 'A tool for entering a broadcast game into the engine move by move')} noindex>
+  <Transcribe client:only="svelte" {decks} />
+</Base>

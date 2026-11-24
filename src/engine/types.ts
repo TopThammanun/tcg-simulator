@@ -182,8 +182,31 @@ export interface Pending {
   request: ChoiceRequest;
 }
 
+/**
+ * A real game's deal (BOT-PRO.md): a transcribed game has no seed, so the state keeps the order of each player's deck
+ * after each of their shuffles and every coin flip. A game being transcribed records them as the seeded RNG makes them
+ * (`record`); a saved game replays them under any seed. The cards the transcript saw are `known`; the rest stand in for
+ * cards not seen (script.ts nameCard() turns a stand-in into the card seen).
+ */
+export interface DealScript {
+  /** orders[p][k]: p's deck, top first, after p's k-th shuffle (the setup's is the first). A shuffle past the end is the seeded RNG's. */
+  orders: [readonly (readonly CardId[])[], readonly (readonly CardId[])[]];
+  /** Coin flips in order (true = heads); past the end: the seeded coin. */
+  coins: readonly boolean[];
+  /** Mulligans each player took at setup: that many shuffles put no Basic in their top 7, the next one does. */
+  mulligans?: [number, number];
+  /** Cards whose identity the transcript saw. */
+  known: readonly CardId[];
+  /** Transcribing: shuffles and flips the script doesn't have yet are added as the RNG makes them. */
+  record?: boolean;
+}
+
 export interface GameState {
   seed: number;
+  /** A transcribed game's deal; none for a seeded game. */
+  script?: DealScript;
+  /** How far into `script` the game is: shuffles made per player, coins flipped. */
+  scriptPos?: { shuffles: [number, number]; coins: number };
   turn: number;
   current: PlayerId;
   first: PlayerId;
