@@ -2,7 +2,9 @@
 // (scripts/pro/stream.ts), names what the OCR read by the closest card or player name (every list of
 // data/pro/majors.json and the engine's cards), smooths each value over the samples around it, and cuts the samples
 // into turns (the lit panel changes sides) and games (the boards start over). Each turn keeps both boards at its
-// start and end, and what changed: Pokémon put down, evolved, Knocked Out, damage, Prize cards.
+// start and end, and what changed: Pokémon put down, evolved, Knocked Out, damage, Prize cards. A player outside
+// every top 32 keeps the name as read, their deck named by the list most like the Pokémon seen; replays of other
+// events' finals (data/pro/matches.json) are left out.
 //   npx tsx scripts/pro/trace.ts <id> [...ids]
 // Writes .cache/pro/streams/<id>.trace.json and prints the games.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -73,6 +75,51 @@ for (const c of Object.values(manifest.cards)) (c.category === 'pokemon' ? POKEM
 const POKEMON_NAMES = [...POKEMON];
 const TRAINER_NAMES = [...TRAINERS];
 const PLAYERS = [...new Set(majors.flatMap((e) => e.lists.map((l) => l.player)))];
+const vods = (JSON.parse(readFileSync('data/pro/vods.json', 'utf8')) as { videos: { event: number; id: string }[] }).videos;
+/** The finals of data/pro/matches.json: their players by event (the streams open with replays of past finals). */
+const FINALS = (JSON.parse(readFileSync('data/pro/matches.json', 'utf8')) as { matches: { event: number; placings: [number, number] }[] }).matches.map((m) => ({
+  event: m.event,
+  players: m.placings.map((p) => majors.find((e) => e.id === m.event)?.lists.find((l) => l.placing === p)?.player ?? ''),
+}));
+
+/** The Pokémon names of each major list, for naming a deck by what was seen of it. */
+const LIST_MONS = majors.flatMap((e) =>
+  e.lists.map((l) => {
+    const mons = new Set<string>();
+    let section = '';
+    for (const line of l.text.split('\n')) {
+      const h = line.match(/^(Pokémon|Trainer|Energy):/);
+      if (h) section = h[1]!;
+      const m = section === 'Pokémon' ? line.match(/^\d+ (.+?) [A-Z0-9]{2,4} [A-Za-z0-9-]+$/) : null;
+      if (m) mons.add(m[1]!);
+    }
+    return { deck: l.deck, mons };
+  }),
+);
+
+/** The deck of the major list whose Pokémon are most like those seen (Jaccard), when at least two of them were seen. */
+function deckSeen(seen: Set<string>): string | null {
+  let best: string | null = null;
+  let bestJ = 0;
+  for (const l of LIST_MONS) {
+    const both = [...seen].filter((n) => l.mons.has(n)).length;
+    const j = both / (seen.size + l.mons.size - both);
+    if (both >= 2 && j > bestJ) {
+      bestJ = j;
+      best = l.deck;
+    }
+  }
+  return best;
+}
+
+/** The words of a name, 3 letters or more, without accents. */
+const words = (n: string) => n.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/[^\p{L}]+/u).filter((w) => w.length >= 3);
+
+/** One player read two ways: the shorter name's words all in the longer one ("Gutierrez Ruiz", "Pablo Gutierrez Ruiz", "Cox James"), a letter misread here and there. */
+function samePlayer(a: string, b: string): boolean {
+  const [x, y] = [words(a), words(b)].sort((u, v) => u.length - v.length) as [string[], string[]];
+  return x.length > 0 && x.every((w) => y.some((v) => lev(w, v) <= Math.floor(w.length / 4)));
+}
 
 // ---------- one sample ----------
 
@@ -113,7 +160,7 @@ const hpOf = (text: string) => {
  * Pokémon name near the top is the Active, below y 330 a Benched Pokémon (top to bottom); an HP pair belongs to the
  * name just above it; the player's name is on the first line.
  */
-function read(s: Sample): Read | null {
+function read(s: Sample, home: readonly string[]): Read | null {
   if (!s.overlay) return null;
   const sides = ([0, 1] as const).map((side): Side => {
     const lines: OcrLine[] = [...(s.ocr[side === 0 ? 'left' : 'right'] ?? []), ...(s.ocr[side === 0 ? 'lhp' : 'rhp'] ?? [])];
@@ -137,7 +184,16 @@ function read(s: Sample): Read | null {
     });
     // The player's name: one line, or two (the 2027 overlay writes first and last name on two lines).
     const nameLines = lines.filter((l) => l.y >= 10 && l.y <= 48 && /[A-Za-z]{3}/.test(l.text) && !/^\d/.test(l.text)).sort((a, b) => a.y - b.y || a.x - b.x);
-    const player = [nameLines.map((l) => l.text).join(' '), ...nameLines.map((l) => l.text)].map((t) => closest(t, PLAYERS)).find((n) => n) ?? null;
+    // A player of this video's event first, then of another event, else the name as read (outside every top 32).
+    const tries = [nameLines.map((l) => l.text).join(' '), ...nameLines.map((l) => l.text)];
+    // A name as read keeps its words of 3 letters or more (a flag or a stray letter beside it drops out): two of
+    // them, or one long one.
+    // (not words of narrow strokes only, "Ili", "Til": the panel's edges; nor the overlay's "SEED")
+    const raw = nameLines.length <= 3 ? nameLines.flatMap((l) => l.text.split(/[^A-Za-zÀ-ž'-]+/)).filter((w) => w.length >= 3 && !/^[iltjfr'-]+$/i.test(w) && !/^seed$/i.test(w)) : [];
+    const player =
+      tries.map((t) => closest(t, home)).find((n) => n) ??
+      tries.map((t) => closest(t, PLAYERS)).find((n) => n) ??
+      (raw.length >= 2 || raw[0]?.length! >= 6 ? raw.join(' ').toLowerCase().replace(/(^|[ '-])\p{L}/gu, (c) => c.toUpperCase()) : null);
     return {
       player,
       active: top ? { name: top.name, hp: activeHp?.hp ?? null, max: activeHp?.max ?? null } : null,
@@ -285,8 +341,9 @@ function diff(start: [Board, Board], end: [Board, Board], side: 0 | 1): Pick<Tur
   return { put: mine.came, evolved, ko, damage };
 }
 
-function trace(samples: Sample[]): Game[] {
-  const reads = smooth(samples.map(read).filter((r): r is Read => r !== null));
+function trace(samples: Sample[], event: number | undefined): { games: Game[]; replays: number } {
+  const home = majors.find((e) => e.id === event)?.lists.map((l) => l.player) ?? [];
+  const reads = smooth(samples.map((s) => read(s, home)).filter((r): r is Read => r !== null));
   // Prize icons: whether a lit icon is a Prize taken or left is read off the data: lit counts rise through a game
   // when they are Prizes taken.
   const games: Game[] = [];
@@ -302,19 +359,38 @@ function trace(samples: Sample[]): Game[] {
     game.turns.push({ side: turn.side, from: a.t, to: b.t, start, end, stadium: b.stadium, trainers: [...turn.trainers], ...diff(start, end, turn.side) });
     game.to = b.t;
   };
-  const deckOf = (player: string | null) => (player ? (majors.flatMap((e) => e.lists).find((l) => l.player === player)?.deck ?? null) : null);
+  // The list of this event first: a player's deck at another event may be another deck.
+  const deckOf = (player: string | null) =>
+    player ? ((majors.find((e) => e.id === event)?.lists ?? []).find((l) => l.player === player) ?? majors.flatMap((e) => e.lists).find((l) => l.player === player))?.deck ?? null : null;
+  // How often each name was read on each side of each game: a game's players are its most read names.
+  const named = new Map<Game, [Map<string, number>, Map<string, number>]>();
+  const same = (a: string | null, b: string | null) => !a || !b || samePlayer(a, b);
   for (let i = 0; i < reads.length; i++) {
     const r = reads[i]!;
     const players: [string | null, string | null] = [r.sides[0].player, r.sides[1].player];
     const fresh = (s: 0 | 1) => r.sides[s].bench.every((b) => b === null) || r.sides[s].active === null;
-    // A new game: other players, or both boards back to an Active alone after a game was under way.
-    const newMatch = !game || (players[0] && players[1] && (players[0] !== game.players[0] || players[1] !== game.players[1]));
+    // A new game: other players (for a few samples running: a misread name lasts a sample or two), or both boards
+    // back to an Active alone after a game was under way.
+    const newMatch =
+      !game ||
+      (players[0] &&
+        players[1] &&
+        !(same(players[0], game.players[0]) && same(players[1], game.players[1])) &&
+        reads.slice(i, i + 4).every((x) => same(x.sides[0].player, players[0]) && same(x.sides[1].player, players[1])));
     const restart = game && game.turns.length > 2 && fresh(0) && fresh(1) && reads.slice(i, i + 3).every((x) => x.sides.every((s) => s.bench.every((b) => b === null)));
     if (newMatch || restart) {
       close();
       turn = null;
-      game = { players, decks: [deckOf(players[0]), deckOf(players[1])], from: r.t, to: r.t, turns: [] };
+      game = { players, decks: [null, null], from: r.t, to: r.t, turns: [] };
+      named.set(game, [new Map(), new Map()]);
       games.push(game);
+    }
+    for (const s of [0, 1] as const) {
+      const p = players[s];
+      if (!p) continue;
+      const counts = named.get(game!)![s];
+      counts.set(p, (counts.get(p) ?? 0) + 1);
+      if (!game!.players[s]) game!.players[s] = p;
     }
     if (r.turn === null) continue;
     if (!turn || turn.side !== r.turn) {
@@ -327,7 +403,25 @@ function trace(samples: Sample[]): Game[] {
     if (r.trainer && r.trainer.side === r.turn) turn.trainers.add(r.trainer.name);
   }
   close();
-  return games.filter((g) => g.turns.length >= 2);
+  const kept = games.filter((g) => g.turns.length >= 2);
+  for (const g of kept)
+    for (const s of [0, 1] as const) {
+      const top = [...named.get(g)![s]].sort((a, b) => b[1] - a[1])[0];
+      g.players[s] = top ? top[0] : null;
+    }
+  // A deck: the player's list at a major, else by the Pokémon seen on that player's side in all their games here.
+  for (const g of kept)
+    for (const s of [0, 1] as const) {
+      const p = g.players[s];
+      g.decks[s] = deckOf(p);
+      if (g.decks[s]) continue;
+      const theirs = p ? kept.flatMap((h) => ([0, 1] as const).filter((k) => h.players[k] && samePlayer(h.players[k]!, p)).map((k) => [h, k] as const)) : [[g, s] as const];
+      g.decks[s] = deckSeen(new Set(theirs.flatMap(([h, k]) => h.turns.flatMap((t) => [...all(t.start[k]), ...all(t.end[k])].map((m) => m.name)))));
+    }
+  // A game between the two finalists of another event is a replay (the streams open with past finals).
+  const replay = (g: Game) =>
+    FINALS.some((f) => f.event !== event && f.players.every((p) => g.players.some((q) => q && samePlayer(p, q))));
+  return { games: kept.filter((g) => !replay(g)), replays: kept.filter(replay).length };
 }
 
 for (const id of process.argv.slice(2)) {
@@ -335,9 +429,9 @@ for (const id of process.argv.slice(2)) {
     .trim()
     .split('\n')
     .map((l) => JSON.parse(l) as Sample);
-  const games = trace(samples);
+  const { games, replays } = trace(samples, vods.find((v) => v.id === id)?.event);
   writeFileSync(`.cache/pro/streams/${id}.trace.json`, JSON.stringify({ id, games }, null, 1));
-  console.log(`${id}: ${samples.length} samples, ${games.length} games`);
+  console.log(`${id}: ${samples.length} samples, ${games.length} games (${replays} replays of other events left out)`);
   const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
   for (const g of games) {
     console.log(`\n${mmss(g.from)}–${mmss(g.to)} ${g.players[0]} (${g.decks[0]}) vs ${g.players[1]} (${g.decks[1]}), ${g.turns.length} turns`);
