@@ -70,7 +70,7 @@
     border-left-color: var(--primary);
   }
   .line.bot {
-    border-left-color: var(--stamp);
+    border-left-color: var(--theirs);
   }
   .line.turn {
     margin-top: 6px;
@@ -79,7 +79,7 @@
   }
   /* The bot's turn just played, when yours starts. */
   .line.recent {
-    background: color-mix(in srgb, var(--stamp) 10%, transparent);
+    background: color-mix(in srgb, var(--theirs) 10%, transparent);
   }
   .line.at {
     background: color-mix(in srgb, var(--primary) 14%, transparent);

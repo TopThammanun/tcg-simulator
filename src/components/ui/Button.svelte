@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The one button: white for the main action of the moment, dark for the rest, red only for what can't be taken
+  // The one button: red for the main action of the moment, grey for the rest, a deeper red only for what can't be taken
   // back (leaving a game). 44px tall on touch screens.
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';

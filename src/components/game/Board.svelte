@@ -199,7 +199,7 @@
 {/snippet}
 
 <div
-  class="board"
+  class="board dark"
   data-zone="board"
   data-drop="play"
   class:play-ready={accepts('play')}
@@ -211,8 +211,8 @@
   <!-- The centre of the gym's floor, with its badge (BrandMark.astro's shape). -->
   <div class="midline" aria-hidden="true">
     <svg class="emblem" viewBox="0 0 32 32">
-      <path d="M16 2L28.12 9V23L16 30L3.88 23V9Z" fill="var(--gym)" />
-      <path d="M16 2L28.12 9V23L16 30Z" fill="var(--gym-deep)" />
+      <path d="M16 2L28.12 9V23L16 30L3.88 23V9Z" fill="var(--brand)" />
+      <path d="M16 2L28.12 9V23L16 30Z" fill="var(--brand-deep)" />
       <path d="M10.5 15.5L16 10.5L21.5 15.5M10.5 21.5L16 16.5L21.5 21.5" fill="none" stroke="var(--primary-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   </div>
@@ -375,7 +375,7 @@
     transform: translateY(calc(var(--row-gap) * 0.6));
   }
   .board.turn-theirs .midline::before {
-    --glow: var(--stamp);
+    --glow: var(--theirs);
     opacity: 0.7;
     transform: translateY(calc(var(--row-gap) * -0.6));
   }

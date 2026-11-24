@@ -34,7 +34,7 @@
   const ready = $derived(picks.length === take);
 </script>
 
-<div class="prize-pick" role="dialog" aria-modal="true" aria-label={tx('เลือก Prize', 'Choose Prize cards')} transition:fade={{ duration: motion(180) }}>
+<div class="prize-pick dark" role="dialog" aria-modal="true" aria-label={tx('เลือก Prize', 'Choose Prize cards')} transition:fade={{ duration: motion(180) }}>
   <header>
     <p class="kicker">{knockedOut.length ? tx(`${knockedOut.join(', ')} ของบอทถูก Knock Out`, `The bot's ${knockedOut.join(', ')} Knocked Out`) : 'Knock Out'}</p>
     <h2>{tx(`เลือก Prize ${take} ใบ`, `Choose ${take} Prize ${take === 1 ? 'card' : 'cards'}`)}</h2>

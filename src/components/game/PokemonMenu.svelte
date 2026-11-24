@@ -61,7 +61,7 @@
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div
-  class="pmenu"
+  class="pmenu dark"
   class:sheet
   style={pos}
   role="dialog"
@@ -297,7 +297,7 @@
   .use:hover:not(:disabled) {
     border-color: var(--ink-faint);
   }
-  /* Using an Ability: amber, what can be played now. */
+  /* Using an Ability: the accent, what can be played now. */
   .use.can {
     border-color: var(--accent);
     background: var(--accent);
@@ -399,7 +399,7 @@
   .attack.off .dmg {
     color: inherit;
   }
-  /* What the attack would do to their Active: green for damage, gold for a Knock Out. */
+  /* What the attack would do to their Active: green for damage, the accent for a Knock Out. */
   .pv {
     align-self: flex-start;
     padding: 2px 8px;

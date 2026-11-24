@@ -17,7 +17,7 @@
     'M20 3L37 35H3Z',
   ];
   const d = $derived(SHAPES[((shape % SHAPES.length) + SHAPES.length) % SHAPES.length]!);
-  const colour = $derived(`var(--t-${type.toLowerCase()}, var(--gym))`);
+  const colour = $derived(`var(--t-${type.toLowerCase()}, var(--brand))`);
 </script>
 
 <svg

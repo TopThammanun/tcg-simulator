@@ -128,7 +128,7 @@
     border: 1px solid var(--rule);
     background: var(--card-bg);
     --critical: var(--stamp);
-    --warning: var(--accent);
+    --warning: var(--warn);
     border-radius: var(--radius-xl);
   }
   figcaption {
@@ -154,7 +154,7 @@
     display: inline-block;
     width: 16px;
     margin-left: 6px;
-    border-top: 2px solid var(--primary);
+    border-top: 2px solid var(--ink-strong);
   }
   .legend i.dash {
     border-top: 2px dashed var(--ink-soft);
@@ -191,7 +191,7 @@
     stroke-linecap: round;
   }
   .seg.mine {
-    stroke: var(--primary);
+    stroke: var(--ink-strong);
   }
   .seg.theirs {
     stroke: var(--ink-soft);
@@ -203,7 +203,7 @@
     stroke-width: 1.5;
   }
   .dot {
-    fill: var(--primary);
+    fill: var(--ink-strong);
     stroke: var(--card-bg);
     stroke-width: 2;
   }
@@ -255,7 +255,7 @@
     line-height: 16px;
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 4px 10px -4px #0008;
+    box-shadow: var(--shadow-lg);
   }
   .tip span {
     display: block;

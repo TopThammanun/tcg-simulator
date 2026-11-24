@@ -226,8 +226,8 @@
     color: #fff;
   }
   .badge.warn {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--warn);
+    color: var(--warn-ink);
   }
   .badge.ok {
     border: 1px solid var(--line);
@@ -296,7 +296,7 @@
     border-radius: var(--radius-lg);
   }
   .way.bot {
-    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
   }
   .tag {
     display: block;
@@ -307,7 +307,7 @@
     font-weight: 600;
   }
   .way.bot .tag {
-    color: var(--accent);
+    color: var(--warn);
   }
   .moves {
     display: flex;
@@ -344,9 +344,9 @@
   .gains {
     margin-top: 12px;
     padding: 12px;
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
     border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    background: color-mix(in srgb, var(--warn) 6%, transparent);
   }
   .gains h3 {
     margin: 0;
@@ -357,7 +357,7 @@
   }
   .gains h4 {
     margin: 12px 0 0;
-    color: var(--accent);
+    color: var(--warn);
     font-size: 12px;
     line-height: 16px;
     font-weight: 600;
@@ -383,7 +383,7 @@
     content: '•';
   }
   .facts.now li::before {
-    color: var(--accent);
+    color: var(--warn);
     content: '+';
     font-weight: 600;
   }

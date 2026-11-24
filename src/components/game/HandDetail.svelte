@@ -45,7 +45,7 @@
     border-radius: var(--radius-lg);
     background: var(--card-bg);
     color: var(--ink);
-    box-shadow: 0 10px 30px #0006;
+    box-shadow: 0 10px 30px #0003;
     border: 1px solid var(--line);
   }
   .img {
