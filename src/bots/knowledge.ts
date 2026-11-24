@@ -2,14 +2,14 @@
 import type { Attack, EnergyType } from '../data/cards';
 import { baseDamage } from '../engine/combat';
 import { def, hasRuleBox, isBasicEnergy } from '../engine/db';
-import { attackCost, canPay, energyOf, hpLeft } from '../engine/rules';
+import { attackCost, canPay, energyOf, hpLeft, type Provided } from '../engine/rules';
 import { keyOf, opp, slotsOf, topDef, topKey } from '../engine/state';
 import type { GameState, PlayerId, Slot } from '../engine/types';
 import { P } from './params';
 import type { DeckPlan } from './types';
 
 /** Energy types still missing to pay `cost` with `have`. */
-export function missingFor(have: EnergyType[], cost: EnergyType[]): number {
+export function missingFor(have: readonly Provided[], cost: readonly EnergyType[]): number {
   const pool = have.slice();
   let missing = 0;
   let colorless = 0;
@@ -18,7 +18,8 @@ export function missingFor(have: EnergyType[], cost: EnergyType[]): number {
       colorless++;
       continue;
     }
-    const i = pool.indexOf(c);
+    let i = pool.indexOf(c);
+    if (i < 0) i = pool.indexOf('Any');
     if (i < 0) missing++;
     else pool.splice(i, 1);
   }

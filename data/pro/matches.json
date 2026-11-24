@@ -1,0 +1,11 @@
+{
+  "about": "The major finals prepared for transcribing (BOT-PRO.md P0): both lists come from data/pro/majors.json (scripts/pro/majors.ts) by event and placing, seat 1 = placings[0]. games: the second each game starts at in the video, where known.",
+  "matches": [
+    { "id": "worlds-2026-final", "event": 515, "round": "Finals", "placings": [1, 2], "video": "KQ-32rHXKM8", "source": "stream-en" },
+    { "id": "naic-2026-final", "event": 518, "round": "Finals", "placings": [1, 2], "video": "IWA_e9ff_EA", "source": "stream-en" },
+    { "id": "laic-2027-final", "event": 574, "round": "Finals", "placings": [1, 2], "video": "Yk8oyJGco1E", "source": "stream-en" },
+    { "id": "puebla-2027-final", "event": 583, "round": "Finals", "placings": [1, 2], "video": "bQZCF3_X6KA", "source": "stream-en" },
+    { "id": "louisville-2027-final", "event": 581, "round": "Finals", "placings": [1, 2], "video": "o5Slm-Z8lfY", "source": "stream-en" },
+    { "id": "frankfurt-2027-final", "event": 579, "round": "Finals", "placings": [1, 2], "video": "SwLR1bs4KF4", "source": "stream-en", "games": [0, 970, 1884] }
+  ]
+}

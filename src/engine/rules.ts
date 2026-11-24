@@ -3,7 +3,7 @@ import { possessive, tx, verb } from '../i18n';
 import type { Ctx } from './ctx';
 import { def, energyCard, hasRuleBox, isLilliesPokemon } from './db';
 import { keyOf, opp, slotsOf, topDef, topKey } from './state';
-import type { Condition, GameState, PlayerId, Slot, SlotId } from './types';
+import type { CardId, Condition, GameState, PlayerId, Slot, SlotId } from './types';
 
 // ---------- stadium, abilities ----------
 
@@ -35,8 +35,9 @@ export function slotsWithAbility(s: GameState, p: PlayerId, name: string): Slot[
   return slotsOf(s.players[p]).filter((sl) => abilityOn(s, sl, name));
 }
 
+/** The Tool attached to a Pokémon, as far as it has an effect: none while Jamming Tower is in play. */
 export function toolKey(s: GameState, slot: Slot): string | undefined {
-  return slot.tool === null ? undefined : keyOf(s, slot.tool);
+  return slot.tool === null || stadiumIs(s, 'jamming-tower') ? undefined : keyOf(s, slot.tool);
 }
 
 // ---------- HP, energy, costs ----------
@@ -64,8 +65,23 @@ export function provides(key: string): EnergyType {
   return 'Colorless';
 }
 
-export function energyOf(s: GameState, slot: Slot): EnergyType[] {
-  return slot.energy.map((e) => provides(keyOf(s, e)));
+/** Energy an attached card provides, one entry per Energy: "Any" pays for any type (Neo Upper Energy). */
+export type Provided = EnergyType | 'Any';
+
+/**
+ * What one Energy card attached to `slot` provides there: one Energy of its type, except Ignition Energy, {C}{C}{C} on
+ * an Evolution Pokémon, and Neo Upper Energy, two Energy of every type on a Stage 2 Pokémon.
+ */
+export function energyFrom(s: GameState, slot: Slot, card: CardId): Provided[] {
+  const k = keyOf(s, card);
+  const stage = topDef(s, slot).stage;
+  if (k === 'ignition-energy' && stage !== 'Basic') return ['Colorless', 'Colorless', 'Colorless'];
+  if (k === 'neo-upper-energy' && stage === 'Stage2') return ['Any', 'Any'];
+  return [provides(k)];
+}
+
+export function energyOf(s: GameState, slot: Slot): Provided[] {
+  return slot.energy.flatMap((e) => energyFrom(s, slot, e));
 }
 
 export function attackCost(s: GameState, user: Slot, attack: Attack): EnergyType[] {
@@ -83,7 +99,7 @@ export function attackCost(s: GameState, user: Slot, attack: Attack): EnergyType
   return cost;
 }
 
-export function canPay(have: EnergyType[], cost: EnergyType[]): boolean {
+export function canPay(have: readonly Provided[], cost: readonly EnergyType[]): boolean {
   const pool = have.slice();
   let colorless = 0;
   for (const c of cost) {
@@ -91,7 +107,8 @@ export function canPay(have: EnergyType[], cost: EnergyType[]): boolean {
       colorless++;
       continue;
     }
-    const i = pool.indexOf(c);
+    let i = pool.indexOf(c);
+    if (i < 0) i = pool.indexOf('Any');
     if (i < 0) return false;
     pool.splice(i, 1);
   }
@@ -131,7 +148,7 @@ export function canRetreat(s: GameState, p: PlayerId): boolean {
   const a = ps.active;
   if (!a || ps.retreated || ps.bench.length === 0) return false;
   if (a.marks.some((m) => m.kind === 'cant-retreat' && m.turn === s.turn)) return false;
-  return a.energy.length >= retreatCost(s, p, a);
+  return energyOf(s, a).length >= retreatCost(s, p, a);
 }
 
 export function benchLimit(s: GameState, p: PlayerId): number {
@@ -318,6 +335,15 @@ export function endTurn(ctx: Ctx): void {
   ps.lastAttack = ps.attacked ?? null;
   ps.attacked = null;
   ps.lastPrizes = (ps.turnPrizes ?? ps.prizes.length) - ps.prizes.length;
+
+  // Ignition Energy attached to this player's Pokémon is discarded at the end of their turn.
+  for (const sl of slotsOf(ps)) {
+    const ignition = sl.energy.filter((e) => keyOf(s, e) === 'ignition-energy');
+    if (!ignition.length) continue;
+    sl.energy = sl.energy.filter((e) => !ignition.includes(e));
+    ps.discard.push(...ignition);
+    ctx.log(tx(`Ignition Energy ${ignition.length} ใบจาก ${topDef(s, sl).name} ถูกทิ้ง`, `${ignition.length} Ignition Energy discarded from ${topDef(s, sl).name}`), p);
+  }
 
   // Between turns: Poison puts 1 damage counter on the Poisoned Active Pokémon.
   cleanConditions(s);

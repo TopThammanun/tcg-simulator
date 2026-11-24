@@ -1,13 +1,13 @@
 // Abilities a player uses or that trigger. Passive Abilities (Skyliner, Fairy Zone, Cobalt Command,
 // Flower Curtain, Spherical Shield, Midnight Fluttering, Memory Helix, Festival Lead, Seasoned Skill,
-// ACE Nullifier) are read directly by the rules where they apply.
+// ACE Nullifier) are read directly by the rules where they apply; Damp and Watchful Eye by the Abilities they stop.
 import { tx, verb } from '../../i18n';
 import { uniqueByKey, type Ctx } from '../ctx';
-import { def, isTrainerType } from '../db';
-import { abilityOn, addCondition, isActive, provides, stadiumIs, switchIn } from '../rules';
+import { def, isBasicEnergy, isTrainerType } from '../db';
+import { abilityOn, addCondition, isActive, maxHp, provides, stadiumIs, switchIn } from '../rules';
 import { keyOf, opp, slotsOf, topDef, topKey } from '../state';
 import type { GameState, PlayerId, Slot } from '../types';
-import { discardStadium } from './common';
+import { attachFrom, discardStadium } from './common';
 
 export interface AbilityImpl {
   /** activated: used with an 'ability' action. bench/evolve: offered when played from hand. */
@@ -107,6 +107,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
   'Adrena-Brain': {
     when: 'activated',
     canUse: (s, p, slot) =>
+      !inPlayWith(s, 'Watchful Eye') &&
       slot.energy.some((e) => provides(keyOf(s, e)) === 'Darkness') &&
       slotsOf(s.players[p]).some((sl) => sl.damage > 0) &&
       adrenaTargets(s, p).length > 0,
@@ -130,6 +131,32 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       const [to] = ctx.pickSlots(p, chainsTargets(ctx.s, p), { purpose: 'switch', prompt: tx('Subjugating Chains: เลือก Pokémon {D} มาเป็นตัวหลัก', 'Subjugating Chains: choose a {D} Pokémon to switch in'), source: 'pecharunt-ex' });
       switchIn(ctx, p, to!);
       addCondition(ctx, to!, 'poisoned');
+    },
+  },
+
+  // Dusclops (5) and Dusknoir (13): the counters, then this Pokémon is Knocked Out (the opponent takes its Prize);
+  // Psyduck's Damp switches it off. Battle Cage keeps the counters off Benched Pokémon.
+  'Cursed Blast': {
+    when: 'activated',
+    canUse: (s, p) => !inPlayWith(s, 'Damp') && cursedTargets(s, p).length > 0,
+    use: (ctx, p, slot) => {
+      const s = ctx.s;
+      const n = topKey(s, slot) === 'dusknoir' ? 13 : 5;
+      const [to] = ctx.pickSlots(p, cursedTargets(s, p), { purpose: 'counters', prompt: tx(`Cursed Blast: วางตัวนับดาเมจ ${n} ตัวบน Pokémon ตัวไหน`, `Cursed Blast: put ${n} damage counters on which Pokémon?`), source: topKey(s, slot) });
+      to!.damage += 10 * n;
+      ctx.log(tx(`Cursed Blast: วางตัวนับดาเมจ ${n} ตัวบน ${topDef(s, to!).name}`, `Cursed Blast: ${n} damage counters on ${topDef(s, to!).name}`), p);
+      slot.damage = Math.max(slot.damage, maxHp(s, slot));
+    },
+  },
+  'Seething Spirit': {
+    when: 'activated',
+    canUse: (s, p) => s.players[p].discard.some((c) => isBasicEnergy(keyOf(s, c))),
+    use: (ctx, p) => {
+      const s = ctx.s;
+      const energy = uniqueByKey(s, ctx.ps(p).discard.filter((c) => isBasicEnergy(keyOf(s, c))));
+      const [e] = ctx.pickCards(p, energy, { purpose: 'attach', prompt: tx('Seething Spirit: ติดพลังงานพื้นฐานจากกองทิ้ง', 'Seething Spirit: attach a Basic Energy from your discard pile'), source: 'blaziken-ex' });
+      const [to] = ctx.pickSlots(p, slotsOf(ctx.ps(p)), { purpose: 'attach', prompt: tx('ติดให้ Pokémon ตัวไหน', 'Attach it to which Pokémon?'), source: 'blaziken-ex' });
+      attachFrom(ctx, p, e!, to!);
     },
   },
 
@@ -176,6 +203,17 @@ export const ABILITIES: Record<string, AbilityImpl> = {
 };
 
 function adrenaTargets(s: GameState, p: PlayerId): Slot[] {
+  const o = s.players[opp(p)];
+  const all = slotsOf(o);
+  return stadiumIs(s, 'battle-cage') ? all.filter((sl) => sl.uid === o.active?.uid) : all;
+}
+
+/** A Pokémon in play on either side has this Ability switched on (Damp, Watchful Eye). */
+function inPlayWith(s: GameState, name: string): boolean {
+  return ([0, 1] as const).some((q) => slotsOf(s.players[q]).some((sl) => abilityOn(s, sl, name)));
+}
+
+function cursedTargets(s: GameState, p: PlayerId): Slot[] {
   const o = s.players[opp(p)];
   const all = slotsOf(o);
   return stadiumIs(s, 'battle-cage') ? all.filter((sl) => sl.uid === o.active?.uid) : all;

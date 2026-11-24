@@ -224,7 +224,7 @@ games.forEach(({ file, g }, gi) => {
       p.benchAtEnd += states[span.end]!.players[seat].bench.length;
       for (let j = span.start; j < span.end; j++) {
         const x = g.actions[j]!;
-        if ('card' in x && x.t !== 'choose') {
+        if ('card' in x) {
           const name = def(keyOf(states[j]!, x.card)).name;
           p.played[name] = (p.played[name] ?? 0) + 1;
         }

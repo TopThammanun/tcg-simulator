@@ -80,6 +80,7 @@ const NEEDS: Record<string, { bench?: Parameters<typeof scenario>[0]['p0']['benc
   'rare-candy': { hand: ['alakazam'] },
   'rosas-encouragement': { bench: [{ card: 'dragapult-ex', under: ['dreepy', 'drakloak'] }] },
   'janines-secret-art': { bench: ['ns-zorua'] },
+  'strange-timepiece': { bench: [{ card: 'kadabra', under: ['abra'] }] },
 };
 
 describe('every Trainer and Special Energy can be played', () => {

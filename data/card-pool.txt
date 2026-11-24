@@ -26,3 +26,21 @@
 1 Eri TEF 146
 1 Hand Trimmer TEF 150
 1 Handheld Fan TWM 150
+# Cards of the major finals to transcribe (BOT-PRO.md P0; scripts/pro/majors.ts): Worlds 2026, NAIC 2026, LAIC 2026–27,
+# Frankfurt and Louisville 2026, and the Dusknoir line, the card the top 32s miss most.
+1 Dedenne SSP 87
+1 Duskull PRE 35
+1 Dusclops PRE 36
+1 Dusknoir PRE 37
+1 Dusk Ball SSP 175
+1 Prime Catcher TEF 157
+1 Jamming Tower TWM 153
+1 Ignition Energy WHT 86
+1 Neo Upper Energy TEF 162
+1 Patrat CRI 70
+1 Gwynn PBL 78
+1 Strange Timepiece MEG 128
+1 Torchic DRI 40
+1 Combusken DRI 41
+1 Blaziken ex JTG 24
+1 Chi-Yu TWM 39

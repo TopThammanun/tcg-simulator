@@ -222,6 +222,38 @@ agreement = สัดส่วนดีลที่ท่าอันดับ 1
   เป็น Basic ตัวนั้นก่อน แล้ว choice ลง Bench จะกลับมาถาม; ทุกการ์ดที่เล่นหรือค้นเจอ เลือกจาก list; ใบที่คลิปไม่เผย (ทิ้งจาก Ultra Ball) เลือก
   "ไม่รู้" ได้โดยปล่อยเป็น `?`; จบเกมกด "ตรวจเล่นซ้ำ" แล้วดาวน์โหลดเป็น `data/pro/<รายการ>-<รอบ>.json` (ไฟล์ละเกมหรือหลายเกมก็ได้)
 
+### P0 (ต่อ): list จริงของนัดชิง การ์ดที่ขาด และนัดที่เตรียมไว้ (24 พ.ย.) ทำแล้ว
+
+- `scripts/pro/majors.ts`: list ของรายการใหญ่จาก limitlesstcg.com (เว็บหลัก ซึ่ง API ของ play.limitlesstcg.com ที่ `limitless.ts`
+  ใช้ไม่มี) อันดับ 1–32 ของ 12 รายการ (Worlds 2026, NAIC, LAIC, Regionals Puebla/Nice/Louisville/Frankfurt/Baltimore/Indianapolis/
+  Utrecht/Gdańsk, Turin) เป็น export text พร้อมการ์ดที่ engine ยังไม่มี → `data/pro/majors.json`
+- **ก่อนเพิ่มการ์ด:** นัดชิงที่ engine เล่นได้ทั้งสองฝั่งมีแค่ Puebla; Worlds ขาด Dedenne ใบเดียว; การ์ดที่ขาดบ่อยที่สุดในอันดับ 1–32 คือสาย
+  Dusknoir (38 list) ตามด้วย Prime Catcher (28), Jamming Tower (24)
+- **เพิ่ม 16 ใบ** (`data/card-pool.txt`, `tests/engine/cards-majors.test.ts` 21 ข้อ): Dedenne, Duskull/Dusclops/Dusknoir (Cursed Blast:
+  วางตัวนับ 5/13 แล้วตัวเองโดน KO อีกฝ่ายได้ Prize; Damp ของ Psyduck ปิดได้; Battle Cage จำกัดเป้าเป็นตัวหลัก), Patrat (Watchful Eye ปิด
+  Adrena-Brain), Torchic/Combusken/Blaziken ex (Seething Spirit), Chi-Yu, Dusk Ball, Prime Catcher, Gwynn, Strange Timepiece (ย้อนวิวัฒนาการ),
+  Jamming Tower (`toolKey` คืนว่างเมื่ออยู่ในสนาม Tool ทุกใบจึงหมดผล), Ignition Energy ({C}{C}{C} บน Pokémon วิวัฒนาการ ทิ้งตอนจบเทิร์น),
+  Neo Upper Energy (บน Stage 2 ให้ 2 พลังงานทุกประเภท) — สองใบหลังต้องให้ `energyOf` นับการ์ดใบเดียวเป็นหลายพลังงานและมี "Any"
+  (`Provided`, `energyFrom`; `canPay` / `missingFor` ใช้ Any แทนประเภทไหนก็ได้; ถอยตัวนับพลังงานที่ให้ไม่ใช่จำนวนใบ และเลือกทีละใบเฉพาะเมื่อ
+  มีการ์ดที่ให้หลายพลังงาน ส่วนเกมเดิมเลือกแบบเดิม จึงไม่ต้องขึ้น `RULES_VERSION`)
+- **หลังเพิ่ม:** นัดชิง 6 นัดเล่นได้ทั้งสองฝั่ง และ list ในอันดับ 1–32 ที่ engine เล่นได้ขึ้นจาก 6–20 เป็น 16–25 ต่อรายการ:
+
+| นัดชิง | ฝั่ง 1 | ฝั่ง 2 | คลิป |
+| --- | --- | --- | --- |
+| Worlds 2026 | Hedrick (Dragapult) | Cassiraga (Alakazam Dudunsparce) | `KQ-32rHXKM8` |
+| NAIC 2026 | Kowalski (Lillie's Clefairy: Mega Kangaskhan, Fezandipiti) | Kosek (Dragapult Dusknoir) | `IWA_e9ff_EA` |
+| LAIC 2026–27 | Fernandez (N's Zoroark) | Fernandez Urroz (Talonflame Dusknoir) | `Yk8oyJGco1E` |
+| Puebla | Hedrick (Dragapult) | Rogerson (Dragapult) | `bQZCF3_X6KA` (บรรยายสเปน) |
+| Louisville | McKay (Dragapult) | Charles (Dragapult Blaziken) | `o5Slm-Z8lfY` |
+| Frankfurt | Chałupka (Alakazam Dusknoir) | Łaszkiewicz (Alakazam Dusknoir) | `SwLR1bs4KF4` (เกม 1/2/3 เริ่มที่ 0:00, 16:10, 31:24) |
+
+- ตรวจชื่อคลิปทั้ง 6 ตรงกับผู้เข้าชิงแล้ว; บอทกฎเล่นคู่ของทั้ง 6 นัด 24 เกมผ่านโค้ดของหน้าถอด จบทุกเกมและเล่นซ้ำได้ตรงทุกตำแหน่ง
+  (บอทกฎไม่ใช้ Cursed Blast และไม่ตีด้วยตัวตีใหม่เพราะแผนของมันไม่รู้จักการ์ดเหล่านี้ ไม่กระทบการถอด แต่ไม้บรรทัด P1 จะเจอตาที่บอทไม่เคยฝึก
+  เป็นข้อค้นพบหนึ่ง)
+- `/transcribe/` เลือกนัดที่เตรียมไว้ (`data/pro/matches.json` → `lib/pro-matches.ts`) กับเกมที่ 1–3 แล้วลิสต์ ชื่อ รายการ คลิปและเวลา
+  (ถ้ารู้) ถูกเติมให้ หน้าถอดมีลิงก์เปิดคลิปที่เวลาเริ่มเกม
+- นัดชิง 6 นัด × 2–3 เกม ≈ 14–18 เกม ส่วนที่ขาดถึง 20 เอาจากรอบ 8 คนใน Day 2 ของรายการเดียวกัน (list อยู่ใน `majors.json` แล้ว)
+
 ### P1: ไม้บรรทัด (24 พ.ย.) เครื่องมือเสร็จ รอเกมจริง
 
 - `scripts/pro/agreement.ts`: ทุกการตัดสินใจที่มีทางเลือกของโปร (ตำแหน่งที่มีท่ามากกว่า "จบเทิร์น", choice ที่ตัวเลือกมากกว่าที่ต้องเลือก) ถามบอท

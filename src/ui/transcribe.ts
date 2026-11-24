@@ -22,6 +22,28 @@ export interface Transcript {
   actions: Action[];
 }
 
+/** A major final prepared for transcribing (data/pro/matches.json, resolved by lib/pro-matches.ts): both lists and the video. */
+export interface PreparedMatch {
+  id: string;
+  /** "Worlds 2026 · Finals: Hedrick vs Cassiraga". */
+  label: string;
+  event: string;
+  round: string;
+  players: [string, string];
+  /** Limitless export text by seat. */
+  lists: [string, string];
+  video: string;
+  source: ProMeta['source'];
+  /** The second each game starts at in the video, where known. */
+  games?: number[];
+}
+
+/** The video at a second, for opening it beside the transcript. */
+export function videoUrl(video: string, at?: number): string {
+  const url = /^https?:/.test(video) ? video : `https://www.youtube.com/watch?v=${video}`;
+  return at ? `${url}${url.includes('?') ? '&' : '?'}t=${at}s` : url;
+}
+
 export interface StartOptions {
   decks: [string[], string[]];
   names: [string, string];

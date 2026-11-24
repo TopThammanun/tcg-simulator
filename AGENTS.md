@@ -53,6 +53,7 @@ npx tsx scripts/meta/pick-lists.ts [--write --only a,b]   # each bot deck's most
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
 npx tsx scripts/pro/agreement.ts [data/pro/*.json] [--deals 8] [--hard]   # BOT-PRO.md P1: the bot's agreement with the pros' moves in transcribed games (/transcribe/), the value head on real games, how the pros pilot each deck -> data/pro/report.md
 npx tsx scripts/pro/synthetic.ts --games 6   # stand-in transcripts (the hard bot as the pro, cards named only as played) for trying the ruler -> .cache/pro/synthetic.json
+npx tsx scripts/pro/majors.ts [--events 515,518,…] [--top 32]   # the lists of major events from limitlesstcg.com (Worlds, ICs, Regionals) as export text, with the cards the engine lacks -> data/pro/majors.json
 # ppo.py --starts <tcg-sim-games-*.json> [--starts-share 0.1]: some self-play games start from those games' positions (gen.ts `starts`)
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)
@@ -181,7 +182,9 @@ own scan by set and number (`limitless`, e.g. the Grookey MEP 52 promo neither A
   hand, in play or in the discard pile names it; a naming during a choice is done on the position the action started
   from and the action re-run), coin flips of the move can be toggled to what really happened, notes per turn, the game
   in progress kept in localStorage, exported as a games file with its `script` and `pro` metadata (`SavedGame.pro`:
-  event, players, video, source) and checked by replaying it.
+  event, players, video, source) and checked by replaying it. The finals prepared for it (`data/pro/matches.json`: event,
+  placings, video; their lists from `data/pro/majors.json`, `lib/pro-matches.ts` at build time) fill the sheet in one
+  pick; the transcript links to the video at the game's start.
 - `src/ui/` — play-screen helpers: `decks.ts` (a deck's headline cards, the meta deck nearest to your own list —
   its plan plays it —, the random opponent by archetype share), `my-decks.ts` (your own lists in localStorage,
   listed by `MyDecks.svelte` on `/decks/`, built in the deck builder; `decklist.ts` checks them and names unsupported

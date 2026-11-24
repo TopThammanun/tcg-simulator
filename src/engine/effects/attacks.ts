@@ -8,6 +8,7 @@ import { uniqueByKey } from '../ctx';
 import { def, hasRuleBox, isBasicEnergy, isBasicPokemon, isNsPokemon, isPokemon } from '../db';
 import { chooseSwitch, maxHp, provides, switchIn } from '../rules';
 import { keyOf, nameOf, rulesBefore, slotsOf, topDef, topKey } from '../state';
+import { benchSpace, discardStadium, putOnBench } from './common';
 
 /** Attacks that copy other attacks are not offered as copy targets themselves (avoids loops). */
 const COPYING = new Set(['Night Joker', 'Seek Inspiration']);
@@ -351,6 +352,43 @@ export const ATTACKS: Record<string, AttackImpl> = {
     const picked = a.ctx.search(a.me, () => true, { prompt: tx('Talon Hunt: ค้นหาการ์ดได้สูงสุด 2 ใบ', 'Talon Hunt: search for up to 2 cards'), max: 2, source: 'talonflame-ex', any: true });
     a.ctx.toHand(a.me, picked);
     a.ctx.shuffle(a.me);
+  },
+  // ---- Dedenne, Duskull, Dusknoir, Torchic, Combusken, Blaziken ex, Chi-Yu ----
+  'Electromagnetic Sonar': (a) => {
+    const trainers = a.s.players[a.me].discard.filter((c) => def(keyOf(a.s, c)).category === 'trainer');
+    const picked = a.ctx.pickCards(a.me, uniqueByKey(a.s, trainers), { prompt: tx('เลือก Trainer จากกองทิ้งขึ้นมือ', 'Choose a Trainer card from your discard pile to put into your hand'), source: 'dedenne' });
+    a.ctx.toHand(a.me, picked);
+  },
+  'Come and Get You': (a) => {
+    const duskull = a.s.players[a.me].discard.filter((c) => keyOf(a.s, c) === 'duskull');
+    const room = Math.min(3, benchSpace(a.ctx, a.me));
+    if (!duskull.length || room <= 0) return;
+    const picked = a.ctx.pickCards(a.me, duskull, { prompt: tx('วาง Duskull จากกองทิ้งลง Bench (สูงสุด 3)', 'Put up to 3 Duskull from your discard pile onto your Bench'), min: 0, max: room, source: 'duskull' });
+    for (const c of picked) putOnBench(a.ctx, a.me, c);
+  },
+  'Shadow Bind': (a) => {
+    a.hit(a.defender, a.base);
+    a.mark(a.defender, { kind: 'cant-retreat', turn: a.s.turn + 1 });
+  },
+  Collect: (a) => {
+    a.ctx.draw(a.me, 1);
+  },
+  'Double Kick': (a) => {
+    let heads = 0;
+    for (let i = 0; i < 2; i++) if (a.flip()) heads++;
+    a.hit(a.defender, 40 * heads);
+  },
+  'Smolder-sault': (a) => {
+    a.hit(a.defender, a.base);
+    cantAttackNextTurn(a);
+  },
+  Allure: (a) => {
+    a.ctx.draw(a.me, 2);
+  },
+  'Ground Melter': (a) => {
+    const stadium = a.s.stadium !== null;
+    a.hit(a.defender, a.base + (stadium ? 60 : 0));
+    if (stadium) discardStadium(a.ctx);
   },
   // ---- Passimian, Enamorus ----
   'Coordinated Throwing': (a) => {

@@ -49,6 +49,16 @@ function attachFromDiscard(ctx: Ctx, p: PlayerId, energyFilter: (k: string) => b
   attachFrom(ctx, p, e!, to!);
 }
 
+/** Pokémon without a Rule Box in p's hand, Gwynn aside. */
+function gwynnPokemon(s: GameState, p: PlayerId, card: CardId): CardId[] {
+  return handOthers(s, p, card).filter((c) => isPokemon(keyOf(s, c)) && !hasRuleBox(keyOf(s, c)));
+}
+
+/** p's evolved Pokémon whose current form is {P}. */
+function timepieceTargets(s: GameState, p: PlayerId): Slot[] {
+  return slotsOf(s.players[p]).filter((sl) => sl.stack.length > 1 && topDef(s, sl).types.includes('Psychic'));
+}
+
 export const TRAINERS: Record<string, TrainerImpl> = {
   // ---- Items ----
   'ultra-ball': {
@@ -270,6 +280,68 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       const picked = ctx.search(p, isEx, { prompt: tx('Cyrano: ค้น Pokémon ex (สูงสุด 3)', 'Cyrano: search for up to 3 Pokémon ex'), max: 3, source: 'cyrano' });
       ctx.toHand(p, picked);
       ctx.shuffle(p);
+    },
+  },
+  // ---- cards of the major finals (BOT-PRO.md P0) ----
+  'dusk-ball': {
+    play: (ctx, p) => {
+      const s = ctx.s;
+      const bottom = ctx.ps(p).deck.slice(-7);
+      const mons = bottom.filter((c) => isPokemon(keyOf(s, c)));
+      const picked = ctx.pickCards(p, uniqueByKey(s, mons), {
+        purpose: 'search',
+        secret: true,
+        view: bottom,
+        reveal: true,
+        min: 0,
+        max: 1,
+        prompt: tx('Dusk Ball: ดูการ์ด 7 ใบล่างสุดของเด็ค เลือก Pokémon 1 ใบขึ้นมือ', 'Dusk Ball: look at the bottom 7 cards of your deck and choose a Pokémon to put into your hand'),
+        source: 'dusk-ball',
+      });
+      ctx.toHand(p, picked);
+      ctx.shuffle(p);
+    },
+  },
+  'prime-catcher': {
+    canPlay: (s, p) => s.players[opp(p)].bench.length > 0,
+    play: (ctx, p) => {
+      const [t] = ctx.pickSlots(p, ctx.ps(opp(p)).bench, { purpose: 'gust', prompt: tx('Prime Catcher: ดึง Pokémon ตัวไหนขึ้นมา', 'Prime Catcher: switch in which Pokémon?'), source: 'prime-catcher' });
+      switchIn(ctx, opp(p), t!);
+      chooseSwitch(ctx, p, 'prime-catcher');
+    },
+  },
+  gwynn: {
+    canPlay: (s, p, card) => gwynnPokemon(s, p, card).length > 0,
+    play: (ctx, p, card) => {
+      const picked = ctx.pickCards(p, gwynnPokemon(ctx.s, p, card), {
+        purpose: 'discard-cost',
+        prompt: tx('Gwynn: ทิ้ง Pokémon ที่ไม่มี Rule Box จากมือ (สูงสุด 2 ใบ ใบละจั่ว 3)', 'Gwynn: discard up to 2 Pokémon without a Rule Box from your hand (draw 3 for each)'),
+        min: 1,
+        max: 2,
+        source: 'gwynn',
+      });
+      ctx.toDiscard(p, picked);
+      ctx.draw(p, 3 * picked.length);
+    },
+  },
+  'strange-timepiece': {
+    canPlay: (s, p) => timepieceTargets(s, p).length > 0,
+    play: (ctx, p) => {
+      const s = ctx.s;
+      const [sl] = ctx.pickSlots(p, timepieceTargets(s, p), { purpose: 'target', prompt: tx('Strange Timepiece: ย้อนวิวัฒนาการ Pokémon ตัวไหน', 'Strange Timepiece: devolve which Pokémon?'), source: 'strange-timepiece' });
+      const levels = sl!.stack.length - 1;
+      const n =
+        levels === 1
+          ? 1
+          : ctx.pickOption(p, tx('เอาการ์ดวิวัฒนาการขึ้นมือกี่ใบ', 'How many Evolution cards go to your hand?'), Array.from({ length: levels }, (_, i) => tx(`${i + 1} ใบ`, String(i + 1))), 'strange-timepiece') + 1;
+      const back = sl!.stack.splice(sl!.stack.length - n, n);
+      ctx.ps(p).hand.push(...back);
+      ctx.reveal(p, back);
+      // Devolving clears Special Conditions and the effects of attacks; the Pokémon can't evolve again this turn.
+      sl!.conditions = [];
+      sl!.marks = [];
+      sl!.evolvedTurn = s.turn;
+      ctx.log(tx(`${topDef(s, sl!).name} ย้อนวิวัฒนาการ (${back.map((c) => ctx.cardName(c)).join(', ')} ขึ้นมือ)`, `${topDef(s, sl!).name} devolves (${back.map((c) => ctx.cardName(c)).join(', ')} to the hand)`), p);
     },
   },
   'bosss-orders': {

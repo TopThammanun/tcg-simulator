@@ -13,6 +13,7 @@ import {
   checkKOs,
   cleanConditions,
   endTurn,
+  energyFrom,
   retreatCost,
   slotsWithAbility,
   stadiumIs,
@@ -235,6 +236,9 @@ export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string
   'gladions-final-battle': () => tx('ต้องเป็นการ์ดใบเดียวที่เหลือในมือ', 'It must be the only card left in your hand'),
   'lanas-aid': () => tx('ไม่มี Pokémon (ที่ไม่มี Rule Box) หรือพลังงานพื้นฐานในกองทิ้ง', 'No Pokémon without a Rule Box or Basic Energy in your discard pile'),
   surfer: () => tx('ไม่มี Pokémon บน Bench ให้สลับ', 'No Benched Pokémon to switch with'),
+  'prime-catcher': () => tx('คู่แข่งไม่มี Pokémon บน Bench', 'Your opponent has no Benched Pokémon'),
+  gwynn: () => tx('ไม่มี Pokémon ที่ไม่มี Rule Box ในมือให้ทิ้ง', 'No Pokémon without a Rule Box in your hand to discard'),
+  'strange-timepiece': () => tx('ไม่มี Pokémon ประเภท Psychic ที่วิวัฒนาการแล้ว', 'You have no evolved Psychic Pokémon'),
 };
 
 /** Same as one of legalActions(), treating copies of the same card as equal. */
@@ -328,10 +332,22 @@ function execute(ctx: Ctx, action: Action): void {
     case 'retreat': {
       const active = ps.active!;
       const cost = retreatCost(s, p, active);
-      const paid = ctx.pickCards(p, active.energy, { purpose: 'discard-cost', prompt: tx(`ถอยตัว: ทิ้งพลังงาน ${cost} ใบ`, `Retreat: discard ${cost} Energy`), min: cost, max: cost });
-      for (const e of paid) {
-        active.energy = active.energy.filter((x) => x !== e);
-        ps.discard.push(e);
+      const pay = (paid: CardId[]) => {
+        for (const e of paid) {
+          active.energy = active.energy.filter((x) => x !== e);
+          ps.discard.push(e);
+        }
+      };
+      // An Energy card that provides several Energy (Ignition Energy on an Evolution Pokémon) pays for several: the
+      // cards are then picked one at a time until the cost is paid.
+      if (active.energy.every((e) => energyFrom(s, active, e).length === 1)) {
+        pay(ctx.pickCards(p, active.energy, { purpose: 'discard-cost', prompt: tx(`ถอยตัว: ทิ้งพลังงาน ${cost} ใบ`, `Retreat: discard ${cost} Energy`), min: cost, max: cost }));
+      } else {
+        for (let left = cost; left > 0; ) {
+          const [e] = ctx.pickCards(p, active.energy, { purpose: 'discard-cost', prompt: tx(`ถอยตัว: ทิ้งพลังงาน (เหลือต้องจ่าย ${left})`, `Retreat: discard Energy (${left} left to pay)`), min: 1, max: 1 });
+          left -= energyFrom(s, active, e!).length;
+          pay([e!]);
+        }
       }
       ps.retreated = true;
       ctx.log(tx(`${ctx.who(p)} ถอย ${topDef(s, active).name}`, `${ctx.who(p)} ${verb(ctx.who(p), 'retreat')} ${topDef(s, active).name}`), p);

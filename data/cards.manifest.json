@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T18:29:42.763Z",
+  "generatedAt": "2026-11-24T14:46:22.982Z",
   "cards": {
     "mew-ex": {
       "name": "Mew ex",
@@ -565,6 +565,50 @@
         "CRI-61"
       ]
     },
+    "patrat": {
+      "name": "Patrat",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "J",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 70,
+      "types": [
+        "Colorless"
+      ],
+      "stage": "Basic",
+      "abilities": [
+        {
+          "name": "Watchful Eye",
+          "effect": "Damage counters on each Pokémon (both yours and your opponent's) can't be moved to other Pokémon."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Bite",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "10",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Fighting",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "patrat",
+      "prints": [
+        "CRI-70"
+      ]
+    },
     "special-red-card": {
       "name": "Special Red Card",
       "subtypes": [
@@ -713,6 +757,102 @@
       "key": "team-rockets-watchtower",
       "prints": [
         "DRI-180"
+      ]
+    },
+    "torchic": {
+      "name": "Torchic",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "I",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 70,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Collect",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "",
+          "effect": "Draw a card."
+        },
+        {
+          "name": "Combustion",
+          "cost": [
+            "Fire"
+          ],
+          "damage": "10",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "torchic",
+      "prints": [
+        "DRI-40"
+      ]
+    },
+    "combusken": {
+      "name": "Combusken",
+      "subtypes": [
+        "Stage 1"
+      ],
+      "regulationMark": "I",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 100,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Stage1",
+      "evolvesFrom": "Torchic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Combustion",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "20",
+          "effect": ""
+        },
+        {
+          "name": "Double Kick",
+          "cost": [
+            "Fire",
+            "Colorless"
+          ],
+          "damage": "40×",
+          "effect": "Flip 2 coins. This attack does 40 damage for each heads."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 2,
+      "prizes": 1,
+      "tera": false,
+      "key": "combusken",
+      "prints": [
+        "DRI-41"
       ]
     },
     "zeraora": {
@@ -1029,6 +1169,55 @@
       "key": "ns-pp-up",
       "prints": [
         "JTG-153"
+      ]
+    },
+    "blaziken-ex": {
+      "name": "Blaziken ex",
+      "subtypes": [
+        "Stage 2",
+        "ex"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [
+        "Pokémon ex rule: When your Pokémon ex is Knocked Out, your opponent takes 2 Prize cards."
+      ],
+      "hp": 320,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Stage2",
+      "evolvesFrom": "Combusken",
+      "abilities": [
+        {
+          "name": "Seething Spirit",
+          "effect": "Once during your turn, you may attach a Basic Energy card from your discard pile to 1 of your Pokémon."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Smolder-sault",
+          "cost": [
+            "Fire",
+            "Colorless"
+          ],
+          "damage": "200",
+          "effect": "During your next turn, this Pokémon can't attack."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 2,
+      "prizes": 2,
+      "tera": false,
+      "key": "blaziken-ex",
+      "prints": [
+        "JTG-24"
       ]
     },
     "ns-darumaka": {
@@ -1506,6 +1695,25 @@
         "MEG-127"
       ]
     },
+    "strange-timepiece": {
+      "name": "Strange Timepiece",
+      "subtypes": [
+        "Item"
+      ],
+      "regulationMark": "I",
+      "category": "trainer",
+      "rules": [
+        "Devolve 1 of your evolved Psychic Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.)",
+        "You may play any number of Item cards during your turn."
+      ],
+      "trainerType": "Item",
+      "aceSpec": false,
+      "effect": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.)",
+      "key": "strange-timepiece",
+      "prints": [
+        "MEG-128"
+      ]
+    },
     "switch": {
       "name": "Switch",
       "subtypes": [
@@ -1922,6 +2130,22 @@
       "key": "gladions-final-battle",
       "prints": [
         "PBL-77"
+      ]
+    },
+    "gwynn": {
+      "name": "Gwynn",
+      "subtypes": [
+        "Supporter"
+      ],
+      "regulationMark": "J",
+      "category": "trainer",
+      "rules": [],
+      "trainerType": "Supporter",
+      "aceSpec": false,
+      "effect": "Discard up to 2 Pokémon that don't have a Rule Box from your hand, and draw 3 cards for each card you discarded in this way. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "key": "gwynn",
+      "prints": [
+        "PBL-78"
       ]
     },
     "moltres": {
@@ -2346,6 +2570,162 @@
       "prints": [
         "PRE-27",
         "TWM-64"
+      ]
+    },
+    "duskull": {
+      "name": "Duskull",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 60,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Come and Get You",
+          "cost": [
+            "Psychic"
+          ],
+          "damage": "",
+          "effect": "Put up to 3 Duskull from your discard pile onto your Bench."
+        },
+        {
+          "name": "Mumble",
+          "cost": [
+            "Psychic",
+            "Psychic"
+          ],
+          "damage": "30",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Darkness",
+          "value": "×2"
+        }
+      ],
+      "resistances": [
+        {
+          "type": "Fighting",
+          "value": "-30"
+        }
+      ],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "duskull",
+      "prints": [
+        "PRE-35"
+      ]
+    },
+    "dusclops": {
+      "name": "Dusclops",
+      "subtypes": [
+        "Stage 1"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 90,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Stage1",
+      "evolvesFrom": "Duskull",
+      "abilities": [
+        {
+          "name": "Cursed Blast",
+          "effect": "Once during your turn, you may put 5 damage counters on 1 of your opponent's Pokémon. If you use this Ability, this Pokémon is Knocked Out."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Will-O-Wisp",
+          "cost": [
+            "Psychic",
+            "Psychic"
+          ],
+          "damage": "50",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Darkness",
+          "value": "×2"
+        }
+      ],
+      "resistances": [
+        {
+          "type": "Fighting",
+          "value": "-30"
+        }
+      ],
+      "retreat": 2,
+      "prizes": 1,
+      "tera": false,
+      "key": "dusclops",
+      "prints": [
+        "PRE-36"
+      ]
+    },
+    "dusknoir": {
+      "name": "Dusknoir",
+      "subtypes": [
+        "Stage 2"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 160,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Stage2",
+      "evolvesFrom": "Dusclops",
+      "abilities": [
+        {
+          "name": "Cursed Blast",
+          "effect": "Once during your turn, you may put 13 damage counters on 1 of your opponent's Pokémon. If you use this Ability, this Pokémon is Knocked Out."
+        }
+      ],
+      "attacks": [
+        {
+          "name": "Shadow Bind",
+          "cost": [
+            "Psychic",
+            "Psychic",
+            "Colorless"
+          ],
+          "damage": "150",
+          "effect": "During your opponent's next turn, the Defending Pokémon can't retreat."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Darkness",
+          "value": "×2"
+        }
+      ],
+      "resistances": [
+        {
+          "type": "Fighting",
+          "value": "-30"
+        }
+      ],
+      "retreat": 3,
+      "prizes": 1,
+      "tera": false,
+      "key": "dusknoir",
+      "prints": [
+        "PRE-37"
       ]
     },
     "area-zero-underdepths": {
@@ -2833,6 +3213,24 @@
         "SSP-170"
       ]
     },
+    "dusk-ball": {
+      "name": "Dusk Ball",
+      "subtypes": [
+        "Item"
+      ],
+      "regulationMark": "H",
+      "category": "trainer",
+      "rules": [
+        "You may play any number of Item cards during your turn."
+      ],
+      "trainerType": "Item",
+      "aceSpec": false,
+      "effect": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "key": "dusk-ball",
+      "prints": [
+        "SSP-175"
+      ]
+    },
     "gravity-mountain": {
       "name": "Gravity Mountain",
       "subtypes": [
@@ -3037,6 +3435,53 @@
         "SSP-76"
       ]
     },
+    "dedenne": {
+      "name": "Dedenne",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 70,
+      "types": [
+        "Psychic"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Electromagnetic Sonar",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "",
+          "effect": "Put a Trainer card from your discard pile into your hand."
+        },
+        {
+          "name": "Gnaw",
+          "cost": [
+            "Psychic"
+          ],
+          "damage": "30",
+          "effect": ""
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Metal",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "dedenne",
+      "prints": [
+        "SSP-87"
+      ]
+    },
     "raging-bolt-ex": {
       "name": "Raging Bolt ex",
       "subtypes": [
@@ -3205,6 +3650,26 @@
         "TEF-152"
       ]
     },
+    "prime-catcher": {
+      "name": "Prime Catcher",
+      "subtypes": [
+        "Item",
+        "ACE SPEC"
+      ],
+      "regulationMark": "H",
+      "category": "trainer",
+      "rules": [
+        "You may play any number of Item cards during your turn.",
+        "ACE SPEC: You can't have more than 1 ACE SPEC card in your deck."
+      ],
+      "trainerType": "Item",
+      "aceSpec": true,
+      "effect": "Switch in 1 of your opponent's Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon.",
+      "key": "prime-catcher",
+      "prints": [
+        "TEF-157"
+      ]
+    },
     "mist-energy": {
       "name": "Mist Energy",
       "subtypes": [
@@ -3219,6 +3684,26 @@
       "key": "mist-energy",
       "prints": [
         "TEF-161"
+      ]
+    },
+    "neo-upper-energy": {
+      "name": "Neo Upper Energy",
+      "subtypes": [
+        "Special",
+        "ACE SPEC"
+      ],
+      "regulationMark": "H",
+      "category": "energy",
+      "rules": [
+        "You can't have more than 1 ACE SPEC card in your deck.",
+        "ACE SPEC: You can't have more than 1 ACE SPEC card in your deck."
+      ],
+      "energyType": "Special",
+      "aceSpec": true,
+      "effect": "As long as this card is attached to a Pokémon, it provides {C} Energy.\nIf this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time.",
+      "key": "neo-upper-energy",
+      "prints": [
+        "TEF-162"
       ]
     },
     "rellor": {
@@ -3800,6 +4285,24 @@
         "TWM-150"
       ]
     },
+    "jamming-tower": {
+      "name": "Jamming Tower",
+      "subtypes": [
+        "Stadium"
+      ],
+      "regulationMark": "H",
+      "category": "trainer",
+      "rules": [
+        "You may play only 1 Stadium card during your turn. Put it into the Active Spot, and discard it if another Stadium comes into play. A Stadium with the same name can't be played."
+      ],
+      "trainerType": "Stadium",
+      "aceSpec": false,
+      "effect": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect.",
+      "key": "jamming-tower",
+      "prints": [
+        "TWM-153"
+      ]
+    },
     "kieran": {
       "name": "Kieran",
       "subtypes": [
@@ -4009,6 +4512,54 @@
         "TWM-25"
       ]
     },
+    "chi-yu": {
+      "name": "Chi-Yu",
+      "subtypes": [
+        "Basic"
+      ],
+      "regulationMark": "H",
+      "category": "pokemon",
+      "rules": [],
+      "hp": 110,
+      "types": [
+        "Fire"
+      ],
+      "stage": "Basic",
+      "abilities": [],
+      "attacks": [
+        {
+          "name": "Allure",
+          "cost": [
+            "Colorless"
+          ],
+          "damage": "",
+          "effect": "Draw 2 cards."
+        },
+        {
+          "name": "Ground Melter",
+          "cost": [
+            "Fire",
+            "Colorless"
+          ],
+          "damage": "60+",
+          "effect": "If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium."
+        }
+      ],
+      "weaknesses": [
+        {
+          "type": "Water",
+          "value": "×2"
+        }
+      ],
+      "resistances": [],
+      "retreat": 1,
+      "prizes": 1,
+      "tera": false,
+      "key": "chi-yu",
+      "prints": [
+        "TWM-39"
+      ]
+    },
     "goldeen": {
       "name": "Goldeen",
       "subtypes": [
@@ -4188,6 +4739,22 @@
       "key": "hilda",
       "prints": [
         "WHT-84"
+      ]
+    },
+    "ignition-energy": {
+      "name": "Ignition Energy",
+      "subtypes": [
+        "Special"
+      ],
+      "regulationMark": "I",
+      "category": "energy",
+      "rules": [],
+      "energyType": "Special",
+      "aceSpec": false,
+      "effect": "If this card is attached to 1 of your Pokémon, discard it at the end of your turn.\nAs long as this card is attached to a Pokémon, it provides {C} Energy.\nIf this card is attached to an Evolution Pokémon, it provides {C}{C}{C} Energy instead.",
+      "key": "ignition-energy",
+      "prints": [
+        "WHT-86"
       ]
     }
   },
@@ -4472,6 +5039,20 @@
         "low": "https://assets.tcgdex.net/en/me/me04/061/low.webp"
       }
     },
+    "CRI-70": {
+      "key": "CRI-70",
+      "set": "CRI",
+      "number": "70",
+      "name": "Patrat",
+      "card": "patrat",
+      "tcgdexId": "me04-070",
+      "ptcgioId": "me4-70",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me04/070/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me04/070/low.webp"
+      }
+    },
     "CRI-82": {
       "key": "CRI-82",
       "set": "CRI",
@@ -4540,6 +5121,34 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv10/180/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv10/180/low.webp"
+      }
+    },
+    "DRI-40": {
+      "key": "DRI-40",
+      "set": "DRI",
+      "number": "40",
+      "name": "Torchic",
+      "card": "torchic",
+      "tcgdexId": "sv10-040",
+      "ptcgioId": "sv10-40",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv10/040/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv10/040/low.webp"
+      }
+    },
+    "DRI-41": {
+      "key": "DRI-41",
+      "set": "DRI",
+      "number": "41",
+      "name": "Combusken",
+      "card": "combusken",
+      "tcgdexId": "sv10-041",
+      "ptcgioId": "sv10-41",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv10/041/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv10/041/low.webp"
       }
     },
     "DRI-78": {
@@ -4666,6 +5275,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv09/153/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv09/153/low.webp"
+      }
+    },
+    "JTG-24": {
+      "key": "JTG-24",
+      "set": "JTG",
+      "number": "24",
+      "name": "Blaziken ex",
+      "card": "blaziken-ex",
+      "tcgdexId": "sv09-024",
+      "ptcgioId": "sv9-24",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv09/024/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv09/024/low.webp"
       }
     },
     "JTG-26": {
@@ -5004,6 +5627,20 @@
         "low": "https://assets.tcgdex.net/en/me/me01/127/low.webp"
       }
     },
+    "MEG-128": {
+      "key": "MEG-128",
+      "set": "MEG",
+      "number": "128",
+      "name": "Strange Timepiece",
+      "card": "strange-timepiece",
+      "tcgdexId": "me01-128",
+      "ptcgioId": "me1-128",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me01/128/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me01/128/low.webp"
+      }
+    },
     "MEG-130": {
       "key": "MEG-130",
       "set": "MEG",
@@ -5141,6 +5778,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/me/me05/077/high.webp",
         "low": "https://assets.tcgdex.net/en/me/me05/077/low.webp"
+      }
+    },
+    "PBL-78": {
+      "key": "PBL-78",
+      "set": "PBL",
+      "number": "78",
+      "name": "Gwynn",
+      "card": "gwynn",
+      "tcgdexId": "me05-078",
+      "ptcgioId": "me5-78",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/me/me05/078/high.webp",
+        "low": "https://assets.tcgdex.net/en/me/me05/078/low.webp"
       }
     },
     "PFL-14": {
@@ -5423,6 +6074,48 @@
         "low": "https://assets.tcgdex.net/en/sv/sv06/064/low.webp"
       }
     },
+    "PRE-35": {
+      "key": "PRE-35",
+      "set": "PRE",
+      "number": "35",
+      "name": "Duskull",
+      "card": "duskull",
+      "tcgdexId": "sv08.5-035",
+      "ptcgioId": "sv8pt5-35",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08.5/035/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08.5/035/low.webp"
+      }
+    },
+    "PRE-36": {
+      "key": "PRE-36",
+      "set": "PRE",
+      "number": "36",
+      "name": "Dusclops",
+      "card": "dusclops",
+      "tcgdexId": "sv08.5-036",
+      "ptcgioId": "sv8pt5-36",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08.5/036/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08.5/036/low.webp"
+      }
+    },
+    "PRE-37": {
+      "key": "PRE-37",
+      "set": "PRE",
+      "number": "37",
+      "name": "Dusknoir",
+      "card": "dusknoir",
+      "tcgdexId": "sv08.5-037",
+      "ptcgioId": "sv8pt5-37",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08.5/037/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08.5/037/low.webp"
+      }
+    },
     "PRE-94": {
       "key": "PRE-94",
       "set": "PRE",
@@ -5619,6 +6312,20 @@
         "low": "https://assets.tcgdex.net/en/sv/sv08/170/low.webp"
       }
     },
+    "SSP-175": {
+      "key": "SSP-175",
+      "set": "SSP",
+      "number": "175",
+      "name": "Dusk Ball",
+      "card": "dusk-ball",
+      "tcgdexId": "sv08-175",
+      "ptcgioId": "sv8-175",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08/175/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08/175/low.webp"
+      }
+    },
     "SSP-177": {
       "key": "SSP-177",
       "set": "SSP",
@@ -5701,6 +6408,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv08/076/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv08/076/low.webp"
+      }
+    },
+    "SSP-87": {
+      "key": "SSP-87",
+      "set": "SSP",
+      "number": "87",
+      "name": "Dedenne",
+      "card": "dedenne",
+      "tcgdexId": "sv08-087",
+      "ptcgioId": "sv8-87",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv08/087/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv08/087/low.webp"
       }
     },
     "TEF-123": {
@@ -5787,6 +6508,20 @@
         "low": "https://assets.tcgdex.net/en/sv/sv05/152/low.webp"
       }
     },
+    "TEF-157": {
+      "key": "TEF-157",
+      "set": "TEF",
+      "number": "157",
+      "name": "Prime Catcher",
+      "card": "prime-catcher",
+      "tcgdexId": "sv05-157",
+      "ptcgioId": "sv5-157",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv05/157/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv05/157/low.webp"
+      }
+    },
     "TEF-161": {
       "key": "TEF-161",
       "set": "TEF",
@@ -5799,6 +6534,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv05/161/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv05/161/low.webp"
+      }
+    },
+    "TEF-162": {
+      "key": "TEF-162",
+      "set": "TEF",
+      "number": "162",
+      "name": "Neo Upper Energy",
+      "card": "neo-upper-energy",
+      "tcgdexId": "sv05-162",
+      "ptcgioId": "sv5-162",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv05/162/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv05/162/low.webp"
       }
     },
     "TEF-23": {
@@ -6011,6 +6760,20 @@
         "low": "https://assets.tcgdex.net/en/sv/sv06/150/low.webp"
       }
     },
+    "TWM-153": {
+      "key": "TWM-153",
+      "set": "TWM",
+      "number": "153",
+      "name": "Jamming Tower",
+      "card": "jamming-tower",
+      "tcgdexId": "sv06-153",
+      "ptcgioId": "sv6-153",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/153/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/153/low.webp"
+      }
+    },
     "TWM-154": {
       "key": "TWM-154",
       "set": "TWM",
@@ -6123,6 +6886,20 @@
         "low": "https://assets.tcgdex.net/en/sv/sv06/025/low.webp"
       }
     },
+    "TWM-39": {
+      "key": "TWM-39",
+      "set": "TWM",
+      "number": "39",
+      "name": "Chi-Yu",
+      "card": "chi-yu",
+      "tcgdexId": "sv06-039",
+      "ptcgioId": "sv6-39",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv06/039/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv06/039/low.webp"
+      }
+    },
     "TWM-44": {
       "key": "TWM-44",
       "set": "TWM",
@@ -6191,6 +6968,20 @@
         "source": "tcgdex",
         "high": "https://assets.tcgdex.net/en/sv/sv10.5w/084/high.webp",
         "low": "https://assets.tcgdex.net/en/sv/sv10.5w/084/low.webp"
+      }
+    },
+    "WHT-86": {
+      "key": "WHT-86",
+      "set": "WHT",
+      "number": "86",
+      "name": "Ignition Energy",
+      "card": "ignition-energy",
+      "tcgdexId": "sv10.5w-086",
+      "ptcgioId": "rsv10pt5-86",
+      "image": {
+        "source": "tcgdex",
+        "high": "https://assets.tcgdex.net/en/sv/sv10.5w/086/high.webp",
+        "low": "https://assets.tcgdex.net/en/sv/sv10.5w/086/low.webp"
       }
     }
   }

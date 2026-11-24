@@ -32,13 +32,15 @@
     unseenKeys,
     unseenOptions,
     verify,
+    videoUrl,
+    type PreparedMatch,
     type Transcript,
   } from '../../ui/transcribe';
   import { gamesFile, readGamesFile, type ProMeta } from '../../review/record';
   import Board from '../game/Board.svelte';
   import Button from '../ui/Button.svelte';
 
-  let { decks }: { decks: MetaDeck[] } = $props();
+  let { decks, prepared = [] }: { decks: MetaDeck[]; prepared?: PreparedMatch[] } = $props();
 
   setLang(langOfPath(location.pathname));
 
@@ -60,6 +62,21 @@
   let at = $state('');
   let source = $state<ProMeta['source']>('stream-en');
   let mulligans = $state<[number, number]>([0, 0]);
+  /** A prepared final (data/pro/matches.json) and which of its games. */
+  let preparedId = $state('');
+  let game = $state(1);
+
+  function usePrepared() {
+    const m = prepared.find((x) => x.id === preparedId);
+    if (!m) return;
+    names = [m.players[0], m.players[1]];
+    lists = [m.lists[0], m.lists[1]];
+    event = m.event;
+    round = `${m.round} game ${game}`;
+    video = m.video;
+    at = m.games?.[game - 1] !== undefined ? String(m.games[game - 1]) : '';
+    source = m.source;
+  }
 
   const parsed = $derived(lists.map((text) => fromText(text)));
   /** Each seat's 60 card keys, or what is wrong with its list. */
@@ -106,7 +123,7 @@
   /** Each seat's cards, the player to act first: the hand, and the stand-ins the engine has put in play or discarded. */
   const seats = $derived(
     cur
-      ? ([who, who === 0 ? 1 : 0] as PlayerId[]).map((p) => ({ p, hand: cur!.players[p].hand, ...standInsOf(cur!, p) }))
+      ? ([who, who === 0 ? 1 : 0] as PlayerId[]).map((p) => ({ p, ...standInsOf(cur!, p), hand: cur!.players[p].hand }))
       : [],
   );
   const unseenOpts = $derived(cur ? unseenOptions(cur) : []);
@@ -223,6 +240,22 @@
     {#if resumable}
       <p><Button variant="primary" onclick={resume}>{tx('ถอดต่อเกมที่ค้างไว้', 'Go on with the game in progress')}</Button></p>
     {/if}
+    {#if prepared.length}
+      <div class="prepared">
+        <label class="field">
+          <span class="caption-5">{tx('นัดชิงที่เตรียมลิสต์และคลิปไว้แล้ว', 'A final prepared with its lists and video')}</span>
+          <select bind:value={preparedId}>
+            <option value="">{tx('— เลือกนัด —', '— pick a final —')}</option>
+            {#each prepared as m (m.id)}<option value={m.id}>{m.label}</option>{/each}
+          </select>
+        </label>
+        <label class="field small">
+          <span class="caption-5">{tx('เกมที่', 'Game')}</span>
+          <select bind:value={game}>{#each [1, 2, 3] as g (g)}<option value={g}>{g}</option>{/each}</select>
+        </label>
+        <Button disabled={!preparedId} onclick={usePrepared}>{tx('ใช้นัดนี้', 'Use this final')}</Button>
+      </div>
+    {/if}
     <div class="seats">
       {#each [0, 1] as p (p)}
         <div class="seat">
@@ -267,7 +300,10 @@
     <div class="table"><Board s={cur} targets={new Set()} picks={new Map()} abilities={new Map()} onslot={noop} onzoom={noop} ondiscard={noop} /></div>
     <aside class="panel">
       <header class="head">
-        <p class="caption-5 muted">{t.pro.event}{t.pro.round ? ` · ${t.pro.round}` : ''}</p>
+        <p class="caption-5 muted">
+          {t.pro.event}{t.pro.round ? ` · ${t.pro.round}` : ''}
+          {#if t.pro.video}· <a href={videoUrl(t.pro.video, t.pro.at)} target="_blank" rel="noopener">{tx('เปิดคลิป', 'Open the video')}</a>{/if}
+        </p>
         <p class="body-7">
           <strong>{tx(`เทิร์น ${cur.turn}`, `Turn ${cur.turn}`)}</strong>
           · {t.names[0]} {tx('Prize เหลือ', 'Prizes left')} <span class="mono">{cur.players[0].prizes.length}</span>
@@ -407,6 +443,20 @@
   }
   .sheet h1 {
     margin: 0 0 8px;
+  }
+  .prepared {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .prepared .field {
+    flex: 1 1 320px;
+    margin-bottom: 0;
+  }
+  .prepared .field.small {
+    flex: 0 0 96px;
   }
   .seats,
   .meta {

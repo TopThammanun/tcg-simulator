@@ -5,6 +5,7 @@ import { deckKeys } from '../../engine/db';
 import { langPaths, tFor } from '../../i18n';
 import Base from '../../layouts/Base.astro';
 import { loadDecks, metaDecks } from '../../lib/decks';
+import { preparedMatches } from '../../lib/pro-matches';
 import type { MetaDeck } from '../../ui/decks';
 
 export function getStaticPaths() {
@@ -23,6 +24,6 @@ const decks: MetaDeck[] = metaDecks(await loadDecks()).map((d) => ({
 }));
 ---
 
-<Base title={t('ถอดเกมจริง', 'Transcribe a real game')} description={t('เครื่องมือถอดเกมจากคลิปถ่ายทอดสดเป็นเกมใน engine', 'A tool for entering a broadcast game into the engine move by move')} noindex>
-  <Transcribe client:only="svelte" {decks} />
+<Base title={t('ถอดเกมจริง', 'Transcribe a real game')} description={t('เครื่องมือบันทึกเกมจากคลิปถ่ายทอดสด ลงเกมทีละท่า', 'A tool for entering a broadcast game into the engine move by move')} noindex>
+  <Transcribe client:only="svelte" {decks} prepared={preparedMatches()} />
 </Base>
