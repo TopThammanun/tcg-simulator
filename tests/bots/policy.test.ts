@@ -8,11 +8,12 @@ import { BAGS, GLOB_F, OPT_F, SLOTS, SLOT_F, VOCAB, encode } from '../../src/bot
 import { randomModel, run } from '../../src/bots/learn/model';
 import { actionKey, makeNetBot, recordBot, sureTarget, type Decision, type SearchingBot } from '../../src/bots/learn/netbot';
 import { runStep, sureLine } from '../../src/bots/finisher';
-import { makeSearchNetBot } from '../../src/bots/learn/search';
+import { makeSearchNetBot, morePrizes } from '../../src/bots/learn/search';
 import { planFor } from '../../src/bots/plans';
 import type { Bot } from '../../src/bots/types';
 import { actor, apply, createGame, legalActions } from '../../src/engine/actions';
-import { revealedHand } from '../../src/engine/state';
+import { hpLeft } from '../../src/engine/rules';
+import { revealedHand, topKey } from '../../src/engine/state';
 import type { GameState } from '../../src/engine/types';
 import { playGame } from '../../src/sim/game';
 import { deck, DECK_SLUGS, scenario } from '../engine/helpers';
@@ -246,6 +247,24 @@ describe('what the bot checks before it plays', () => {
     // The benched ex needs all 6 counters for 2 Prizes; each Dreepy needs 2: 3 Prizes.
     const after = apply(s, { t: 'choose', picks: choosePicks(s, s.pending!.request, planFor('dragapult-ex')) });
     expect(6 - after.players[0].prizes.length).toBe(3);
+  });
+
+  it("puts the counters left where the next Phantom Dive Knocks Out, not on an ex it can't reach (2026 Worlds final)", () => {
+    let s = scenario({
+      p0: { active: { card: 'dragapult-ex', under: ['dreepy', 'drakloak'], energy: ['fire-energy', 'psychic-energy'] } },
+      p1: { active: 'fezandipiti-ex', bench: [{ card: 'fezandipiti-ex', damage: 200 }, 'fezandipiti-ex', { card: 'kadabra', under: ['abra'] }] },
+    });
+    s = apply(s, { t: 'attack', name: 'Phantom Dive' });
+    const plan = planFor('dragapult-ex');
+    const after = apply(s, { t: 'choose', picks: choosePicks(s, s.pending!.request, plan) });
+    expect(6 - after.players[0].prizes.length).toBe(2);
+    const bench = after.players[1].bench;
+    expect(bench.find((sl) => topKey(after, sl) === 'fezandipiti-ex')!.damage).toBe(0);
+    expect(hpLeft(after, bench.find((sl) => topKey(after, sl) === 'kadabra')!)).toBeLessThanOrEqual(60);
+    // The game's bot: a spread with the same Prizes now but nothing set up gives way to this one.
+    const [hurt, full] = s.players[1].bench;
+    const lazy = { t: 'choose' as const, picks: [hurt!.uid, ...Array(5).fill(full!.uid)] };
+    expect(morePrizes(s, lazy, plan)).not.toBe(lazy);
   });
 });
 

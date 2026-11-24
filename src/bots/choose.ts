@@ -163,39 +163,65 @@ export function gustTarget(s: GameState, me: PlayerId, options: Slot[], plan: De
 
 /**
  * Damage counters on the opponent's Bench: the Knock Outs that take the most Prizes together (then the most
- * Pokémon, then the fewest counters), every set tried (a Bench is at most 8); the rest on the best Prize value left.
+ * Pokémon, then the fewest counters), every set tried (a Bench is at most 8). The rest go where as many counters
+ * next turn Knock Out the most Prizes (the 2026 finals: five on a Genesect so the next Phantom Dive takes it),
+ * else on the best Prize value left.
  */
 function distributeCounters(s: GameState, targets: Slot[], n: number): number[] {
+  const pool = counterTargets(s, targets);
+  const all = pool.map((sl) => ({ sl, need: Math.ceil(hpLeft(s, sl) / 10), prizes: topDef(s, sl).prizes }));
+  const now = mostPrizes(all.filter((x) => x.need <= n), n);
+  const picks: number[] = [];
+  for (const x of now.set) for (let i = 0; i < x.need; i++) picks.push(x.sl.uid);
+  let left = n - now.used;
+  if (left <= 0) return picks;
+  const remaining = all.filter((x) => !now.set.includes(x));
+  // Each of these needs more than `left` (else it would be a Knock Out now), so none of them falls this turn.
+  const next = mostPrizes(remaining, n + left).set.sort((a, b) => b.prizes - a.prizes || a.need - b.need);
+  for (const x of next) {
+    const k = Math.min(left, x.need - 1);
+    for (let i = 0; i < k; i++) picks.push(x.sl.uid);
+    left -= k;
+  }
+  if (left > 0) {
+    const rest = (remaining.length ? remaining.map((x) => x.sl) : pool)
+      .slice()
+      .sort((a, b) => topDef(s, b).prizes - topDef(s, a).prizes || hpLeft(s, a) - hpLeft(s, b))[0]!;
+    for (let i = 0; i < left; i++) picks.push(rest.uid);
+  }
+  return picks;
+}
+
+/** Counters go where Mist Energy doesn't stop them, when there is such a Pokémon. */
+function counterTargets(s: GameState, targets: Slot[]): Slot[] {
   const usable = targets.filter((sl) => !sl.energy.some((e) => keyOf(s, e) === 'mist-energy'));
-  const pool = usable.length > 0 ? usable : targets;
-  const koable = pool.map((sl) => ({ sl, need: Math.ceil(hpLeft(s, sl) / 10), prizes: topDef(s, sl).prizes })).filter((x) => x.need <= n);
+  return usable.length > 0 ? usable : targets;
+}
+
+/** Prizes `n` damage counters on `player`'s Bench could Knock Out (the most, any spread). */
+export function counterReach(s: GameState, player: PlayerId, n: number): number {
+  const bench = counterTargets(s, s.players[player].bench);
+  return mostPrizes(bench.map((sl) => ({ need: Math.ceil(hpLeft(s, sl) / 10), prizes: topDef(s, sl).prizes })), n).prizes;
+}
+
+/** The Knock Outs within `budget` counters that take the most Prizes together, then the most Pokémon, then the fewest counters. */
+function mostPrizes<T extends { need: number; prizes: number }>(items: T[], budget: number): { set: T[]; used: number; prizes: number } {
   let best = { mask: 0, prizes: 0, kos: 0, used: 0 };
-  for (let mask = 1; mask < 1 << koable.length; mask++) {
+  for (let mask = 1; mask < 1 << items.length; mask++) {
     let prizes = 0;
     let kos = 0;
     let used = 0;
-    koable.forEach((x, i) => {
+    items.forEach((x, i) => {
       if (mask & (1 << i)) {
         prizes += x.prizes;
         kos++;
         used += x.need;
       }
     });
-    if (used > n) continue;
+    if (used > budget) continue;
     if (prizes > best.prizes || (prizes === best.prizes && (kos > best.kos || (kos === best.kos && used < best.used)))) best = { mask, prizes, kos, used };
   }
-  const picks: number[] = [];
-  const chosen = koable.filter((_, i) => best.mask & (1 << i));
-  for (const x of chosen) for (let i = 0; i < x.need; i++) picks.push(x.sl.uid);
-  const left = n - best.used;
-  const remaining = pool.filter((sl) => !chosen.some((x) => x.sl === sl));
-  if (left > 0) {
-    const rest = (remaining.length ? remaining : pool)
-      .slice()
-      .sort((a, b) => topDef(s, b).prizes - topDef(s, a).prizes || hpLeft(s, a) - hpLeft(s, b))[0]!;
-    for (let i = 0; i < left; i++) picks.push(rest.uid);
-  }
-  return picks;
+  return { set: items.filter((_, i) => best.mask & (1 << i)), used: best.used, prizes: best.prizes };
 }
 
 function energyNeedScore(s: GameState, me: PlayerId, key: string, plan: DeckPlan): number {

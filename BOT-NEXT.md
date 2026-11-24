@@ -649,6 +649,42 @@ look-ahead (โหมดหน้าเล่น) เจอ network + เช็�
   หรือตัวตีหลัก (Rellor, Abra) ก่อน ทั้งสองอย่างเป็นการตัดสินของ network ที่ self-play ควรเรียนเอง ถ้าจะเร่งต้องทำตำแหน่งเริ่มเกม
   จากสถานการณ์แบบนี้ (`positions.ts`) ซึ่งต้องจัดสนามเอง
 
+### นัดชิงรายการใหญ่ 6 เดือน (มิ.ย.–พ.ย. 2026): ทำแบบเดียวกับ Chiba
+
+แหล่ง: นัดชิง Masters จากช่อง Play Pokémon และ 【公式】ポケモンカードチャンネル 12 นัด อ่านจากคำบรรยายของ YouTube แบบเดียวกับ Chiba
+รายการ (Limitless): Worlds 2026 (`KQ-32rHXKM8`, 797 คน), NAIC 2026 (`IWA_e9ff_EA`, 3,752), LAIC 2026–27 (`Yk8oyJGco1E`, 2,646),
+PJCS 2026 (`JCICrUZdENE`), CL2027 Yokohama (`ryjEGNLV0D8`), Regionals Indianapolis (`nlj_HY9SoJo`), Turin (`P1gzE_BFuUA`),
+Baltimore (`yCYfZA3AOxQ`), Frankfurt (`SwLR1bs4KF4`), Louisville (`o5Slm-Z8lfY`), Nice (`o-iUyl5ewiI`), Puebla (`bQZCF3_X6KA`,
+บรรยายภาษาสเปน) ส่วน Gdańsk ไม่มีคำบรรยาย อ่านละเอียดทั้งคลิป: Worlds, LAIC, NAIC นอกนั้นอ่านเฉพาะช่วงที่ผู้บรรยายอธิบายการตัดสินใจ
+
+- **meta:** เด็คของบอทอยู่ในนัดชิงเกือบทุกนัด: Worlds = Dragapult ex (Hedrick) ชนะ Alakazam; NAIC = Mega Kangaskhan + Lillie's
+  Clefairy ex + Fezandipiti ex (Kowalski) ชนะ Dragapult/Dusknoir; LAIC = N's Zoroark ex ชนะ Talonflame ex/Dusknoir; Nice =
+  Mega Kangaskhan; Indianapolis, Frankfurt, Louisville มี Dragapult; PJCS และ Yokohama มี Lillie's Clefairy ex + Teal Mask Ogerpon ex
+- **วางตัวนับดาเมจที่เหลือเพื่อ KO เทิร์นหน้า (เห็นใน 3 นัด):** Hedrick (Worlds เกม 1) ตี Fezandipiti ex 200 เหลือ 10 HP วางตัวนับ 1 ตัว
+  ให้ KO แล้ววางอีก 5 ตัวบน Genesect เหลือ 60 HP พอ Phantom Dive ครั้งถัดไปวางตัวนับ 6 ตัวก็ KO ได้ และจบเกมด้วยวิธีนั้นจริง
+  Netty (NAIC) วางตัวนับบน ex ที่มี 210 HP ให้ลงมาอยู่ในระยะของการตี 200 ครั้งถัดไปหลังใช้ Boss's Orders ส่วน Riley (Louisville)
+  สะสมตัวนับบนหลายตัวแล้วเก็บ 3 Prize ในเทิร์นเดียว
+- **ไม่ KO ตัวที่เปิดทางให้คู่แข่ง (เห็นใน 4 นัด และตรงกับนัดชิง Chiba):** การ KO ทำให้คู่แข่งใช้ Flip the Script ของ Fezandipiti ex
+  (จั่ว 3) และ Unfair Stamp ได้ Hedrick เลี่ยงการ KO Fezandipiti ex และ Netty ไม่ใช้ Itchy Pollen เพราะดาเมจ 10 จะทำให้ Phantom Dive
+  ครั้งถัดไป KO Fezandipiti เร็วเกินไป Riley ทั้งเกมเลือกไม่ KO แล้วค่อยเก็บหลาย Prize ทีเดียว ส่วน PJCS ไม่ KO Banette เพราะจะทำให้
+  การ์ดในกองทิ้งที่ใช้เพิ่มดาเมจของคู่แข่งมีมากขึ้น
+- **ไล่ KO ตัวที่กำลังจะวิวัฒนาการ:** Kowalski (NAIC) ใช้ Cruel Arrow ของ Fezandipiti ex (100 ใส่ตัวไหนก็ได้) ยิง Dreepy, Drakloak
+  และ Dusclops ทุกเทิร์น จนฝั่ง Dragapult ขึ้น Dragapult ex ไม่ได้ Hedrick ใช้ Dragon Headbutt KO Abra ตั้งแต่เทิร์น 2
+- **อื่น ๆ:** นับมือของ Alakazam ให้ถึง 16 ใบพอดีเพื่อ KO Dragapult ex (320 HP) และวาง Genesect ที่ติด Tool ไว้กัน ACE SPEC
+  (Unfair Stamp) / ลง Pokémon ลง Bench ให้หมดมือก่อนโดน Unfair Stamp / แบ่ง Energy ไว้บน Drakloak สองตัว ถ้าตัวหนึ่งโดน KO
+  อีกตัวยังตีได้ / Zoroark (LAIC) ใช้ Scratch ของ Zorua ตีเบา ๆ ไว้ก่อน ให้ตีแรงครั้งต่อไป KO ได้ และใช้ Pecharunt ex ตีเมื่อทางหลักถูกตัด /
+  Hedrick เกม 2 ชนะด้วยการให้คู่แข่งจั่วจนกองหมดผ่าน Lucky Helmet ของคู่แข่งเอง
+- **นำมาใช้แล้ว:** `choose.ts distributeCounters` หลังเลือกชุด KO แล้ว ตัวนับที่เหลือจะไปไว้บนชุด Pokémon ที่ตัวนับจำนวนเท่ากัน
+  KO ได้ Prize มากที่สุดในเทิร์นหน้า (ถ้าไม่มี จึงใช้กฎเดิมคือวางบนตัวที่ได้ Prize มากสุด) และ `search.ts morePrizes` ของบอทในเกม
+  เทียบ Prize ที่ได้ก่อน ถ้าเท่ากันจึงดูว่าทางไหนเหลือ Prize ให้ KO ได้ในเทิร์นหน้ามากกว่า (`counterReach`)
+  วัดกับ Dragapult 160 เกม (บอทในเกมเจอ hard bot ทุกเด็ค) มีการเลือกวางตัวนับ 405 ครั้ง ทางของ network กับกฎได้ Prize ในเทิร์นนั้นเท่ากันทุกครั้ง
+  และวางต่างกัน 64 ครั้ง Prize ที่ KO ได้ในเทิร์นหน้า: network 202 กฎใหม่ 268 มี test จำลองตาของ Hedrick
+  อัตราชนะเทียบแบบคู่ (192 เกม deal เดียวกัน เจอ hard bot): เดิม 181 ใหม่ 182 ต่างกันแค่ 3 เกม hard bot อ่อนเกินจะวัดผลต่อการชนะได้
+  บอกได้แค่ว่าไม่แย่ลง
+- **ที่ยังไม่ได้ทำ:** การไม่ KO ที่เปิดทาง (Flip the Script / Unfair Stamp) กับการเลือก KO ตัวที่กำลังจะวิวัฒนาการ ยังเป็นการตัดสินของ
+  network เหมือนที่เขียนไว้ในหัวข้อ Chiba ตอนนี้มีตัวอย่างจากผู้เล่นมากขึ้นแล้ว ทางที่ทำได้คือจัดตำแหน่งเริ่มเกมแบบในคลิปให้ self-play
+  (`positions.ts`) หรือใส่ไว้ในรางวัลของการฝึก
+
 ## แหล่งที่มา
 
 writeup บน Kaggle (อ่านทั้งฉบับ 21 พ.ย. 2026 ด้วยเบราว์เซอร์อัตโนมัติ (Playwright) เพราะหน้าโหลดด้วย JavaScript; รายชื่อผู้ชนะ:

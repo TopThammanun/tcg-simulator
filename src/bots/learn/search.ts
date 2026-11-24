@@ -10,7 +10,7 @@ import { actor, apply } from '../../engine/actions';
 import { opp } from '../../engine/state';
 import type { Action, GameState, PlayerId } from '../../engine/types';
 import { determinize } from '../../engine/view';
-import { choosePicks } from '../choose';
+import { choosePicks, counterReach } from '../choose';
 import { planFinish, runStep, sureLine, type Step } from '../finisher';
 import { P } from '../params';
 import { makeRand } from '../random';
@@ -56,22 +56,29 @@ export const MAX_ROLLOUT_ACTIONS = 200;
 /** Choices whose result shows at once in Prizes: damage counters spread over the Bench, a target for damage. */
 export const PRIZE_CHOICES = new Set(['counters', 'target']);
 
-/** Prizes the chooser takes once `picks` answers the pending choice and the rest of the move plays out (99: the game won). */
+/**
+ * Prizes the chooser takes once `picks` answers the pending choice and the rest of the move plays out (99: the game won),
+ * times 100; for damage counters, plus the Prizes as many counters could Knock Out on that Bench next turn.
+ */
 function prizesAfter(s: GameState, picks: number[], plan: DeckPlan): number {
-  const me = s.pending!.request.player;
+  const req = s.pending!.request;
+  const me = req.player;
   try {
     let st = apply(s, { t: 'choose', picks });
     for (let guard = 0; st.pending && st.winner === null && guard < 30; guard++) st = apply(st, { t: 'choose', picks: choosePicks(st, st.pending.request, plan) });
-    if (st.winner === me) return 99;
-    return s.players[me].prizes.length - st.players[me].prizes.length;
+    if (st.winner === me) return 9900;
+    const reach = req.purpose === 'counters' ? counterReach(st, opp(me), req.max) : 0;
+    return (s.players[me].prizes.length - st.players[me].prizes.length) * 100 + reach;
   } catch {
-    return -1;
+    return -100;
   }
 }
 
 /**
  * The network's answer, unless the rule-based chooser's (exact Knock Out arithmetic) or, for one pick, another
  * option takes more Prizes: the policy sometimes spreads Phantom Dive's counters so that nothing is Knocked Out.
+ * Damage counters: as many Prizes now, and more for the same counters next turn (the rest set up where the next
+ * Phantom Dive Knocks Out, as the 2026 finalists did; the policy's spread did so 202 Prizes to the rule's 268 in 160 games).
  */
 export function morePrizes(s: GameState, net: Action, plan: DeckPlan): Action {
   if (net.t !== 'choose') return net;
