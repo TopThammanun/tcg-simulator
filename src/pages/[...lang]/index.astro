@@ -31,25 +31,25 @@ const artOf = (slug: string) => headlines(decks.find((d) => d.slug === slug)!)[0
 const steps = [
   {
     phase: t('วอร์มอัป', 'Warm up'),
-    title: t('เลือกหรือจัดเด็ค', 'Pick or build a deck'),
+    title: t('เลือกเด็ค หรือจัดเอง', 'Pick or build a deck'),
     text: t(
-      'เลือกเด็คใน meta จัดเด็คเองด้วยการกดเลือกการ์ด หรือวาง list ที่ export จาก Limitless หรือ Pokémon TCG Live แล้วเลือกคู่แข่ง หรือสุ่มตามสัดส่วนที่เจอจริง',
+      'หยิบเด็คจาก meta มาใช้ จัดเด็คเองทีละใบ หรือวางลิสต์ที่ export จาก Limitless หรือ Pokémon TCG Live ก็ได้ แล้วเลือกคู่ซ้อม หรือให้สุ่มตามสัดส่วนเด็คที่เจอในทัวร์จริง',
       'Pick a meta deck, build your own by clicking cards in, or paste a list exported from Limitless or Pokémon TCG Live, then pick an opponent, or let it be drawn by how often each deck is played',
     ),
   },
   {
     phase: t('ลงสนาม', 'Battle'),
-    title: t('เล่นกับ Gym leader', 'Play a gym leader'),
+    title: t('ดวลกับหัวหน้ายิม', 'Play a gym leader'),
     text: t(
-      'เล่นตามกฎ Standard เหมือนที่โต๊ะ ค้นเด็คแล้วเห็นทั้งเด็ค เลือก Prize เอง ไม่มีตัวช่วยหรือย้อนตา',
+      'เล่นตามกฎ Standard เหมือนนั่งอยู่ที่โต๊ะจริง ค้นเด็คก็เห็นทั้งกอง Prize ใบไหนก็เลือกหยิบเอง ไม่มีตัวช่วย ไม่มีขอย้อนตา',
       'Standard rules, as at a real table: a search shows your whole deck, you pick your own Prize cards, and there are no hints or take-backs',
     ),
   },
   {
     phase: t('คูลดาวน์', 'Cool down'),
-    title: t('ทบทวนกับโค้ช', 'Review with the coach'),
+    title: t('รีวิวเกมกับโค้ช', 'Review with the coach'),
     text: t(
-      'ดู win% ทุกเทิร์น เทิร์นที่เกมพลิก บอทจะเล่นต่างจากคุณตรงไหน ทางนั้นได้อะไร และ play around อะไรในเทิร์นหน้า แล้วลองเล่นเทิร์นนั้นใหม่',
+      'ดู win% ทุกเทิร์น รู้ว่าเกมพลิกตอนไหน บอทจะเล่นต่างจากคุณตรงไหน เล่นแบบนั้นแล้วได้อะไร และต้องเผื่อเทิร์นหน้าของอีกฝั่งยังไง จากนั้นลองเล่นเทิร์นนั้นใหม่ได้ทันที',
       'See your win% on every turn, the turn the game turned on, where the bot would have played differently, what that gets you and what it plays around next turn, then play that turn again',
     ),
   },
@@ -59,7 +59,7 @@ const steps = [
 const TAGLINE =
   lang === 'en'
     ? ['Every gym leader plays the same list as the top players,', 'so beat them all here before the real event']
-    : ['Gym leader ทุกคนใช้ list เดียวกับผู้เล่นที่ติดอันดับ', 'ผ่านให้ครบที่นี่ แล้วไปเจอกันในทัวร์จริง'];
+    : ['หัวหน้ายิมทุกคนใช้ลิสต์เดียวกับผู้เล่นท็อปในทัวร์จริง', 'ชนะให้ครบที่นี่ แล้วไปเจอกันที่ทัวร์'];
 const segmenter = new Intl.Segmenter(lang, { granularity: 'word' });
 const taglineWords = TAGLINE.map((line) => {
   const words: string[] = [];
@@ -74,56 +74,56 @@ const faq = [
   {
     q: t('MyTrainerGym คืออะไร', 'What is MyTrainerGym?'),
     a: t(
-      'ยิมซ้อม Pokémon TCG ในเบราว์เซอร์: จัดเด็ค เล่นกับบอทที่ใช้เด็คที่ครอง meta (Gym leader) แล้วทบทวนเกมกับโค้ชที่บอกว่าเทิร์นไหนพลาด ทางที่ดีกว่าได้อะไร และควร play around อะไร ฟรี ไม่ต้องสมัคร',
+      'ยิมซ้อม Pokémon TCG ที่เล่นได้ในเบราว์เซอร์ จัดเด็คของคุณ ดวลกับบอทที่ใช้เด็คตัวท็อปใน meta (หัวหน้ายิม) แล้วรีวิวเกมกับโค้ชที่บอกว่าคุณพลาดเทิร์นไหน เล่นอีกทางจะได้อะไร และควรเผื่ออะไรไว้ ใช้ฟรี ไม่ต้องสมัคร',
       'A Pokémon TCG training gym in your browser: build a deck, battle bots playing the decks that rule the meta (the gym leaders), then review the game with a coach that shows which turns slipped, what the better way gets you and what to play around. Free, no sign-up.',
     ),
   },
   {
-    q: t('เหรียญยิมได้มายังไง', 'How do I earn gym badges?'),
+    q: t('ได้เข็มกลัดยิมยังไง', 'How do I earn gym badges?'),
     a: t(
-      `Gym leader มี ${gyms.length} คน คือเด็คที่ครอง meta ชนะเด็คไหนได้เหรียญของเด็คนั้น เหรียญที่เก็บได้อยู่ในหน้าประวัติเกม`,
+      `หัวหน้ายิมมีทั้งหมด ${gyms.length} คน แต่ละคนคือเด็คตัวท็อปใน meta ชนะเด็คไหนก็ได้เข็มกลัดของเด็คนั้น ดูเข็มกลัดที่สะสมไว้ได้ที่หน้าประวัติเกม`,
       `There are ${gyms.length} gym leaders, the decks that rule the meta. Beat one and you earn its badge; your badge case is on the game history page.`,
     ),
   },
   {
     q: t('ต้องสมัครสมาชิกไหม', 'Do I need an account?'),
     a: t(
-      'ไม่ต้อง เปิดเว็บแล้วเล่นได้เลย เกมที่เล่นจบและ list ของคุณเก็บไว้ในเบราว์เซอร์นี้',
+      'ไม่ต้อง เปิดเว็บแล้วเล่นได้เลย เกมที่เล่นจบและลิสต์ของคุณจะเก็บไว้ในเบราว์เซอร์เครื่องนี้',
       'No. Open the site and play. Your finished games and your lists are kept in this browser.',
     ),
   },
   {
     q: t('เด็คของบอทมาจากไหน', "Where do the bots' decks come from?"),
     a: t(
-      `list จริงจากทัวร์นาเมนต์บน Limitless เลือกเด็คที่มีสัดส่วนสูงสุดใน ${limitless.days} วันล่าสุด จากทัวร์นาเมนต์ที่มีผู้เล่น ${limitless.minPlayers} คนขึ้นไป อัปเดต ${updated}`,
+      `ลิสต์จริงจากทัวร์บน Limitless เราเลือกเด็คที่คนใช้มากที่สุดในช่วง ${limitless.days} วันล่าสุด จากทัวร์ที่มีผู้เล่นตั้งแต่ ${limitless.minPlayers} คนขึ้นไป (อัปเดต ${updated})`,
       `Real lists from tournaments on Limitless: the decks with the largest share in the last ${limitless.days} days, from tournaments with ${limitless.minPlayers} or more players. Updated ${updated}.`,
     ),
   },
   {
     q: t('บอทเล่นเก่งแค่ไหน', 'How well does the bot play?'),
     a: t(
-      'บอทใช้ neural network ที่ฝึกจากการเล่นกับตัวเอง และคิดล่วงหน้าหลายทางก่อนเลือกเล่น บอทไม่เห็นการ์ดที่คุณซ่อนอยู่ คาดเดาจากสิ่งที่เปิดแล้วเท่านั้น',
+      'บอทใช้ neural network ที่ฝึกจากการเล่นกับตัวเอง และคิดล่วงหน้าหลายทางก่อนตัดสินใจ บอทมองไม่เห็นการ์ดที่คุณซ่อนไว้ เดาได้จากการ์ดที่เปิดให้เห็นแล้วเท่านั้น ไม่มีโกง',
       "The bot uses a neural network trained by playing against itself, and looks ahead along several lines before it plays. It can't see your hidden cards: it only guesses from what has been revealed.",
     ),
   },
   {
-    q: t('ใช้ list ของตัวเองได้ไหม', 'Can I use my own list?'),
+    q: t('ใช้ลิสต์ของตัวเองได้ไหม', 'Can I use my own list?'),
     a: t(
-      `ได้ จัดเด็คที่หน้าเด็คแบบเดียวกับตัวจัดเด็คของ Limitless: ค้นการ์ด กดเพื่อเพิ่ม กด − เพื่อเอาออก หรือวาง list ที่ export มา ตอนนี้รองรับการ์ด ${SUPPORTED.length} ใบที่เด็คใน meta ใช้ ถ้ามีใบที่ยังไม่รองรับ เว็บจะบอกว่าใบไหน`,
+      `ได้ จัดเด็คที่หน้าเด็คได้เลย ใช้งานเหมือนตัวจัดเด็คของ Limitless ค้นการ์ด กดเพื่อเพิ่ม กด − เพื่อเอาออก หรือวางลิสต์ที่ export มาก็ได้ ตอนนี้รองรับการ์ด ${SUPPORTED.length} ใบที่เด็คใน meta ใช้ ถ้ามีใบไหนที่ยังไม่รองรับ เว็บจะบอกให้รู้`,
       `Yes. Build it on the decks page the way you would in Limitless's deck builder: search for cards, click to add one, − to take one out, or paste an exported list. The ${SUPPORTED.length} cards the meta decks play are supported; if a card isn't yet, the site tells you which.`,
     ),
   },
   {
     q: t('เล่นบนมือถือได้ไหม', 'Can I play on my phone?'),
     a: t(
-      'ได้ สนามปรับขนาดตามจอ ลากการ์ดหรือแตะเพื่อเล่น และกดค้างที่การ์ดเพื่ออ่าน',
+      'ได้ สนามปรับขนาดตามจอ แตะหรือลากการ์ดเพื่อเล่น กดค้างที่การ์ดเพื่ออ่านรายละเอียด',
       'Yes. The table fits the screen: drag or tap cards to play them, and press and hold a card to read it.',
     ),
   },
   {
-    q: t('win% ในหน้าทบทวนคำนวณยังไง', 'How is the win% in a review worked out?'),
+    q: t('win% ในหน้ารีวิวคิดจากอะไร', 'How is the win% in a review worked out?'),
     a: t(
-      'ประเมินด้วย network ของบอทตัวเดียวกับที่คุณเล่นด้วย เฉลี่ยจากการสุ่มการ์ดที่คุณมองไม่เห็นใหม่หลายแบบ เป็นค่าประมาณสำหรับหาเทิร์นที่ควรดูซ้ำ',
+      'คิดจาก network ตัวเดียวกับบอทที่คุณเล่นด้วย โดยสุ่มการ์ดที่คุณมองไม่เห็นใหม่หลาย ๆ แบบแล้วหาค่าเฉลี่ย ตัวเลขนี้เป็นค่าประมาณ เอาไว้หาเทิร์นที่ควรกลับไปดูอีกรอบ',
       "By the same bot network you played against, averaged over many re-deals of the cards you couldn't see. It's an estimate, for finding the turns worth a second look.",
     ),
   },
@@ -131,14 +131,14 @@ const faq = [
 ---
 
 <Base
-  title={t('ยิมซ้อม Pokémon TCG ซ้อม matchup กับบอท AI', 'Pokémon TCG training gym: practise matchups against AI bots')}
+  title={t('ยิมซ้อม Pokémon TCG ฝึก matchup กับบอท AI', 'Pokémon TCG training gym: practise matchups against AI bots')}
   words={t('ยิมซ้อม Pokémon TCG,จำลองเกมการ์ดโปเกมอน,ซ้อม matchup,บอท AI', 'Pokémon TCG training gym,Pokémon TCG simulator,matchup practice,AI bot').split(',')}
   jsonLd={[
     appLd(
       lang,
       siteUrl(Astro.site),
       t(
-        'ซ้อม matchup Pokémon TCG กับบอท AI ที่ใช้ list เด็ค meta จริง จัดเด็คของคุณเอง แล้วทบทวนเกมด้วย win% ทุกเทิร์น',
+        'ซ้อม matchup Pokémon TCG กับบอท AI ที่ใช้ลิสต์เด็ค meta จริง จัดเด็คของคุณเอง แล้วรีวิวเกมด้วย win% ทุกเทิร์น',
         'Practise Pokémon TCG matchups against AI bots playing real meta decklists, build your own deck, and review every turn with win%.',
       ),
       siteUrl(Astro.site)(shot('board')),
@@ -153,18 +153,18 @@ const faq = [
       <span class="mono">{num(limitless.players)}</span> {t('ผู้เล่น', 'players')} · {t('', 'last')} <span class="mono">{limitless.days}</span> {t('วันล่าสุด', 'days')}
     </p>
     <h1 class="heading-1">
-      {t('ยิมซ้อม Pokémon TCG', 'Your Pokémon TCG gym.')}<br />{t('ท้าชิงเด็คที่ครอง meta', 'Train against the meta.')}
+      {t('ยิมซ้อม Pokémon TCG', 'Your Pokémon TCG gym.')}<br />{t('ท้าดวลเด็คท็อปของ meta', 'Train against the meta.')}
     </h1>
     <p class="sub body-7">
-      {t('เลือกเด็คของคุณหรือจัดเด็คเอง แล้วลงสนามกับบอทที่ใช้ list จริงจากทัวร์นาเมนต์ล่าสุด', 'Pick your deck or build your own, then battle bots running real lists from recent tournaments,')}<br />
-      {t('ตามกฎ Standard ในเบราว์เซอร์ ไม่ต้องสมัคร', 'under Standard rules, in your browser, with no sign-up')}
+      {t('เลือกเด็คที่ชอบหรือจัดเอง แล้วลงสนามกับบอทที่ใช้ลิสต์จริงจากทัวร์ล่าสุด', 'Pick your deck or build your own, then battle bots running real lists from recent tournaments,')}<br />
+      {t('กฎ Standard เล่นในเบราว์เซอร์ได้เลย ไม่ต้องสมัคร', 'under Standard rules, in your browser, with no sign-up')}
     </p>
     <a class="btn primary" href={to('/play/')}>{t('เริ่มซ้อมกับบอท', 'Start training')}</a>
     <figure class="shot">
       <img
         src={shot('board')}
         alt={t(
-          'หน้าจอเกม: สนามของคุณด้านล่าง สนามของบอทด้านบน การ์ดในมือ แถบคำสั่งใต้สนาม และช่องอ่านการ์ดกับ log ด้านขวา',
+          'หน้าจอเกม: สนามของคุณอยู่ด้านล่าง สนามของบอทอยู่ด้านบน มีการ์ดในมือ แถบคำสั่งใต้สนาม และช่องอ่านการ์ดกับบันทึกเกมทางขวา',
           "The game screen: your side below, the bot's above, your hand, the command bar under the table, and the card text and log on the right",
         )}
         width="1440"
@@ -177,18 +177,18 @@ const faq = [
   <section class="section" aria-labelledby="meta-title">
     <header class="section-head reveal">
       <div>
-        <p class="eyebrow">{t('Gym leader', 'Gym leaders')}</p>
-        <h2 id="meta-title" class="heading-3">{t('เด็คที่คุณต้องผ่านให้ได้', 'The decks you have to beat')}</h2>
+        <p class="eyebrow">{t('หัวหน้ายิม', 'Gym leaders')}</p>
+        <h2 id="meta-title" class="heading-3">{t('เด็คที่คุณต้องเอาชนะ', 'The decks you have to beat')}</h2>
         <p class="body-3 muted">
           {
             t(
-              `${gyms.length} เด็คที่ครอง meta บน Limitless ${limitless.days} วันล่าสุด (อัปเดต ${updated}) ชนะเด็คไหนได้เหรียญของเด็คนั้น`,
+              `${gyms.length} เด็คตัวท็อปของ meta บน Limitless ในช่วง ${limitless.days} วันล่าสุด (อัปเดต ${updated}) ชนะเด็คไหนก็ได้เข็มกลัดของเด็คนั้น`,
               `The ${gyms.length} decks that rule the meta on Limitless over the last ${limitless.days} days (updated ${updated}). Beat one to earn its badge.`,
             )
           }
         </p>
       </div>
-      <a class="btn" href={to('/decks/')}>{t('ดู list ทั้งหมด', 'See every list')}</a>
+      <a class="btn" href={to('/decks/')}>{t('ดูลิสต์ทั้งหมด', 'See every list')}</a>
     </header>
     <div class="decks reveal">
       {
@@ -211,7 +211,7 @@ const faq = [
     <header class="section-head reveal">
       <div>
         <p class="eyebrow">{t('โปรแกรมซ้อม', 'Training plan')}</p>
-        <h2 id="how-title" class="heading-3">{t('ซ้อมครบหนึ่งรอบในยิมเดียว', 'One full session, in one gym')}</h2>
+        <h2 id="how-title" class="heading-3">{t('ซ้อมครบ จบในยิมเดียว', 'One full session, in one gym')}</h2>
       </div>
     </header>
     <ol class="steps">
@@ -232,11 +232,11 @@ const faq = [
   <section class="section after" aria-labelledby="after-title">
     <div class="after-text reveal">
       <p class="eyebrow">{t('โค้ชหลังเกม', 'Your coach')}</p>
-      <h2 id="after-title" class="heading-3">{t('หลังทุกเกม โค้ชบอกว่าเทิร์นไหนเกมพลิก', 'After every battle, see the turn it turned on')}</h2>
+      <h2 id="after-title" class="heading-3">{t('จบเกมปุ๊บ โค้ชชี้ให้เห็นว่าเกมพลิกที่เทิร์นไหน', 'After every battle, see the turn it turned on')}</h2>
       <p class="body-3 muted">
         {
           t(
-            'ทุกเทิร์นของคุณถูกวิเคราะห์ในเบราว์เซอร์ กราฟ win% แยกตาคุณกับตาบอท เทิร์นที่ควรดูเปิดบนสนาม เทียบทางที่คุณเล่นกับทางที่บอทจะเล่น พร้อมบอกว่าทางนั้นได้อะไร และ play around อะไรในเทิร์นหน้า',
+            'วิเคราะห์ทุกเทิร์นของคุณในเบราว์เซอร์ มีกราฟ win% แยกตาคุณกับตาบอท เปิดเทิร์นที่ควรดูขึ้นมาบนสนาม เทียบทางที่คุณเล่นกับทางที่บอทจะเล่น บอกว่าเล่นแบบนั้นได้อะไร และเผื่อเทิร์นหน้าของอีกฝั่งไว้แค่ไหน',
             "Every turn of yours is analysed in your browser: a win% chart with your turns and the bot's apart, the turn worth a look on the table, your way next to the bot's, what that way gets you and what it plays around next turn.",
           )
         }
@@ -247,7 +247,7 @@ const faq = [
       <img
         src={shot('review')}
         alt={t(
-          'หน้าทบทวนเกม: ประโยคสรุป สนามของเทิร์นที่ควรดู กราฟ win% และทางที่คุณเล่นเทียบกับทางที่บอทจะเล่น',
+          'หน้ารีวิวเกม: ประโยคสรุปเกม สนามในเทิร์นที่ควรดู กราฟ win% และทางที่คุณเล่นเทียบกับทางที่บอทจะเล่น',
           "A game's review: the summary sentence, the table at the turn worth a look, the win% chart, and your way next to the bot's",
         )}
         width="1216"
@@ -290,7 +290,7 @@ const faq = [
 
   <section class="final reveal" aria-labelledby="final-title">
     <ArenaLines class="final-arena" />
-    <ul class="badges" aria-label={t('เหรียญยิมทั้งหมด', 'Every gym badge')}>
+    <ul class="badges" aria-label={t('เข็มกลัดยิมทั้งหมด', 'Every gym badge')}>
       {
         gyms.map((g) => (
           <li>
@@ -299,8 +299,8 @@ const faq = [
         ))
       }
     </ul>
-    <h2 id="final-title" class="heading-4">{t('พร้อมท้าชิงยิมแรกของคุณ', 'Ready for your first gym battle?')}</h2>
-    <p class="body-3 muted">{t(`เลือกเด็ค เลือก Gym leader แล้วเริ่มได้ทันที เก็บให้ครบ ${gyms.length} เหรียญ`, `Pick a deck and a gym leader and start right away. Collect all ${gyms.length} badges.`)}</p>
+    <h2 id="final-title" class="heading-4">{t('พร้อมท้าดวลยิมแรกหรือยัง', 'Ready for your first gym battle?')}</h2>
+    <p class="body-3 muted">{t(`เลือกเด็ค เลือกหัวหน้ายิม แล้วเริ่มได้ทันที สะสมเข็มกลัดให้ครบ ${gyms.length} อัน`, `Pick a deck and a gym leader and start right away. Collect all ${gyms.length} badges.`)}</p>
     <a class="btn primary" href={to('/play/')}>{t('เริ่มซ้อมกับบอท', 'Start training')}</a>
   </section>
 </Base>

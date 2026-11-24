@@ -80,11 +80,11 @@ export function actionBar(i: BarInput): Bar {
   if (i.confirmNew)
     return {
       kind: 'warn',
-      title: tx('ทิ้งเกมนี้?', 'Leave this game?'),
-      text: tx('เกมที่ยังไม่จบจะไม่ถูกบันทึก', 'An unfinished game is not saved'),
+      title: tx('ออกจากเกมนี้?', 'Leave this game?'),
+      text: tx('เกมนี้ยังไม่จบ ถ้าออกตอนนี้จะไม่ถูกบันทึก', 'An unfinished game is not saved'),
       buttons: [
         { id: 'stay', label: tx('เล่นต่อ', 'Keep playing'), kind: 'default' },
-        { id: 'leave', label: tx('ทิ้งเกม', 'Leave'), kind: 'danger' },
+        { id: 'leave', label: tx('ออกจากเกม', 'Leave'), kind: 'danger' },
       ],
     };
   if (i.myTurn && i.box) {
@@ -120,7 +120,7 @@ export function actionBar(i: BarInput): Bar {
     return {
       kind: 'warn',
       title: tx('ยังโจมตีได้', 'You can still attack'),
-      text: tx(`(${(i.attacksLeft ?? []).join(', ')}) · จบเทิร์นโดยไม่โจมตี?`, `(${(i.attacksLeft ?? []).join(', ')}) · End the turn without attacking?`),
+      text: tx(`ยังใช้ ${(i.attacksLeft ?? []).join(', ')} ได้ · จะจบเทิร์นโดยไม่โจมตีเลยไหม?`, `(${(i.attacksLeft ?? []).join(', ')}) · End the turn without attacking?`),
       buttons: [
         { id: 'back-to-attack', label: tx('กลับไปโจมตี', 'Back to attack'), kind: 'primary' },
         { id: 'end-anyway', label: tx('จบเทิร์นเลย', 'End turn anyway'), kind: 'default', key: 'E' },
@@ -133,10 +133,10 @@ export function actionBar(i: BarInput): Bar {
       kind: 'held',
       title: name,
       text: play
-        ? tx('แตะการ์ดอีกครั้ง หรือกดปุ่มเพื่อใช้ · ลากลงสนามก็ได้', 'Tap the card again or press the button to play it · or drag it onto the table')
+        ? tx('แตะการ์ดอีกครั้งหรือกดปุ่มเพื่อใช้ · จะลากลงสนามก็ได้', 'Tap the card again or press the button to play it · or drag it onto the table')
         : actions?.kind === 'target'
           ? tx('แตะ Pokémon ที่สว่าง หรือลากการ์ดไปวาง', 'Tap a lit Pokémon, or drag the card onto it')
-          : tx(`ใช้ตอนนี้ไม่ได้${why ? `: ${why}` : ''}`, `Can't be played now${why ? `: ${why}` : ''}`),
+          : tx(`ตอนนี้ใช้ไม่ได้${why ? `: ${why}` : ''}`, `Can't be played now${why ? `: ${why}` : ''}`),
       why: !actions,
       buttons: [
         { id: 'cancel', label: tx('ยกเลิก', 'Cancel'), kind: 'default' },

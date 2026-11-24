@@ -43,10 +43,10 @@
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   const points = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(Math.round(d * 100))}`;
   const VERDICT = {
-    'missed-win': { label: tx('✗ พลาดชัด: มีทางชนะ', '✗ Clear slip: a win was there'), cls: 'bad' },
-    'missed-ko': { label: tx('✗ พลาดชัด: มีทาง KO มากกว่า', '✗ Clear slip: a bigger Knock Out was there'), cls: 'bad' },
+    'missed-win': { label: tx('✗ พลาดชัดเจน: มีทางชนะเกม', '✗ Clear slip: a win was there'), cls: 'bad' },
+    'missed-ko': { label: tx('✗ พลาดชัดเจน: มีทาง KO ที่ได้ Prize มากกว่า', '✗ Clear slip: a bigger Knock Out was there'), cls: 'bad' },
     better: { label: tx('▲ น่าจะมีทางที่ดีกว่า', '▲ Likely a better way'), cls: 'warn' },
-    ok: { label: tx('● ไม่พบจุดพลาด', '● No slip found'), cls: 'ok' },
+    ok: { label: tx('● ไม่เจอจุดพลาด', '● No slip found'), cls: 'ok' },
   } as const;
 
   /** The turn shown, by number: the list still grows while the review runs. */
@@ -72,7 +72,7 @@
       ? tx('ชนะเกม', 'Game won')
       : shown.winner !== null
         ? tx('จบเกม', 'Game over')
-        : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`),
+        : tx(`จบเทิร์นแล้ว win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`),
   );
   const hidden = $derived([
     [tx('มือบอท', "Bot's hand"), shown.players[1].hand],
@@ -121,7 +121,7 @@
         </button>
         <strong class="title">{tx('เทิร์น', 'Turn')} {t.turn}</strong>
         <span class={`badge ${VERDICT[t.verdict].cls}`}>{VERDICT[t.verdict].label}</span>
-        <span class="mono win" title={tx('win% ก่อนเทิร์น → หลังเทิร์นที่คุณเล่น', 'Win% before the turn → after the turn you played')}>{pct(t.before)} → {pct(t.win.p)}</span>
+        <span class="mono win" title={tx('win% ก่อนเทิร์น → หลังจบเทิร์นที่คุณเล่น', 'Win% before the turn → after the turn you played')}>{pct(t.before)} → {pct(t.win.p)}</span>
         <span class="turn-nav">
           <button type="button" class="ghost" disabled={index === 0} onclick={() => toTurn(index - 1)}
             >‹ {tx('', 'Previous')}<span class="lw">{tx('เทิร์น', ' turn')}</span>{tx('ก่อน', '')}</button
@@ -133,7 +133,7 @@
       </header>
 
       <div class="stage-box">
-        <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้แบบ', 'See this turn as')}>
+        <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้ในแบบ', 'See this turn as')}>
           <button type="button" role="tab" aria-selected={kind === 'mine'} class:on={kind === 'mine'} onclick={() => pick('mine')}>
             {tx('คุณเล่น', 'You played')} <span class="mono">{pct(t.win.p)}</span>
           </button>
@@ -143,7 +143,7 @@
               <span class="mono diff" class:up={t.alt.diff > 0}>{points(t.alt.diff)}</span>
             </button>
           {:else}
-            <span class="same">{tx('บอทก็เล่นแบบเดียวกัน', 'The bot plays it the same way')}</span>
+            <span class="same">{tx('บอทก็จะเล่นแบบเดียวกับคุณ', 'The bot plays it the same way')}</span>
           {/if}
         </div>
         {#key `${t.turn}:${kind}`}
@@ -161,7 +161,7 @@
     </div>
 
     <aside class="side" aria-label={tx('รายละเอียดเทิร์น', 'The turn')}>
-      <h3>{kind === 'bot' && bot ? tx('บอทจะเล่นแบบนี้', 'The bot would play this') : tx('ที่คุณเล่น', 'What you played')}</h3>
+      <h3>{kind === 'bot' && bot ? tx('บอทจะเล่นแบบนี้', 'The bot would play this') : tx('สิ่งที่คุณเล่น', 'What you played')}</h3>
       <ol class="steps">
         <li class:on={pos === 0}>
           <button type="button" onclick={() => stage?.jump(0)}><span class="no mono">0</span>{tx('ต้นเทิร์น', 'Start of the turn')}</button>
@@ -172,7 +172,7 @@
             {#if k === split}
               <p class="part">
                 {#if kind === 'bot' && bot}
-                  {tx('บอทเล่นต่างจากคุณตรงนี้', 'Here the bot parts from you')}{t.alt?.why ? `: ${t.alt.why}` : ''}
+                  {tx('บอทเริ่มเล่นต่างจากคุณตรงนี้', 'Here the bot parts from you')}{t.alt?.why ? `: ${t.alt.why}` : ''}
                 {:else if bot}
                   {tx('ตรงนี้บอทจะเล่นต่างออกไป', 'Here the bot would play differently')}
                 {/if}
@@ -184,15 +184,14 @@
       </ol>
       {#if bot && t.alt}
         <p class="muted">
-          {kind === 'bot' ? tx('ถ้าเล่นแบบบอท', "The bot's way:") : tx('ถ้าเล่นแบบบอทแทน', "Played the bot's way instead:")} win% {pct(t.alt.win.p)} ({points(t.alt.diff)}
-          {tx('จุดจากที่คุณเล่น', 'points from your way')})
+          {kind === 'bot' ? tx('ถ้าเล่นแบบบอท', "The bot's way:") : tx('ถ้าเล่นแบบบอทแทน', "Played the bot's way instead:")} win% {pct(t.alt.win.p)} ({points(t.alt.diff)}{tx('% เทียบกับที่คุณเล่น', ' points from your way')})
         </p>
       {/if}
       {#if t.missed}
         <p class="bad-text">
           {t.missed.kind === 'win'
-            ? tx('มีทางชนะเกมในเทิร์นนี้', 'There was a way to win the game this turn')
-            : tx(`มีทาง KO ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`, `A Knock Out was there for ${t.missed.prizes} Prize cards (you took ${t.missed.took})`)}:
+            ? tx('เทิร์นนี้มีทางชนะเกม', 'There was a way to win the game this turn')
+            : tx(`มีทาง KO ที่ได้ ${t.missed.prizes} Prize (คุณได้ ${t.missed.took})`, `A Knock Out was there for ${t.missed.prizes} Prize cards (you took ${t.missed.took})`)}:
           {t.missed.line.join(' → ')}
         </p>
       {/if}
@@ -209,7 +208,7 @@
           {/each}
         </div>
       {/if}
-      <p class="muted small">{tx('การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด', 'The cards hidden at the time, all face up')}</p>
+      <p class="muted small">{tx('เปิดดูการ์ดที่ตอนนั้นมองไม่เห็น', 'The cards hidden at the time, all face up')}</p>
       {#each hidden as [label, ids] (label)}
         <h4>{label} ({ids.length})</h4>
         <div class="cards">

@@ -68,9 +68,9 @@
       const cards = deckKeys(p.deck);
       const problems = [
         ...p.unsupported.map((n) => tx(`ยังเล่น ${n} ไม่ได้`, `${n} can't be played yet`)),
-        ...p.ambiguous.map((n) => tx(`${n} มีหลายใบที่ข้อความต่างกัน ใส่ชุดและเลขด้วย`, `${n} names several cards: add its set and number`)),
+        ...p.ambiguous.map((n) => tx(`${n} มีหลายใบที่ข้อความต่างกัน ใส่ชื่อชุดและเลขการ์ดด้วย`, `${n} names several cards: add its set and number`)),
         ...p.unreadable.map((l) => tx(`อ่านไม่ออก: ${l}`, `Can't read: ${l}`)),
-        ...(cards.length && cards.length !== 60 ? [tx(`มี ${cards.length} ใบ (ต้อง 60)`, `${cards.length} cards (60 needed)`)] : []),
+        ...(cards.length && cards.length !== 60 ? [tx(`มี ${cards.length} ใบ (ต้องมี 60 ใบ)`, `${cards.length} cards (60 needed)`)] : []),
       ];
       return { cards, problems };
     }),
@@ -216,7 +216,7 @@
     <h1 class="heading-4">{tx('ถอดเกมจริง', 'Transcribe a real game')}</h1>
     <p class="body-7 muted">
       {tx(
-        'วาง list ของทั้งสองฝั่ง (export จาก Limitless) แล้วเล่นตามคลิปทีละท่า การ์ดที่คลิปไม่ได้เผยจะเป็น "?" จนกว่าจะถูกเล่นหรือเลือก',
+        'วางลิสต์ของทั้งสองฝั่ง (export จาก Limitless) แล้วกดเล่นตามคลิปทีละท่า การ์ดที่คลิปไม่ได้เปิดให้เห็นจะแสดงเป็น "?" จนกว่าจะถูกเล่นหรือถูกเลือก',
         "Paste both lists (Limitless export) and enter the game move by move as the video shows it. A card the video never shows stays a '?' until it is played or picked.",
       )}
     </p>
@@ -244,7 +244,7 @@
               {#each sheets[p]!.problems as pr (pr)}<li>{pr}</li>{/each}
             </ul>
           {:else if sheets[p]!.cards.length === 60}
-            <p class="caption-5 muted">{tx(`60 ใบ · แผนที่ใช้ทบทวน: ${nearestDeck(sheets[p]!.cards, decks).name}`, `60 cards · reviewed as ${nearestDeck(sheets[p]!.cards, decks).name}`)}</p>
+            <p class="caption-5 muted">{tx(`60 ใบ · รีวิวด้วยแผนของ ${nearestDeck(sheets[p]!.cards, decks).name}`, `60 cards · reviewed as ${nearestDeck(sheets[p]!.cards, decks).name}`)}</p>
           {/if}
         </div>
       {/each}
@@ -307,7 +307,7 @@
           <p class="body-7">{req.prompt}</p>
           {#if unseenOpts.length}
             <p class="caption-5">
-              <button type="button" class="row accent" onclick={() => (naming = { among: unseenOpts })}>{tx(`เลือกใบที่ยังไม่เห็น (${unseenOpts.length} ใบ) → ระบุว่าเป็นใบไหน`, `Pick an unseen card (${unseenOpts.length}): say which`)}</button>
+              <button type="button" class="row accent" onclick={() => (naming = { among: unseenOpts })}>{tx(`เลือกใบที่ยังไม่เห็น (${unseenOpts.length} ใบ) แล้วระบุว่าเป็นใบไหน`, `Pick an unseen card (${unseenOpts.length}): say which`)}</button>
             </p>
           {/if}
           <ul class="list">
@@ -352,7 +352,7 @@
           </p>
           {#if seat.play.length || seat.discard.length}
             <p class="caption-5 warn">
-              {tx('ใบที่ engine วางให้โดยยังไม่รู้ว่าใบไหน:', 'Cards the engine placed without knowing which they are:')}
+              {tx('การ์ดที่ระบบวางให้โดยยังไม่รู้ว่าเป็นใบไหน:', 'Cards the engine placed without knowing which they are:')}
               {#each seat.play as c (c)}
                 <button type="button" class="chip unseen" onclick={() => (naming = { card: c })}>{tx('ในสนาม', 'in play')} ?</button>
               {/each}
@@ -372,13 +372,13 @@
       </label>
 
       <div class="tools">
-        <Button size="sm" onclick={() => tryTo(() => undo(t!))} disabled={t.states.length < 2}>{tx('ถอยหนึ่งท่า', 'Undo')}</Button>
+        <Button size="sm" onclick={() => tryTo(() => undo(t!))} disabled={t.states.length < 2}>{tx('ย้อนหนึ่งท่า', 'Undo')}</Button>
         <Button size="sm" onclick={() => (checked = verify(t!))}>{tx('ตรวจเล่นซ้ำ', 'Check replay')}</Button>
         <Button size="sm" variant="primary" onclick={download}>{tx('ดาวน์โหลดเกม', 'Download the game')}</Button>
         <Button size="sm" variant={restartArmed ? 'danger' : 'ghost'} onclick={restart}>{restartArmed ? tx('ทิ้งเกมนี้จริง ๆ', 'Really drop this game') : tx('เริ่มเกมใหม่', 'New game')}</Button>
       </div>
       {#if checked}
-        <p class={['caption-5', checked.length ? 'error' : 'ok']}>{checked.length ? checked.join(' · ') : tx('เล่นซ้ำได้ตรงทุกตำแหน่ง', 'The replay matches every position')}</p>
+        <p class={['caption-5', checked.length ? 'error' : 'ok']}>{checked.length ? checked.join(' · ') : tx('เล่นซ้ำแล้วตรงทุกตำแหน่ง', 'The replay matches every position')}</p>
       {/if}
       <p class="caption-5 muted">{tx(`${t.actions.length} ท่า · เห็นแล้ว ${cur.script?.known.length ?? 0} ใบ`, `${t.actions.length} moves · ${cur.script?.known.length ?? 0} cards seen`)}</p>
     </aside>

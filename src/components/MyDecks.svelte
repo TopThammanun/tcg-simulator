@@ -43,10 +43,10 @@
           <span class="info">
             <strong>{d.name}</strong>
             {#if r.cards}
-              <span class="muted">{tx('เล่นแบบ', 'Plays like')} {near(r.cards).name}</span>
+              <span class="muted">{tx('บอทเล่นแบบ', 'Plays like')} {near(r.cards).name}</span>
             {:else}
               <span class="bad"
-                >{tx('ยังเล่นไม่ได้', 'Not playable yet')}: {r.errors[0]}{r.errors.length > 1 ? tx(` และอีก ${r.errors.length - 1} ข้อ`, ` and ${r.errors.length - 1} more`) : ''}</span
+                >{tx('ยังเล่นไม่ได้', 'Not playable yet')}: {r.errors[0]}{r.errors.length > 1 ? tx(` (และอีก ${r.errors.length - 1} ข้อ)`, ` and ${r.errors.length - 1} more`) : ''}</span
               >
             {/if}
           </span>
@@ -61,13 +61,13 @@
   {:else}
     <p class="empty">
       {tx(
-        'ยังไม่มี จัดเด็คของคุณในตัวจัดเด็ค (ใช้แบบเดียวกับ Limitless: ค้นการ์ดแล้วกด +) หรือนำเข้า list ที่ export มา แล้วเล่นกับบอทด้วยเด็คที่คุณใช้จริง',
+        'ยังไม่มีเด็คเลย ลองจัดเด็คของคุณในหน้าจัดเด็ค (ใช้เหมือน Limitless: ค้นการ์ดแล้วกด +) หรือนำเข้าลิสต์ที่ export มา แล้วลงสนามกับบอทด้วยเด็คที่คุณใช้จริง',
         "None yet. Build yours in the deck builder (it works like Limitless's: search for a card and press +) or import an exported list, then play the bot with the deck you really play.",
       )}
     </p>
   {/if}
   <p class="starts">
-    {tx('หรือเริ่มจาก list ของ:', 'Or start from the list of:')}
+    {tx('หรือเริ่มจากลิสต์ของ:', 'Or start from the list of:')}
     {#each decks as d (d.slug)}<a href={href(`/builder/?from=${d.slug}`)}>{d.name}</a>{/each}
   </p>
 </section>

@@ -426,8 +426,8 @@
   const topLinks = $derived(
     cur && cur.winner !== null
       ? [
-          ...(savedId !== null ? [{ href: href(`/review/?id=${savedId}`), label: tx('ทบทวนเกมนี้', 'Review this game') }] : []),
-          { href: href(`/decks/${botSlug}/`), label: tx(`ดู list ที่บอทใช้ (${botDeck?.name ?? ''})`, `The bot's list (${botDeck?.name ?? ''})`) },
+          ...(savedId !== null ? [{ href: href(`/review/?id=${savedId}`), label: tx('รีวิวเกมนี้', 'Review this game') }] : []),
+          { href: href(`/decks/${botSlug}/`), label: tx(`ดูลิสต์ที่บอทใช้ (${botDeck?.name ?? ''})`, `The bot's list (${botDeck?.name ?? ''})`) },
         ]
       : [],
   );
@@ -595,7 +595,7 @@
     seed = g.seed;
     botSlug = g.opponent;
     minePlan = g.mine ?? 'player';
-    mineName = g.mineName ?? tx('list ของคุณ', 'Your list');
+    mineName = g.mineName ?? tx('ลิสต์ของคุณ', 'Your list');
     gameDecks = g.decks;
     preloadDecks(...g.decks);
     redeals = (g.redeals ?? []).slice();
@@ -616,7 +616,7 @@
   async function resume(id: number, at: number) {
     const g = await getGame(id);
     if (!g) {
-      error = tx('ไม่พบเกมที่บันทึกไว้', 'Saved game not found');
+      error = tx('ไม่เจอเกมที่บันทึกไว้', 'Saved game not found');
       return;
     }
     const all = replay(g);
@@ -624,7 +624,7 @@
     seed = g.seed;
     botSlug = g.opponent;
     minePlan = g.mine ?? 'player';
-    mineName = g.mineName ?? tx('list ของคุณ', 'Your list');
+    mineName = g.mineName ?? tx('ลิสต์ของคุณ', 'Your list');
     gameDecks = g.decks;
     preloadDecks(...g.decks);
     savedId = null;
@@ -822,7 +822,7 @@
         // Ignore an answer for a position that is gone (a new game).
         if (!stale && cur === s) step(a);
       } catch (e) {
-        if (!stale) error = tx(`บอทผิดพลาด: ${(e as Error).message}`, `Bot error: ${(e as Error).message}`);
+        if (!stale) error = tx(`บอทเกิดข้อผิดพลาด: ${(e as Error).message}`, `Bot error: ${(e as Error).message}`);
       }
     }, delay);
     return () => {
@@ -1034,10 +1034,10 @@
       <div class="unfinished" role="region" aria-label={tx('เกมที่ค้างไว้', 'Unfinished game')}>
         <div>
           <strong>{tx('มีเกมที่ค้างไว้', 'You have an unfinished game')}</strong>
-          <span>{tx('เทิร์น', 'Turn')} {unfinished.turn} · {g.mineName ?? tx('list ของคุณ', 'Your list')} vs {g.opponentName}</span>
+          <span>{tx('เทิร์น', 'Turn')} {unfinished.turn} · {g.mineName ?? tx('ลิสต์ของคุณ', 'Your list')} vs {g.opponentName}</span>
         </div>
         <span class="acts">
-          <Button onclick={() => (clearCurrent(), (unfinished = null))}>{tx('ทิ้ง', 'Discard')}</Button>
+          <Button onclick={() => (clearCurrent(), (unfinished = null))}>{tx('ทิ้งเกมนี้', 'Discard')}</Button>
           <Button variant="primary" onclick={() => goOn(unfinished!)}>{tx('เล่นต่อเกมที่ค้างไว้', 'Play it on')}</Button>
         </span>
       </div>
@@ -1060,7 +1060,7 @@
             {#if myDecks.length}
               <optgroup label={tx('เด็คของฉัน', 'My decks')}>
                 {#each choices.filter((c) => c.id.startsWith('my:')) as c}
-                  <option value={c.id} disabled={!c.cards}>{c.name}{c.cards ? '' : tx(' (list ใช้ไม่ได้)', ' (list not playable)')}</option>
+                  <option value={c.id} disabled={!c.cards}>{c.name}{c.cards ? '' : tx(' (ลิสต์นี้ยังเล่นไม่ได้)', ' (list not playable)')}</option>
                 {/each}
               </optgroup>
             {/if}
@@ -1086,19 +1086,19 @@
         <label>
           {tx('คู่แข่ง', 'Opponent')}
           <select bind:value={opponent}>
-            <option value="random">{tx('สุ่มตามสัดส่วนใน meta', 'Random, by meta share')}</option>
+            <option value="random">{tx('สุ่มตามสัดส่วนเด็คใน meta', 'Random, by meta share')}</option>
             {#each decks as d}
               <option value={d.slug}>{d.rank}. {d.name} · {d.metaShare?.toFixed(1)}%</option>
             {/each}
           </select>
         </label>
-        <a class="more" href={href(oppChoice ? `/decks/${oppChoice.slug}/` : '/decks/')}>{tx('ดู list ของบอท', "The bot's list")}</a>
+        <a class="more" href={href(oppChoice ? `/decks/${oppChoice.slug}/` : '/decks/')}>{tx('ดูลิสต์ของบอท', "The bot's list")}</a>
       </div>
     </div>
 
     <div class="prefs">
       <Segmented label={tx('ความเร็วบอท', 'Bot speed')} options={SPEED_OPTIONS} bind:value={speed} />
-      <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} />
+      <Segmented label={tx('ภาพเคลื่อนไหว', 'Animation')} options={ANIM_OPTIONS} bind:value={animLevel} />
       <Button variant="primary" class="start" onclick={() => start()}>{tx('เริ่มเกม', 'Start')}</Button>
     </div>
   </section>
@@ -1111,7 +1111,7 @@
     <div class="rotate" role="status">
       <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="6" width="20" height="36" rx="3" /><path d="M40 20a14 14 0 0 1-6 14M38 34h-4v-4" /></svg>
       <strong>{tx('หมุนจอเป็นแนวตั้งเพื่อเล่น', 'Turn your screen upright to play')}</strong>
-      <span>{tx('จอนี้เตี้ยเกินกว่าจะวางสนามได้ครบ (ถ้าเป็นคอมพิวเตอร์ ขยายหน้าต่างให้สูงขึ้น)', 'This screen is too short for the whole table (on a computer, make the window taller)')}</span>
+      <span>{tx('จอนี้เตี้ยเกินไป วางสนามได้ไม่ครบ (ถ้าใช้คอมพิวเตอร์ ลองขยายหน้าต่างให้สูงขึ้น)', 'This screen is too short for the whole table (on a computer, make the window taller)')}</span>
     </div>
     <div class="main">
       <TopBar
@@ -1229,23 +1229,23 @@
         <Button wide onclick={() => ((howto = true), (menuOpen = false))}>{tx('วิธีเล่น', 'How to play')}</Button>
       </div>
       <Segmented label={tx('ความเร็วบอท', 'Bot speed')} options={SPEED_OPTIONS} bind:value={speed} onchange={saveSettings} />
-      <Segmented label="Animation" options={ANIM_OPTIONS} bind:value={animLevel} onchange={saveSettings} />
+      <Segmented label={tx('ภาพเคลื่อนไหว', 'Animation')} options={ANIM_OPTIONS} bind:value={animLevel} onchange={saveSettings} />
       <div class="switches">
         <Switch label={tx('เสียง', 'Sound')} bind:checked={soundOn} onchange={saveSettings} />
         <Switch label={tx('เรียงการ์ดในมือ', 'Sort your hand')} bind:checked={sortHand} onchange={saveSettings} />
       </div>
       <nav class="menu-links" aria-label={tx('ไปหน้าอื่น', 'Other pages')}>
-        <a href={href(`/decks/${botSlug}/`)}>{tx('ดู list ที่บอทใช้', "The bot's list")} ({botDeck?.name ?? ''})</a>
+        <a href={href(`/decks/${botSlug}/`)}>{tx('ดูลิสต์ที่บอทใช้', "The bot's list")} ({botDeck?.name ?? ''})</a>
         <a href={href('/review/')}>{tx('ประวัติเกม', 'Game history')}</a>
         <a href={href('/')}>{tx('กลับหน้าแรก', 'Home')}</a>
       </nav>
-      {#if cur.winner === null && !watch}<p class="menu-note">{tx('เกมที่ยังไม่จบเก็บไว้ในเบราว์เซอร์นี้ ปิดหน้าแล้วกลับมาเล่นต่อได้', 'An unfinished game is kept in this browser: close the page and come back to it later')}</p>{/if}
+      {#if cur.winner === null && !watch}<p class="menu-note">{tx('เกมที่ยังไม่จบจะเก็บไว้ในเบราว์เซอร์นี้ ปิดหน้าไปแล้วกลับมาเล่นต่อได้', 'An unfinished game is kept in this browser: close the page and come back to it later')}</p>{/if}
     </div>
   </Sheet>
 {/if}
 
 {#if recapOpen && recap.length}
-  <Sheet title={tx('บอทเล่นไปเมื่อเทิร์นที่แล้ว', "The bot's last turn")} onclose={() => (recapOpen = false)}>
+  <Sheet title={tx('เทิร์นที่แล้วบอทเล่นอะไรไป', "The bot's last turn")} onclose={() => (recapOpen = false)}>
     <ul class="recap-list" aria-label={tx('เทิร์นที่แล้วของบอท', "The bot's last turn")}>
       {#each recap as line}<li>{line}</li>{/each}
     </ul>
@@ -1312,7 +1312,7 @@
     style:--tilt={`${drag.tilt.toFixed(1)}deg`}
   >
     <div class="ghost-face"><CardFace cardKey={drag.key} /></div>
-    <span class="ghost-label">{drag.over ? drag.drops.get(drag.over)!.label : tx('ลากไปที่ช่องที่ไฮไลต์', 'Drag to a lit spot')}</span>
+    <span class="ghost-label">{drag.over ? drag.drops.get(drag.over)!.label : tx('ลากไปวางที่ช่องที่สว่าง', 'Drag to a lit spot')}</span>
   </div>
 {/if}
 

@@ -32,12 +32,12 @@ describe('the turns worth a look and the sentence', () => {
 
   it('sums the game up in one sentence, with the counts and the widest gap', () => {
     const s = reviewSummary(turns);
-    expect(s.sentence).toBe('เทิร์น 6: มีทาง KO ได้ 2 Prize (คุณได้ 0)');
+    expect(s.sentence).toBe('เทิร์น 6: มีทาง KO ที่ได้ 2 Prize (คุณได้ 0)');
     expect(s.missed).toBe(1);
     expect(s.better).toBe(2);
     expect(s.widest).toEqual({ turn: 4, points: 35 });
-    expect(reviewSummary(turns.filter((t) => t.verdict === 'better')).sentence).toBe('เทิร์น 4: เล่นแบบบอทจะได้ win% 55% แทน 20%');
-    expect(reviewSummary([turn(2, 0.5, 0.5)]).sentence).toMatch(/^ไม่พบจุดที่เสียเปรียบ/);
+    expect(reviewSummary(turns.filter((t) => t.verdict === 'better')).sentence).toBe('เทิร์น 4: ถ้าเล่นแบบบอท win% จะเป็น 55% แทนที่จะเป็น 20%');
+    expect(reviewSummary([turn(2, 0.5, 0.5)]).sentence).toMatch(/^เกมนี้ไม่มีจุดพลาด/);
     expect(reviewSummary([]).sentence).toBe('');
   });
 });

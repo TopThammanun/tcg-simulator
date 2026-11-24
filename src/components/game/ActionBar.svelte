@@ -19,7 +19,7 @@
 >
   <div class="say">
     {#if bar.chips}
-      <span class="uses" aria-label={tx('ใช้ไปแล้วเทิร์นนี้', 'Used this turn')}>
+      <span class="uses" aria-label={tx('เทิร์นนี้ใช้ไปแล้ว', 'Used this turn')}>
         {#each bar.chips as u (u.label)}
           <span class={`use ${u.state}`} title={u.title}>{u.state === 'used' ? '✓ ' : ''}{u.label}</span>
         {/each}

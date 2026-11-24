@@ -8,7 +8,10 @@ the previous phase's gate passes and the user has checked it.
 The site is in two languages: Thai at `/`, English at `/en/` (`src/i18n/`). Every text a player sees is written in
 place, Thai first: `tx('จบเทิร์น', 'End turn')` in the engine, bots, `src/ui` and Svelte, `t(…)` = `tFor(lang)` in Astro
 pages. Never call `tx` at module top level (the language is set at start: `setLang` in each island and worker). Card
-names and card text stay in English in both. The bot must not read its text (labels, prompts): it plays the same in
+names and card text stay in English in both. Thai is written as natural Thai copy, not a word-for-word translation of
+the English: short spoken sentences, the game's terms as Thai players say them (Pokémon, Bench, Prize, KO, Supporter,
+Stadium, Item, Tool in English; ตัวหลัก for the Active Pokémon, พลังงาน, โดน KO, ลิสต์, เด็ค, หัวหน้ายิม for a Gym Leader,
+เข็มกลัดยิม for a badge, รีวิว for the review, win% differences in %, not "จุด"). The bot must not read its text (labels, prompts): it plays the same in
 both languages (`tests/i18n/english.test.ts`).
 
 ## Commands

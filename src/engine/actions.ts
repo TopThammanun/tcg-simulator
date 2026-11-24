@@ -162,7 +162,7 @@ function excitedDive(s: GameState, p: PlayerId, key: string): boolean {
  */
 export function whyNotPlayable(s: GameState, card: CardId): string | null {
   if (s.winner !== null || s.phase !== 'main') return tx('เกมยังไม่เริ่มหรือจบแล้ว', "The game hasn't started or is over");
-  if (s.pending) return tx('ตอบตัวเลือกที่ค้างอยู่ก่อน', 'Answer the open choice first');
+  if (s.pending) return tx('ตอบตัวเลือกที่ค้างอยู่ให้เสร็จก่อน', 'Answer the open choice first');
   const p = s.current;
   const ps = s.players[p];
   if (!ps.hand.includes(card)) return tx('การ์ดไม่ได้อยู่ในมือ', 'The card is not in your hand');
@@ -174,21 +174,21 @@ export function whyNotPlayable(s: GameState, card: CardId): string | null {
     if (d.stage === 'Basic' || excitedDive(s, p, k)) {
       return ps.bench.length < benchLimit(s, p) ? null : tx(`Bench เต็มแล้ว (${benchLimit(s, p)} ตัว)`, `Your Bench is full (${benchLimit(s, p)})`);
     }
-    if (s.turn <= 2) return tx('เทิร์นแรกของแต่ละคนยังวิวัฒนาการไม่ได้', 'No one can evolve on their first turn');
+    if (s.turn <= 2) return tx('เทิร์นแรกของแต่ละฝั่งยังวิวัฒนาการไม่ได้', 'No one can evolve on their first turn');
     if (mine.some((sl) => canEvolve(s, sl, k))) return null;
     const from = pokemon(k).evolvesFrom;
-    if (!from) return tx('ลงจากมือตรงๆ ไม่ได้', "It can't be played straight from your hand");
+    if (!from) return tx('ลงจากมือตรง ๆ ไม่ได้', "It can't be played straight from your hand");
     return mine.some((sl) => topDef(s, sl).name === from)
-      ? tx(`${from} เพิ่งลงสนามหรือเพิ่งวิวัฒนาการเทิร์นนี้ (วิวัฒนาการได้เทิร์นหน้า)`, `${from} came into play or evolved this turn (it can evolve next turn)`)
+      ? tx(`${from} เพิ่งลงสนามหรือเพิ่งวิวัฒนาการในเทิร์นนี้ รอวิวัฒนาการเทิร์นหน้า`, `${from} came into play or evolved this turn (it can evolve next turn)`)
       : tx(`ต้องมี ${from} ในสนามก่อน`, `You need ${from} in play first`);
   }
-  if (aceBlocked && d.aceSpec) return tx('ACE Nullifier ของคู่แข่งห้ามใช้การ์ด ACE SPEC', "Your opponent's ACE Nullifier blocks ACE SPEC cards");
+  if (aceBlocked && d.aceSpec) return tx('ใช้การ์ด ACE SPEC ไม่ได้ เพราะติด ACE Nullifier ของคู่แข่ง', "Your opponent's ACE Nullifier blocks ACE SPEC cards");
   if (d.category === 'energy') return ps.energyAttached ? tx('ติดพลังงานจากมือไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)', 'You already attached an Energy from your hand this turn (1 per turn)') : null;
   if (d.trainerType === 'Tool') return mine.some((sl) => sl.tool === null) ? null : tx('Pokémon ทุกตัวติด Tool อยู่แล้ว', 'All your Pokémon already have a Tool');
-  if (d.trainerType === 'Item' && ps.itemLockTurn === s.turn) return tx('เทิร์นนี้ถูกห้ามใช้ Item', "You can't play Items this turn");
+  if (d.trainerType === 'Item' && ps.itemLockTurn === s.turn) return tx('เทิร์นนี้ใช้ Item ไม่ได้', "You can't play Items this turn");
   if (d.trainerType === 'Supporter') {
     if (ps.supporterPlayed) return tx('เล่น Supporter ไปแล้วเทิร์นนี้ (เทิร์นละ 1 ใบ)', 'You already played a Supporter this turn (1 per turn)');
-    if (s.turn === 1) return tx('คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก', "The player going first can't play a Supporter on their first turn");
+    if (s.turn === 1) return tx('ผู้เล่นที่ได้เริ่มก่อน เล่น Supporter ในเทิร์นแรกไม่ได้', "The player going first can't play a Supporter on their first turn");
   }
   if (d.trainerType === 'Stadium') {
     if (ps.stadiumPlayed) return tx('เล่น Stadium ไปแล้วเทิร์นนี้', 'You already played a Stadium this turn');
@@ -201,7 +201,7 @@ export function whyNotPlayable(s: GameState, card: CardId): string | null {
 
 /** What each Trainer with a condition needs, said when it isn't met (tests/ui/why.test.ts: every one has a line). */
 export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string> = {
-  'ultra-ball': () => tx('ต้องมีการ์ดอื่นในมือให้ทิ้ง 2 ใบ', 'You need 2 other cards in your hand to discard'),
+  'ultra-ball': () => tx('ต้องมีการ์ดใบอื่นในมือให้ทิ้ง 2 ใบ', 'You need 2 other cards in your hand to discard'),
   'buddy-buddy-poffin': () => tx('Bench เต็มแล้ว', 'Your Bench is full'),
   'night-stretcher': () => tx('ไม่มี Pokémon หรือพลังงานพื้นฐานในกองทิ้ง', 'No Pokémon or Basic Energy in your discard pile'),
   'energy-switch': () => tx('ต้องมี Pokémon 2 ตัวขึ้นไป และมีพลังงานพื้นฐานติดอยู่ให้ย้าย', 'You need 2 or more Pokémon and a Basic Energy attached to move'),
@@ -210,12 +210,12 @@ export const TRAINER_NEEDS: Record<string, (s: GameState, p: PlayerId) => string
   'enhanced-hammer': () => tx('Pokémon ของคู่แข่งไม่มีพลังงานพิเศษ', "Your opponent's Pokémon have no Special Energy"),
   'rare-candy': (s) =>
     s.turn <= 2
-      ? tx('เทิร์นแรกของแต่ละคนใช้ไม่ได้', "It can't be used on anyone's first turn")
-      : tx('ไม่มี Basic ในสนามที่มี Stage 2 ของมันอยู่ในมือ', 'No Basic in play whose Stage 2 is in your hand'),
+      ? tx('ใช้ในเทิร์นแรกของแต่ละฝั่งไม่ได้', "It can't be used on anyone's first turn")
+      : tx('ไม่มี Basic ในสนามที่มีร่าง Stage 2 ของมันอยู่ในมือ', 'No Basic in play whose Stage 2 is in your hand'),
   'tool-scrapper': () => tx('ไม่มี Tool ติดอยู่ในสนาม', 'No Tools attached in play'),
   'sacred-ash': () => tx('ไม่มี Pokémon ในกองทิ้ง', 'No Pokémon in your discard pile'),
-  'secret-box': () => tx('ต้องมีการ์ดอื่นในมือให้ทิ้ง 3 ใบ', 'You need 3 other cards in your hand to discard'),
-  'unfair-stamp': () => tx('ใช้ได้เฉพาะเทิร์นหลังจาก Pokémon ของคุณถูก KO', 'Only during a turn right after one of your Pokémon was Knocked Out'),
+  'secret-box': () => tx('ต้องมีการ์ดใบอื่นในมือให้ทิ้ง 3 ใบ', 'You need 3 other cards in your hand to discard'),
+  'unfair-stamp': () => tx('ใช้ได้เฉพาะเทิร์นถัดจากที่ Pokémon ของคุณโดน KO', 'Only during a turn right after one of your Pokémon was Knocked Out'),
   'special-red-card': () => tx('ใช้ได้เมื่อคู่แข่งเหลือ Prize 3 ใบหรือน้อยกว่า', 'Only when your opponent has 3 or fewer Prize cards left'),
   'wondrous-patch': () =>
     tx('ต้องมี Psychic Energy ในกองทิ้ง และ Pokémon ประเภท Psychic บน Bench', 'You need a Psychic Energy in your discard pile and a Psychic Pokémon on your Bench'),
@@ -394,13 +394,13 @@ function setup(ctx: Ctx): void {
   const goFirst =
     ctx.pickOption(
       winner,
-      tx(`${won} ชนะการโยนเหรียญ: ไปก่อนหรือไปหลัง?`, `${won} ${verb(won, 'win')} the coin flip: go first or second?`),
-      [tx('ไปก่อน', 'Go first'), tx('ไปหลัง', 'Go second')],
+      tx(`${won} ชนะการโยนเหรียญ จะเริ่มก่อนหรือเริ่มหลัง?`, `${won} ${verb(won, 'win')} the coin flip: go first or second?`),
+      [tx('เริ่มก่อน', 'Go first'), tx('เริ่มหลัง', 'Go second')],
       undefined,
       'first',
     ) === 0;
   s.first = goFirst ? winner : opp(winner);
-  ctx.log(tx(`${ctx.who(s.first)} ได้เล่นก่อน`, `${ctx.who(s.first)} ${verb(ctx.who(s.first), 'go', 'goes')} first`));
+  ctx.log(tx(`${ctx.who(s.first)} ได้เริ่มก่อน`, `${ctx.who(s.first)} ${verb(ctx.who(s.first), 'go', 'goes')} first`));
 
   for (const p of [0, 1] as const) {
     const ps = ctx.ps(p);
@@ -432,7 +432,7 @@ function setup(ctx: Ctx): void {
     for (const p of [s.first, opp(s.first)] as const) {
       const drawn = mulliganDraw(ctx, p);
       const basics = drawn.filter((c) => isBasicPokemon(keyOf(s, c)));
-      if (basics.length) benchFrom(ctx, p, basics, tx('Basic ที่จั่วเพิ่มจาก mulligan: ลง Bench ตัวไหน', 'Basics drawn for the mulligan: which go onto your Bench?'), 'mulligan');
+      if (basics.length) benchFrom(ctx, p, basics, tx('Basic ที่จั่วเพิ่มเพราะ mulligan: จะลง Bench ตัวไหน', 'Basics drawn for the mulligan: which go onto your Bench?'), 'mulligan');
     }
   }
   for (const p of [0, 1] as const) {
@@ -453,7 +453,7 @@ function mulliganDraw(ctx: Ctx, p: PlayerId): CardId[] {
   if (m === 0) return [];
   const labels = Array.from({ length: m + 1 }, (_, i) => tx(`${i} ใบ`, `${i} ${i === 1 ? 'card' : 'cards'}`));
   const who = ctx.who(opp(p));
-  const prompt = tx(`${who} mulligan ${m} ครั้ง: จั่วเพิ่มกี่ใบ?`, `${who} took ${m} ${m === 1 ? 'mulligan' : 'mulligans'}: how many extra cards to draw?`);
+  const prompt = tx(`${who} mulligan ${m} ครั้ง จะจั่วเพิ่มกี่ใบ?`, `${who} took ${m} ${m === 1 ? 'mulligan' : 'mulligans'}: how many extra cards to draw?`);
   const n = ctx.pickOption(p, prompt, labels, undefined, 'mulligan-draw');
   const ps = ctx.ps(p);
   const drawn = ps.deck.slice(0, n);

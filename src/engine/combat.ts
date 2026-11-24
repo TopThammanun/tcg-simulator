@@ -228,7 +228,7 @@ function resolveAttack(ctx: Ctx, p: PlayerId, attack: Attack): void {
   ctx.log(tx(`${ctx.who(p)}: ${topDef(s, user).name} ใช้ ${attack.name}`, `${ctx.who(p)}: ${topDef(s, user).name} uses ${attack.name}`), p);
   if (user.conditions.includes('confused') && !ctx.flip()) {
     user.damage += 30;
-    ctx.log(tx(`${topDef(s, user).name} สับสน ทำร้ายตัวเอง 30`, `${topDef(s, user).name} is Confused and hurts itself for 30`), p);
+    ctx.log(tx(`${topDef(s, user).name} สับสน เลยโดนดาเมจ 30 เอง`, `${topDef(s, user).name} is Confused and hurts itself for 30`), p);
     checkKOs(ctx);
     return;
   }
@@ -272,7 +272,7 @@ function afterAttack(a: AttackCtx): void {
     if (userInPlay && discard.includes(e)) {
       discard.splice(discard.indexOf(e), 1);
       user.energy.push(e);
-      ctx.log(tx('Boomerang Energy กลับมาติด', 'Boomerang Energy is attached again'));
+      ctx.log(tx('Boomerang Energy กลับมาติดเหมือนเดิม', 'Boomerang Energy is attached again'));
     }
   }
   checkKOs(ctx, a.hits);
@@ -285,7 +285,7 @@ function festivalLead(ctx: Ctx, p: PlayerId, userUid: SlotId): void {
   if (!stadiumIs(s, 'festival-grounds') || !abilityOn(s, user, 'Festival Lead')) return;
   const options = usableAttacks(s, p).filter((x) => x.from === undefined);
   if (options.length === 0) return;
-  const labels = [...options.map((o) => o.attack.name), tx('ไม่โจมตีอีก', 'No more attacks')];
+  const labels = [...options.map((o) => o.attack.name), tx('พอแค่นี้', 'No more attacks')];
   const i = ctx.pickOption(p, tx('Festival Lead: โจมตีอีกครั้ง?', 'Festival Lead: attack again?'), labels, topKey(s, user), 'attack');
   if (i < options.length) resolveAttack(ctx, p, options[i]!.attack);
 }

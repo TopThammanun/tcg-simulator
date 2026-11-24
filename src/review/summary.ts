@@ -37,15 +37,15 @@ export function reviewSummary(turns: readonly TurnReview[]): ReviewSummary {
   const widest = gain ? { turn: gain.turn, points: Math.round(gain.alt!.diff * 100) } : null;
   const top = key[0];
   let sentence = turns.length
-    ? tx('ไม่พบจุดที่เสียเปรียบชัด ๆ ในเกมนี้ ทุกเทิร์นใกล้เคียงกับที่บอทจะเล่น', 'No clear slip in this game: every turn is close to what the bot would play')
+    ? tx('เกมนี้ไม่มีจุดพลาดชัด ๆ ทุกเทิร์นเล่นได้ใกล้เคียงกับบอท', 'No clear slip in this game: every turn is close to what the bot would play')
     : '';
-  if (top?.missed?.kind === 'win') sentence = tx(`เทิร์น ${top.turn}: มีทางชนะเกมในเทิร์นนั้น`, `Turn ${top.turn}: there was a way to win the game that turn`);
+  if (top?.missed?.kind === 'win') sentence = tx(`เทิร์น ${top.turn}: มีทางชนะเกมได้ในเทิร์นนั้น`, `Turn ${top.turn}: there was a way to win the game that turn`);
   else if (top?.missed) sentence = tx(
-      `เทิร์น ${top.turn}: มีทาง KO ได้ ${top.missed.prizes} Prize (คุณได้ ${top.missed.took})`,
+      `เทิร์น ${top.turn}: มีทาง KO ที่ได้ ${top.missed.prizes} Prize (คุณได้ ${top.missed.took})`,
       `Turn ${top.turn}: a Knock Out was there for ${top.missed.prizes} Prize cards (you took ${top.missed.took})`,
     );
   else if (top?.alt) sentence = tx(
-      `เทิร์น ${top.turn}: เล่นแบบบอทจะได้ win% ${pct(top.alt.win.p)} แทน ${pct(top.win.p)}`,
+      `เทิร์น ${top.turn}: ถ้าเล่นแบบบอท win% จะเป็น ${pct(top.alt.win.p)} แทนที่จะเป็น ${pct(top.win.p)}`,
       `Turn ${top.turn}: the bot's way gives a win% of ${pct(top.alt.win.p)} instead of ${pct(top.win.p)}`,
     );
   return { sentence, missed, better, widest };

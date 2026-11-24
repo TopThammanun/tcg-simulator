@@ -31,7 +31,7 @@
       <CardText {cardKey} compact />
     </div>
   {:else}
-    <p class="empty">{tx('ชี้เมาส์ที่การ์ดใบไหนก็ได้เพื่ออ่านข้อความเต็มตรงนี้', 'Point at any card to read its full text here')}</p>
+    <p class="empty">{tx('ชี้เมาส์ที่การ์ดใบไหนก็ได้ ข้อความเต็มจะขึ้นตรงนี้', 'Point at any card to read its full text here')}</p>
   {/if}
 </section>
 

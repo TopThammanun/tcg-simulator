@@ -14,7 +14,7 @@ interface Props {
 const { print, card, count, index = 0 } = Astro.props;
 const src = print.image.source === 'none' ? undefined : print.image.low;
 const t = tFor(langOfPath(Astro.url.pathname));
-const note = !src ? t('ไม่มีรูป', 'No image') : print.image.altOf ? t('รูปจาก print อื่น', 'Image from another print') : undefined;
+const note = !src ? t('ไม่มีรูป', 'No image') : print.image.altOf ? t('ใช้รูปจากการ์ดพิมพ์อื่น', 'Image from another print') : undefined;
 ---
 
 <button
@@ -23,7 +23,7 @@ const note = !src ? t('ไม่มีรูป', 'No image') : print.image.altO
   style={`--i:${index}`}
   data-detail={print.key}
   data-broken={src ? undefined : ''}
-  aria-label={t(`${count} ใบ ${card.name} — ดูรายละเอียด`, `${count} ${card.name} — details`)}
+  aria-label={t(`${card.name} ${count} ใบ (แตะเพื่อดูรายละเอียด)`, `${count} ${card.name} — details`)}
 >
   {
     src && (

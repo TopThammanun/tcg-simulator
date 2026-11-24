@@ -139,8 +139,8 @@
       <div
         class="pile deck"
         class:low={ps.deck.length <= LOW_DECK}
-        title={tx(`การ์ดในเด็ค ${ps.deck.length} ใบ`, `${ps.deck.length} cards in the deck`) +
-          (ps.deck.length <= LOW_DECK ? tx(' · ใกล้หมด: จั่วไม่ได้ตอนต้นเทิร์นเมื่อไหร่ แพ้ทันที', ' · running out: no card to draw at the start of a turn loses the game') : '')}
+        title={tx(`เด็คเหลือ ${ps.deck.length} ใบ`, `${ps.deck.length} cards in the deck`) +
+          (ps.deck.length <= LOW_DECK ? tx(' · ใกล้หมดแล้ว ถ้าต้นเทิร์นไม่มีการ์ดให้จั่ว จะแพ้ทันที', ' · running out: no card to draw at the start of a turn loses the game') : '')}
       >
         <span class="spot" data-zone={`deck-${p}`}>
           {#if ps.deck.length}<span class="stack" style:box-shadow={stackShadow(ps.deck.length)}><CardBack /></span>{/if}
@@ -185,7 +185,7 @@
         {@render slotCard(p, b, false)}
       {/each}
       {#each ghosts as k, i (i)}
-        <button type="button" class="ghost-card" title={tx('แตะเพื่อเอาคืน', 'Tap to take it back')} onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
+        <button type="button" class="ghost-card" title={tx('แตะเพื่อเอากลับเข้ามือ', 'Tap to take it back')} onclick={() => onghost?.(i)}><CardFace cardKey={k} /></button>
       {/each}
       {#each { length: open } as _, i}
         {#if mine && i === 0 && accepts('bench')}
@@ -220,7 +220,7 @@
     </svg>
   </div>
 
-  <div class="their-hand" data-zone="hand-1" title={tx(`มือบอท ${s.players[1].hand.length} ใบ`, `Bot's hand: ${s.players[1].hand.length} cards`)}>
+  <div class="their-hand" data-zone="hand-1" title={tx(`บอทมีการ์ดในมือ ${s.players[1].hand.length} ใบ`, `Bot's hand: ${s.players[1].hand.length} cards`)}>
     <span class="fan">
       {#each { length: Math.min(12, s.players[1].hand.length) } as _, i}
         {@const n = Math.min(12, s.players[1].hand.length)}

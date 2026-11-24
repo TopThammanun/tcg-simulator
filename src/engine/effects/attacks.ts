@@ -33,7 +33,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
   // ---- Mew ex, Abra, Dunsparce: switching ----
   'Teleportation Burst': (a) => {
     a.hit(a.defender, a.base);
-    if (bench(a, 'me').length > 0 && a.ctx.yesNo(a.me, tx('สลับ Mew ex กับ Pokémon บน Bench?', 'Switch Mew ex with a Benched Pokémon?'), 'mew-ex')) {
+    if (bench(a, 'me').length > 0 && a.ctx.yesNo(a.me, tx('จะสลับ Mew ex กับ Pokémon บน Bench ไหม?', 'Switch Mew ex with a Benched Pokémon?'), 'mew-ex')) {
       chooseSwitch(a.ctx, a.me, 'mew-ex');
     }
   },
@@ -157,7 +157,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
 
   // ---- Bench damage and damage counters ----
   'Cruel Arrow': (a) => {
-    const t = a.pickTarget(a.oppSlots(), tx('เลือกเป้า 100 ดาเมจ', 'Choose the target for 100 damage'));
+    const t = a.pickTarget(a.oppSlots(), tx('เลือกเป้าที่จะรับดาเมจ 100', 'Choose the target for 100 damage'));
     a.hit(t ?? null, 100);
   },
   'Twin Shotels': (a) => {
@@ -192,7 +192,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
     a.hit(a.defender, a.base);
     const targets = bench(a, 'opp');
     if (a.user.energy.length < 3 || targets.length === 0) return;
-    if (!a.ctx.yesNo(a.me, tx('สับพลังงาน 3 ใบเข้าเด็ค แล้วยิง Bench 120?', 'Shuffle 3 Energy into your deck to do 120 to a Benched Pokémon?'), 'wellspring-mask-ogerpon-ex')) return;
+    if (!a.ctx.yesNo(a.me, tx('จะสับพลังงาน 3 ใบเข้าเด็ค เพื่อทำดาเมจ 120 ใส่ Pokémon บน Bench ไหม?', 'Shuffle 3 Energy into your deck to do 120 to a Benched Pokémon?'), 'wellspring-mask-ogerpon-ex')) return;
     const picked = a.ctx.pickCards(a.me, a.user.energy, {
       purpose: 'energy',
       prompt: tx('เลือกพลังงาน 3 ใบที่จะสับเข้าเด็ค', 'Choose 3 Energy to shuffle into your deck'),
@@ -229,7 +229,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
   'Metallic Hammer': (a) => {
     const metal = a.user.energy.filter((e) => provides(keyOf(a.s, e)) === 'Metal').slice(0, 3);
     const offered = rulesBefore(a.s, 2) ? metal.length === 3 : true;
-    const more = offered && (metal.length === 0 || a.ctx.yesNo(a.me, tx(`ทิ้งพลังงาน {M} ${metal.length} ใบเพื่อเพิ่ม 150?`, `Discard ${metal.length} {M} Energy for 150 more damage?`), 'metagross'));
+    const more = offered && (metal.length === 0 || a.ctx.yesNo(a.me, tx(`จะทิ้งพลังงาน {M} ${metal.length} ใบ เพื่อเพิ่มดาเมจอีก 150 ไหม?`, `Discard ${metal.length} {M} Energy for 150 more damage?`), 'metagross'));
     if (more && metal.length > 0) a.discardEnergy(a.user, metal);
     a.hit(a.defender, a.base + (more ? 150 : 0));
   },
@@ -319,7 +319,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
     const d = a.defender;
     if (d && !a.blocked(d)) d.damage = Math.max(d.damage, maxHp(a.s, d));
     a.user.damage = Math.max(a.user.damage, maxHp(a.s, a.user));
-    a.ctx.log(tx('Destined Fight: Active ทั้งสองฝั่งถูก Knock Out', 'Destined Fight: both Active Pokémon are Knocked Out'));
+    a.ctx.log(tx('Destined Fight: ตัวหลักของทั้งสองฝั่งโดน KO', 'Destined Fight: both Active Pokémon are Knocked Out'));
   },
   'Ghostly Blow': (a) => {
     a.hit(a.defender, a.base);
@@ -342,7 +342,7 @@ export const ATTACKS: Record<string, AttackImpl> = {
   'Flamebody Cannon': (a) => {
     a.hit(a.defender, a.base);
     a.discardEnergy(a.user, a.user.energy.slice());
-    const t = a.pickTarget(a.s.players[a.opp].bench, tx('Flamebody Cannon: 90 ดาเมจใส่ Pokémon บน Bench ตัวไหน', 'Flamebody Cannon: 90 damage to which Benched Pokémon?'));
+    const t = a.pickTarget(a.s.players[a.opp].bench, tx('Flamebody Cannon: ทำดาเมจ 90 ใส่ Pokémon บน Bench ตัวไหน', 'Flamebody Cannon: 90 damage to which Benched Pokémon?'));
     if (t) a.hit(t, 90, { noWR: true });
   },
   // ---- Talonflame ex ----

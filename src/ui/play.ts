@@ -95,7 +95,7 @@ export function turnUses(s: GameState): TurnUse[] {
     ps.supporterPlayed
       ? { label: 'Supporter', state: 'used', title: tx('เล่น Supporter ไปแล้วเทิร์นนี้', 'Supporter played this turn') }
       : s.turn === 1
-        ? { label: 'Supporter', state: 'barred', title: tx('คนที่ได้เล่นก่อนห้ามเล่น Supporter ในเทิร์นแรก', "The player going first can't play a Supporter on their first turn") }
+        ? { label: 'Supporter', state: 'barred', title: tx('ผู้เล่นที่ได้เริ่มก่อน เล่น Supporter ในเทิร์นแรกไม่ได้', "The player going first can't play a Supporter on their first turn") }
         : { label: 'Supporter', state: 'free', title: tx('ยังเล่น Supporter ได้ 1 ใบ', 'You can still play 1 Supporter') },
     ps.energyAttached
       ? { label: tx('ติดพลังงาน', 'Energy'), state: 'used', title: tx('ติดพลังงานจากมือไปแล้วเทิร์นนี้', 'Energy attached from your hand this turn') }
@@ -111,7 +111,7 @@ export function turnUses(s: GameState): TurnUse[] {
  * bot's turn), the question a box over the table asks, the result, or that an earlier position is shown.
  */
 export function waitingText(s: GameState, o: { watch?: boolean; viewing?: boolean; prompt?: string }): string {
-  if (o.viewing) return tx('กำลังดูสนามย้อนหลัง · กด "กลับไปเกมปัจจุบัน" ที่แถบบน', 'Viewing an earlier position · press "Back to the game" at the top');
+  if (o.viewing) return tx('กำลังดูสนามย้อนหลัง · กด "กลับไปที่เกม" ที่แถบด้านบน', 'Viewing an earlier position · press "Back to the game" at the top');
   if (s.winner !== null) return `${s.winner === 0 ? tx('คุณชนะ', 'You win') : s.winner === 1 ? tx('บอทชนะ', 'Bot wins') : tx('เสมอ', 'Draw')}${s.winReason ? ` · ${s.winReason}` : ''}`;
   if (o.prompt) return o.prompt;
   const last = s.log[s.log.length - 1]?.text;
@@ -127,7 +127,7 @@ export function benchHint(req: ChoiceRequest, picked: number, room: number): str
   const more = Math.min(room, req.options.length) - picked;
   const now =
     picked >= room ? tx('ลง Bench ครบแล้ว', 'Bench full') : more <= 0 ? tx('ไม่มี Basic ในมือแล้ว', 'No Basics left in your hand') : tx(`ลาก Basic ลง Bench ได้อีก ${more} ตัว (หรือแตะการ์ด)`, `Drag up to ${more} more Basics to the Bench (or tap the cards)`);
-  return [req.hint === 'mulligan' ? tx('Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง', "Basics drawn for the opponent's mulligan") : '', now, picked ? tx('แตะตัวบน Bench เพื่อเอาคืน', 'Tap a Benched one to take it back') : '']
+  return [req.hint === 'mulligan' ? tx('Basic ที่จั่วเพิ่มเพราะคู่แข่ง mulligan', "Basics drawn for the opponent's mulligan") : '', now, picked ? tx('แตะตัวบน Bench เพื่อเอากลับเข้ามือ', 'Tap a Benched one to take it back') : '']
     .filter(Boolean)
     .join(' · ');
 }

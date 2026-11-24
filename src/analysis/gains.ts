@@ -97,7 +97,7 @@ export function boardFacts(start: GameState, a: GameState, b: GameState, me: Pla
     const ko = kos.length ? `KO ${kos.join(', ')}: ` : '';
     out.push(
       tx(
-        `${ko}ได้ ${took(a)} Prize (${other} ${took(b)}) เหลืออีก ${pa.prizes.length} ใบก็ชนะ`,
+        `${ko}ได้ ${took(a)} Prize (${other}ได้ ${took(b)}) อีก ${pa.prizes.length} ใบก็ชนะ`,
         `${ko}takes ${took(a)} Prize ${took(a) === 1 ? 'card' : 'cards'} (${other}: ${took(b)}), ${pa.prizes.length} left to win`,
       ),
     );
@@ -111,7 +111,7 @@ export function boardFacts(start: GameState, a: GameState, b: GameState, me: Pla
     const ha = hpLeft(a, sl);
     const hb = hpLeft(b, sb);
     if (hb - ha >= 30)
-      out.push(tx(`${topDef(a, sl).name} ของอีกฝั่งเหลือ ${ha} HP (${other} ${hb}): KO ได้ง่ายขึ้นเทิร์นหน้า`, `Their ${topDef(a, sl).name} is down to ${ha} HP (${other}: ${hb}): easier to Knock Out next turn`));
+      out.push(tx(`${topDef(a, sl).name} ของอีกฝั่งเหลือ ${ha} HP (${other}เหลือ ${hb}) เทิร์นหน้า KO ได้ง่ายขึ้น`, `Their ${topDef(a, sl).name} is down to ${ha} HP (${other}: ${hb}): easier to Knock Out next turn`));
   }
 
   // Attackers set for next turn.
@@ -123,19 +123,19 @@ export function boardFacts(start: GameState, a: GameState, b: GameState, me: Pla
     const name = def(x.key).name;
     out.push(
       x.missing === 0
-        ? tx(`${name} พร้อมใช้ ${x.attack} (~${x.dmg}) เทิร์นหน้า`, `${name} is ready to use ${x.attack} (~${x.dmg}) next turn`)
-        : tx(`${name} ขาดอีกแค่ 1 พลังงานสำหรับ ${x.attack} (~${x.dmg}): ติดเทิร์นหน้าแล้วตีได้เลย`, `${name} is 1 Energy short of ${x.attack} (~${x.dmg}): attach next turn and attack`),
+        ? tx(`${name} พร้อมใช้ ${x.attack} (~${x.dmg}) ในเทิร์นหน้า`, `${name} is ready to use ${x.attack} (~${x.dmg}) next turn`)
+        : tx(`${name} ขาดพลังงานอีกแค่ 1 ใบก็ใช้ ${x.attack} (~${x.dmg}) ได้ ติดเทิร์นหน้าแล้วตีได้เลย`, `${name} is 1 Energy short of ${x.attack} (~${x.dmg}): attach next turn and attack`),
     );
   }
 
   // Pokémon in play (evolved, or on the Bench) that b's way doesn't have.
   const inPlay = (s: GameState) => slotsOf(s.players[me]).map((sl) => topKey(s, sl));
   const more = minus(inPlay(a), inPlay(b));
-  if (more.length) out.push(tx(`มี ${names(more)} บนสนามแล้ว (${other} ไม่มี)`, `${names(more)} in play already (${other}: not yet)`));
+  if (more.length) out.push(tx(`มี ${names(more)} อยู่บนสนามแล้ว (${other}ยังไม่มี)`, `${names(more)} in play already (${other}: not yet)`));
 
   // Energy in play.
   const energy = (s: GameState) => slotsOf(s.players[me]).reduce((n, sl) => n + sl.energy.length, 0);
-  if (energy(a) > energy(b)) out.push(tx(`พลังงานบนสนาม ${energy(a)} ใบ (${other} ${energy(b)})`, `${energy(a)} Energy in play (${other}: ${energy(b)})`));
+  if (energy(a) > energy(b)) out.push(tx(`มีพลังงานบนสนาม ${energy(a)} ใบ (${other}มี ${energy(b)} ใบ)`, `${energy(a)} Energy in play (${other}: ${energy(b)})`));
 
   // Cards kept: what b's way played or discarded this turn that a still holds, and the size of the hand.
   const handKeys = (s: GameState) => s.players[me].hand.map((c) => keyOf(s, c));
@@ -144,18 +144,18 @@ export function boardFacts(start: GameState, a: GameState, b: GameState, me: Pla
     return s.players[me].discard.filter((c) => !was.has(c)).map((c) => keyOf(s, c));
   };
   const kept = minus(handKeys(a), handKeys(b)).filter((k) => spent(b).includes(k) && def(k).category === 'trainer');
-  if (kept.length) out.push(tx(`เก็บ ${names(kept)} ไว้ในมือ (${other} ใช้หรือทิ้งไปแล้ว)`, `Keeps ${names(kept)} in hand (${other}: played or discarded)`));
+  if (kept.length) out.push(tx(`เก็บ ${names(kept)} ไว้ในมือได้ (${other}ใช้หรือทิ้งไปแล้ว)`, `Keeps ${names(kept)} in hand (${other}: played or discarded)`));
   if (pa.hand.length - pb.hand.length >= 2)
-    out.push(tx(`การ์ดในมือ ${pa.hand.length} ใบ (${other} ${pb.hand.length}): มีทรัพยากรไว้เล่นเทิร์นหน้า`, `${pa.hand.length} cards in hand (${other}: ${pb.hand.length}): more to play next turn`));
+    out.push(tx(`มีการ์ดในมือ ${pa.hand.length} ใบ (${other}มี ${pb.hand.length} ใบ) เหลือของไว้เล่นเทิร์นหน้า`, `${pa.hand.length} cards in hand (${other}: ${pb.hand.length}): more to play next turn`));
 
   // Their hand.
   const oa = a.players[o].hand.length;
   const ob = b.players[o].hand.length;
-  if (ob - oa >= 2) out.push(tx(`มืออีกฝั่งเหลือ ${oa} ใบ (${other} ${ob}): มีทางเล่นน้อยลง`, `Their hand is down to ${oa} cards (${other}: ${ob}): fewer ways to play`));
+  if (ob - oa >= 2) out.push(tx(`มือของอีกฝั่งเหลือ ${oa} ใบ (${other}เหลือ ${ob} ใบ) ทางเล่นของเขาน้อยลง`, `Their hand is down to ${oa} cards (${other}: ${ob}): fewer ways to play`));
 
   // Your deck, when it is running low.
   if (pb.deck.length <= 12 && pa.deck.length - pb.deck.length >= 3)
-    out.push(tx(`การ์ดในเด็คเหลือ ${pa.deck.length} ใบ (${other} ${pb.deck.length}): ห่างจากการจั่วหมดเด็ค`, `${pa.deck.length} cards left in your deck (${other}: ${pb.deck.length}): further from decking out`));
+    out.push(tx(`เด็คเหลือ ${pa.deck.length} ใบ (${other}เหลือ ${pb.deck.length} ใบ) ห่างจากการจั่วจนหมดเด็คมากขึ้น`, `${pa.deck.length} cards left in your deck (${other}: ${pb.deck.length}): further from decking out`));
   return out.slice(0, MOST);
 }
 
@@ -163,7 +163,7 @@ export function boardFacts(start: GameState, a: GameState, b: GameState, me: Pla
 export function threatFacts(a: ThreatReport, b: ThreatReport, other: string): string[] {
   const out: string[] = [];
   if (b.winChance - a.winChance >= 0.1)
-    out.push(tx(`อีกฝั่งมีโอกาสชนะในเทิร์นถัดไปแค่ ${pct(a.winChance)} (${other} ${pct(b.winChance)})`, `Their chance to win on their next turn is only ${pct(a.winChance)} (${other}: ${pct(b.winChance)})`));
+    out.push(tx(`เทิร์นหน้าอีกฝั่งมีโอกาสชนะแค่ ${pct(a.winChance)} (${other}มีโอกาส ${pct(b.winChance)})`, `Their chance to win on their next turn is only ${pct(a.winChance)} (${other}: ${pct(b.winChance)})`));
   // Your Pokémon much safer, the most Prizes at stake first.
   const used = new Set<number>();
   const risky = b.slots.filter((x) => x.chance >= 0.3).sort((x, y) => y.chance * y.prizes - x.chance * x.prizes);
@@ -177,18 +177,18 @@ export function threatFacts(a: ThreatReport, b: ThreatReport, other: string): st
     out.push(
       x
         ? tx(
-            `${y.name} (ให้ ${prizes}) มีโอกาสโดน KO ${pct(chance)} (${other} ${pct(y.chance)}${how ? ` ด้วย ${how}` : ''})`,
+            `${y.name} (มีค่า ${prizes}) มีโอกาสโดน KO ${pct(chance)} (${other}โอกาส ${pct(y.chance)}${how ? ` จาก ${how}` : ''})`,
             `${y.name} (worth ${prizes}) is Knocked Out ${pct(chance)} of the time (${other}: ${pct(y.chance)}${how ? `, by ${how}` : ''})`,
           )
         : tx(
-            `ไม่มี ${y.name} (ให้ ${prizes}) บนสนามให้อีกฝั่งเก็บ (${other} โดน KO ${pct(y.chance)}${how ? ` ด้วย ${how}` : ''})`,
+            `ไม่มี ${y.name} (มีค่า ${prizes}) บนสนามให้อีกฝั่งเก็บ (${other}มีโอกาสโดน KO ${pct(y.chance)}${how ? ` จาก ${how}` : ''})`,
             `No ${y.name} (worth ${prizes}) in play for them to take (${other}: Knocked Out ${pct(y.chance)} of the time${how ? `, by ${how}` : ''})`,
           ),
     );
     if (out.length >= 3) break;
   }
   if (b.expected - a.expected >= 0.4 && out.length < 3)
-    out.push(tx(`อีกฝั่งน่าจะได้ Prize ${one(a.expected)} ใบในเทิร์นถัดไป (${other} ${one(b.expected)})`, `They are expected to take ${one(a.expected)} Prize cards on their next turn (${other}: ${one(b.expected)})`));
+    out.push(tx(`เทิร์นหน้าอีกฝั่งน่าจะได้ Prize ${one(a.expected)} ใบ (${other}ราว ${one(b.expected)} ใบ)`, `They are expected to take ${one(a.expected)} Prize cards on their next turn (${other}: ${one(b.expected)})`));
   return out;
 }
 

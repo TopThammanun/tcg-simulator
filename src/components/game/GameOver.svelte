@@ -29,7 +29,7 @@
   } = $props();
 
   const won = $derived(winner === 0);
-  const title = $derived(winner === 'draw' ? tx('เสมอ', 'Draw') : won ? tx('ชนะ', 'You win') : tx('แพ้', 'You lose'));
+  const title = $derived(winner === 'draw' ? tx('เสมอ', 'Draw') : won ? tx('คุณชนะ', 'You win') : tx('คุณแพ้', 'You lose'));
 </script>
 
 <div class="over" class:won class:lost={winner === 1} transition:fade={{ duration: motion(250) }}>
@@ -37,15 +37,15 @@
     <p class="title">{title}</p>
     <p class="reason">{reason}</p>
     <div class="buttons">
-      {#if onagain}<button type="button" class="primary" onclick={onagain}>{tx('เล่นอีกครั้ง (เด็คเดิม)', 'Play again (same decks)')}</button>{/if}
+      {#if onagain}<button type="button" class="primary" onclick={onagain}>{tx('เล่นอีกตา (เด็คเดิม)', 'Play again (same decks)')}</button>{/if}
       <button type="button" class:primary={!onagain} onclick={onnew}>{onagain ? tx('เลือกเด็คใหม่', 'Pick new decks') : tx('เกมใหม่', 'New game')}</button>
-      <button type="button" onclick={onclose}>{tx('ดูสนาม', 'See the table')}</button>
+      <button type="button" onclick={onclose}>{tx('ดูสนามต่อ', 'See the table')}</button>
     </div>
     {#if reviewHref}
-      <a class="review" href={reviewHref}>{tx('ทบทวนเกมนี้', 'Review this game')}</a>
-      <span class="what">{tx('เทิร์นไหนพลาด · win% ทั้งเกม · บอทจะเล่นต่างตรงไหน', "Your slips · win% over the game · where the bot would differ")}</span>
+      <a class="review" href={reviewHref}>{tx('รีวิวเกมนี้', 'Review this game')}</a>
+      <span class="what">{tx('พลาดเทิร์นไหน · win% ตลอดเกม · บอทจะเล่นต่างจากคุณตรงไหน', "Your slips · win% over the game · where the bot would differ")}</span>
     {/if}
-    <a class="list" href={botHref}>{tx(`ดู list ที่บอทใช้ (${botDeck}) →`, `The bot's list (${botDeck}) →`)}</a>
+    <a class="list" href={botHref}>{tx(`ดูลิสต์ที่บอทใช้ (${botDeck}) →`, `The bot's list (${botDeck}) →`)}</a>
   </div>
 </div>
 

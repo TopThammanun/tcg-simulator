@@ -67,14 +67,14 @@ function find(s: GameState, uid: SlotId) {
  * null when it does nothing to the Active.
  */
 export function previewText(p: AttackPreview): string | null {
-  const tags = [p.weak && tx('จุดอ่อน ×2', 'Weakness ×2'), p.resist && tx('ต้านทาน', 'Resistance')].filter(Boolean).join(', ');
+  const tags = [p.weak && tx('จุดอ่อน ×2', 'Weakness ×2'), p.resist && tx('ติดความต้านทาน', 'Resistance')].filter(Boolean).join(', ');
   const range = p.min === p.max ? `${p.min}` : `${p.min}–${p.max}`;
   const t = tags ? ` (${tags})` : '';
   if (p.ko >= 1) return tx(`KO ตัวหลักได้แน่นอน${t}`, `Sure KO of the Active Pokémon${t}`);
   if (p.ko > 0) {
     const pct = Math.min(95, Math.max(5, Math.round(p.ko * 20) * 5));
-    return tx(`KO ตัวหลัก ~${pct}% · ไม่ KO ก็เข้า ${range}${t}`, `KO of the Active Pokémon ~${pct}% · else ${range} damage${t}`);
+    return tx(`โอกาส KO ตัวหลัก ~${pct}% · ถ้าไม่ KO ดาเมจเข้า ${range}${t}`, `KO of the Active Pokémon ~${pct}% · else ${range} damage${t}`);
   }
   if (p.max === 0) return null;
-  return tx(`เข้าตัวหลักจริง ${range}${t}`, `${range} damage to the Active Pokémon${t}`);
+  return tx(`ดาเมจเข้าตัวหลัก ${range}${t}`, `${range} damage to the Active Pokémon${t}`);
 }

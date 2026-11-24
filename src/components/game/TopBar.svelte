@@ -36,7 +36,7 @@
   <IconButton icon="menu" label={tx('เมนูเกม', 'Game menu')} aria-expanded={menuOpen} onclick={onmenu} />
   <strong class:result>{title}</strong>
   {#each sub as s}<span class="opp">{s}</span>{/each}
-  {#if back}<button type="button" class="link" onclick={back}>{tx('กลับไปเกมปัจจุบัน', 'Back to the game')}</button>{/if}
+  {#if back}<button type="button" class="link" onclick={back}>{tx('กลับไปที่เกม', 'Back to the game')}</button>{/if}
   {#each links as l}<a href={l.href}>{l.label} →</a>{/each}
   {#if narrow}
     <span class="right"><IconButton icon="log" label={tx('บันทึกเกม', 'Game log')} aria-expanded={logOpen} onclick={onlog} /></span>

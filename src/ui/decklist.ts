@@ -47,7 +47,7 @@ export function cardFor(e: { name: string; set?: string; number?: string }): Car
 function thai(message: string, shift: number): string {
   const m = message.replace(/^decklist:? ?/, '');
   const line = m.match(/^line (\d+): cannot read "(.*)"$/);
-  if (line) return tx(`บรรทัด ${Number(line[1]) - shift} อ่านไม่ออก: "${line[2]}" (รูปแบบ: จำนวน ชื่อการ์ด ชุด เลข เช่น 4 Dreepy TWM 128)`, `Line ${Number(line[1]) - shift} can't be read: "${line[2]}" (format: count, card name, set, number, e.g. 4 Dreepy TWM 128)`);
+  if (line) return tx(`บรรทัด ${Number(line[1]) - shift} อ่านไม่ออก: "${line[2]}" (รูปแบบที่ถูกคือ จำนวน ชื่อการ์ด ชุด เลข เช่น 4 Dreepy TWM 128)`, `Line ${Number(line[1]) - shift} can't be read: "${line[2]}" (format: count, card name, set, number, e.g. 4 Dreepy TWM 128)`);
   const total = m.match(/^has (\d+) cards, expected (\d+)$/);
   if (total) return tx(`มี ${total[1]} ใบ (ต้องมี ${total[2]} ใบ)`, `${total[1]} cards (${total[2]} needed)`);
   return m;
@@ -74,7 +74,7 @@ export function checkList(text: string): ListCheck {
   for (const e of entries) {
     const card = cardFor(e);
     if (!card || card === 'ambiguous') {
-      if (card === 'ambiguous') errors.push(tx(`${e.name} ${e.set} ${e.number}: มีหลายแบบที่ข้อความต่างกัน ให้ระบุชุดและเลขการ์ด`, `${e.name} ${e.set} ${e.number}: several versions with different text; give the set and card number`));
+      if (card === 'ambiguous') errors.push(tx(`${e.name} ${e.set} ${e.number}: มีหลายเวอร์ชันที่ข้อความต่างกัน ใส่ชื่อชุดและเลขการ์ดด้วย`, `${e.name} ${e.set} ${e.number}: several versions with different text; give the set and card number`));
       else {
         unsupported.push(e.name);
         errors.push(tx(`${e.name}: ยังไม่รองรับ`, `${e.name}: not supported yet`));
@@ -91,12 +91,12 @@ export function checkList(text: string): ListCheck {
     if (c.category === 'energy' && c.energyType === 'Basic') continue;
     counts.set(c.name, (counts.get(c.name) ?? 0) + 1);
   }
-  for (const [name, n] of counts) if (n > 4) errors.push(tx(`${name} มี ${n} ใบ (ชื่อเดียวกันได้ไม่เกิน 4)`, `${n} copies of ${name} (4 at most with the same name)`));
+  for (const [name, n] of counts) if (n > 4) errors.push(tx(`${name} มี ${n} ใบ (การ์ดชื่อเดียวกันใส่ได้ไม่เกิน 4 ใบ)`, `${n} copies of ${name} (4 at most with the same name)`));
   const ace = cards.filter((k) => {
     const c = manifest.cards[k]!;
     return c.category !== 'pokemon' && c.aceSpec;
   }).length;
-  if (ace > 1) errors.push(tx(`มี ACE SPEC ${ace} ใบ (ได้ไม่เกิน 1)`, `${ace} ACE SPEC cards (1 at most)`));
+  if (ace > 1) errors.push(tx(`มี ACE SPEC ${ace} ใบ (ใส่ได้แค่ 1 ใบ)`, `${ace} ACE SPEC cards (1 at most)`));
   if (!cards.some((k) => {
     const c = manifest.cards[k]!;
     return c.category === 'pokemon' && c.stage === 'Basic';

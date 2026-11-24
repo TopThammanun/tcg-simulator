@@ -74,8 +74,8 @@ test('the deck builder works like Limitless: +, right-click, limits, import, und
   // A meta list to start from, an import that names what it left out, and undo.
   await page.locator('.from select').selectOption('basic-box');
   await expect(total).toHaveText('60/60');
-  await expect(page.locator('.deck-bar .state')).toContainText('บอทจะเล่น list นี้แบบ Basic Box');
-  await page.getByRole('button', { name: 'นำเข้า list' }).click();
+  await expect(page.locator('.deck-bar .state')).toContainText('บอทจะเล่นลิสต์นี้แบบ Basic Box');
+  await page.getByRole('button', { name: 'นำเข้าลิสต์' }).click();
   await page.getByRole('textbox', { name: 'decklist' }).fill('4 Dreepy TWM 128\n1 Iono PAL 185');
   await page.getByRole('dialog').getByRole('button', { name: 'นำเข้า', exact: true }).click();
   await expect(total).toHaveText('4/60');
@@ -169,7 +169,7 @@ async function newGame(page: Page) {
 /** The animation setting, from the game menu. */
 async function setAnim(page: Page, level: 'เต็ม' | 'เร็ว' | 'ปิด') {
   const menu = await openMenu(page);
-  await menu.getByRole('radiogroup', { name: 'Animation' }).getByText(level, { exact: true }).click();
+  await menu.getByRole('radiogroup', { name: 'ภาพเคลื่อนไหว' }).getByText(level, { exact: true }).click();
   await menu.getByRole('button', { name: 'ปิด' }).click();
   await expect(menu).toHaveCount(0);
 }
@@ -436,7 +436,7 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await zoomed.getByRole('button', { name: 'ปิด' }).click();
   // A card that can't be played says why, in the dock by your hand.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Unfair Stamp"]') }).click();
-  await expect(page.locator('.dock .why')).toContainText('ถูก KO');
+  await expect(page.locator('.dock .why')).toContainText('โดน KO');
   await page.locator('.dock').getByRole('button', { name: 'ยกเลิก' }).click();
   // A tap shows the card's text, and the dock a button; nothing is played yet.
   await page.locator('.hcard').filter({ has: page.locator('img[alt="Energy Switch"]') }).click();
@@ -472,9 +472,9 @@ test('a hand card is read before it is played; Energy Switch is answered on the 
   await headbutt.getByRole('button').click();
   // The Prize cards come up full screen, face down in their order on the mat.
   const prizePick = page.getByRole('dialog', { name: 'เลือก Prize' });
-  await expect(prizePick).toContainText('Budew ของบอทถูก Knock Out');
-  await expect(prizePick).toContainText('เลือก Prize 1 ใบ');
-  const prizes = prizePick.getByRole('button', { name: /เก็บ Prize ใบที่/ });
+  await expect(prizePick).toContainText('Budew ของบอทโดน KO');
+  await expect(prizePick).toContainText('หยิบ Prize 1 ใบ');
+  const prizes = prizePick.getByRole('button', { name: /หยิบ Prize ใบที่/ });
   await expect(prizes).toHaveCount(6);
   await prizes.nth(3).click();
   await expect.poll(async () => (await state(page)).players[0].prizes.length).toBe(5);
@@ -506,7 +506,7 @@ async function boardStaysPut(page: Page) {
   await expect(page.locator('.cmd')).toContainText('ตาบอท');
   expect(await boardBox(page)).toEqual(mine);
   await newGame(page);
-  await expect(page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' })).toBeVisible();
+  await expect(page.getByRole('alertdialog', { name: 'ออกจากเกมนี้' })).toBeVisible();
   expect(await boardBox(page)).toEqual(mine);
 }
 
@@ -559,7 +559,7 @@ test('the table keeps its place and size from your turn to the bot\'s', async ({
 test('"เกมใหม่" during a game asks first; the game goes on unless you say to leave it', async ({ page }) => {
   await startGame(page, 101);
   const turn = (await state(page)).turn;
-  const ask = page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' });
+  const ask = page.getByRole('alertdialog', { name: 'ออกจากเกมนี้' });
   await newGame(page);
   await expect(ask).toBeVisible();
   await ask.getByRole('button', { name: 'เล่นต่อ' }).click();
@@ -567,7 +567,7 @@ test('"เกมใหม่" during a game asks first; the game goes on unless 
   await expect(page.locator('.board')).toBeVisible();
   expect((await state(page)).turn).toBe(turn);
   await newGame(page);
-  await ask.getByRole('button', { name: 'ทิ้งเกม' }).click();
+  await ask.getByRole('button', { name: 'ออกจากเกม' }).click();
   await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
 });
 
@@ -587,7 +587,7 @@ test('a game left unfinished is kept: after a reload it goes on from the very sa
   expect(after.steps).toBe(before.steps);
   // Leaving it forgets it.
   await newGame(page);
-  await page.getByRole('alertdialog', { name: 'ทิ้งเกมนี้' }).getByRole('button', { name: 'ทิ้งเกม' }).click();
+  await page.getByRole('alertdialog', { name: 'ออกจากเกมนี้' }).getByRole('button', { name: 'ออกจากเกม' }).click();
   await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('button', { name: /เริ่มเกม/ })).toBeVisible();
@@ -602,7 +602,7 @@ test('at the end, "เล่นอีกครั้ง" plays the same two deck
   await page.goto('/play/?watch=1&test=1&speed=0&seed=9&me=basic-box&opp=dragapult-ex');
   const over = page.getByRole('dialog', { name: 'จบเกม' });
   await expect(over).toBeVisible({ timeout: 90_000 });
-  await over.getByRole('button', { name: 'เล่นอีกครั้ง (เด็คเดิม)' }).click();
+  await over.getByRole('button', { name: 'เล่นอีกตา (เด็คเดิม)' }).click();
   await expect(over).toHaveCount(0);
   await expect.poll(async () => (await engineState(page)).turn < 3 && (await engineState(page)).winner === null).toBe(true);
   await expect(page.locator('.status')).toContainText('Dragapult ex');
@@ -613,7 +613,7 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
   await page.goto('/play/?watch=1&test=1&speed=0&seed=7&me=basic-box&opp=dragapult-ex&save=1');
   await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
   // The game-over dialog covers the table; its link opens the review.
-  const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /ทบทวนเกมนี้/ });
+  const link = page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /รีวิวเกมนี้/ });
   await expect(link).toBeVisible();
   const started = Date.now();
   await link.click();
@@ -682,11 +682,11 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
 
   // Deleting it can be undone for a few seconds: it comes back under the same id, its review with it.
   const games = page.locator('.games li');
-  const first = await games.first().getByRole('link', { name: 'ทบทวน' }).getAttribute('href');
+  const first = await games.first().getByRole('link', { name: 'รีวิว' }).getAttribute('href');
   await games.first().getByRole('button', { name: 'ลบ' }).click();
   await expect(games).toHaveCount(0);
   await page.getByRole('status').getByRole('button', { name: 'เลิกทำ' }).click();
-  await expect(games.first().getByRole('link', { name: 'ทบทวน' })).toHaveAttribute('href', first!);
+  await expect(games.first().getByRole('link', { name: 'รีวิว' })).toHaveAttribute('href', first!);
   await page.goto(first!);
   await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 3_000 });
 });
@@ -695,7 +695,7 @@ test('a finished game is saved, reviewed turn by turn in under 30 s, and can be 
 async function reviewedGame(page: Page, me = 'basic-box', opp = 'dragapult-ex') {
   await page.goto(`/play/?watch=1&test=1&speed=0&seed=7&me=${me}&opp=${opp}&save=1`);
   await expect(page.locator('.result')).toBeVisible({ timeout: 90_000 });
-  await page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /ทบทวนเกมนี้/ }).click();
+  await page.getByRole('dialog', { name: 'จบเกม' }).getByRole('link', { name: /รีวิวเกมนี้/ }).click();
   await expect(page.locator('.summary')).toContainText('เทิร์นของคุณ', { timeout: 30_000 });
 }
 
@@ -721,7 +721,7 @@ test.describe('on a phone', () => {
     await reviewedGame(page, 'dragapult-ex', 'basic-box');
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(1850);
     await expect(page.locator('.stage-card')).toHaveCount(0);
-    await page.locator('.turn-detail').getByRole('button', { name: 'ดูรีเพลย์ที่คุณเล่น' }).click();
+    await page.locator('.turn-detail').getByRole('button', { name: 'ดูรีเพลย์ของคุณ' }).click();
     const viewer = page.getByRole('dialog', { name: /รีเพลย์เทิร์น/ });
     await expect(viewer.locator('.board')).toBeVisible();
     await viewer.getByRole('button', { name: 'ถัดไปหนึ่งขั้น' }).click();

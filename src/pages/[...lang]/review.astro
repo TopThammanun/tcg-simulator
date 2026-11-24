@@ -14,20 +14,20 @@ const gyms = gymLeaders(await loadDecks()).map(({ name, slugs, shape, type }) =>
 ---
 
 <Base
-  title={t('ประวัติเกมและทบทวนเกม Pokémon TCG', 'Pokémon TCG game history and review')}
+  title={t('ประวัติเกมและรีวิวเกม Pokémon TCG', 'Pokémon TCG game history and review')}
   description={t(
-    'ทบทวนเกม Pokémon TCG ที่คุณเล่นกับบอท: win% ทุกเทิร์น เทิร์นที่พลาด ทางที่ดีกว่าได้อะไร และควร play around อะไรในเทิร์นหน้า',
+    'รีวิวเกม Pokémon TCG ที่คุณเล่นกับบอท ดู win% ทุกเทิร์น รู้ว่าพลาดตรงไหน ถ้าเล่นอีกทางจะได้อะไร และควรเผื่อเทิร์นหน้าของอีกฝั่งยังไง',
     'Review your Pokémon TCG games against the bot: win% on every turn, the turns you slipped, what the better way gets you and what to play around next turn.',
   )}
-  words={t('ทบทวนเกม,วิเคราะห์เกม Pokémon TCG,play around', 'game review,Pokémon TCG analysis,play around').split(',')}
+  words={t('รีวิวเกม,วิเคราะห์เกม Pokémon TCG,play around', 'game review,Pokémon TCG analysis,play around').split(',')}
 >
   <header class="page-head">
-    <p class="eyebrow">{t('โค้ชหลังเกม · เทิร์นไหนที่เกมพลิก', 'Your coach · the turn it turned on')}</p>
+    <p class="eyebrow">{t('โค้ชหลังเกม · เกมพลิกที่เทิร์นไหน', 'Your coach · the turn it turned on')}</p>
     <h1 class="heading-3">{t('ประวัติเกม', 'Game history')}</h1>
     <p class="how body-7">
       {
         t(
-          'เกมที่คุณเล่นจบจะถูกเก็บไว้ในเบราว์เซอร์นี้ กดทบทวนเพื่อดู win% ทุกเทิร์น เทิร์นที่ควรดูก่อน และบอทจะเล่นต่างจากคุณตรงไหน แล้วลองเล่นเทิร์นนั้นใหม่ได้',
+          'เกมที่เล่นจบแล้วจะเก็บไว้ในเบราว์เซอร์นี้ กดรีวิวเพื่อดู win% ทุกเทิร์น เทิร์นที่ควรดูก่อน และตรงไหนที่บอทจะเล่นต่างจากคุณ แล้วลองเล่นเทิร์นนั้นใหม่ได้เลย',
           "Every game you finish is kept in this browser. Review one to see your win% on every turn, the turns to look at first and where the bot would have played differently, then play that turn again.",
         )
       }

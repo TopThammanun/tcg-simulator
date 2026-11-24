@@ -6,9 +6,9 @@ import { tx } from '../i18n';
 export type TipId = 'hand' | 'attack' | 'read-desktop' | 'read-touch';
 
 export const TIPS: Record<TipId, [th: string, en: string]> = {
-  hand: ['แตะการ์ดในมือเพื่ออ่าน แตะอีกครั้งหรือกดปุ่มเพื่อใช้ ลากลงสนามก็ได้', 'Tap a card in your hand to read it, tap it again or press the button to play it, or drag it onto the table'],
+  hand: ['แตะการ์ดในมือเพื่ออ่าน แตะอีกครั้งหรือกดปุ่มเพื่อใช้ หรือจะลากลงสนามเลยก็ได้', 'Tap a card in your hand to read it, tap it again or press the button to play it, or drag it onto the table'],
   attack: ['แตะ Pokémon ตัวหลักของคุณเพื่อเลือกท่าโจมตี (คีย์ A)', 'Tap your Active Pokémon to pick an attack (key A)'],
-  'read-desktop': ['ชี้เมาส์ที่การ์ดใบไหนก็ได้ ข้อความเต็มจะขึ้นในช่องด้านขวา', 'Point at any card and its full text shows in the panel on the right'],
+  'read-desktop': ['ชี้เมาส์ที่การ์ดใบไหนก็ได้ ข้อความเต็มจะขึ้นในช่องทางขวา', 'Point at any card and its full text shows in the panel on the right'],
   'read-touch': ['กดค้างที่การ์ดใบไหนก็ได้ (บนสนามหรือในมือ) เพื่อดูใบใหญ่', 'Press and hold any card (on the table or in your hand) to see it large'],
 };
 

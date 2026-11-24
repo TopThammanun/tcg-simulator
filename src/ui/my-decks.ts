@@ -20,7 +20,7 @@ function read(): MyDeck[] {
     const old = localStorage.getItem(OLD_KEY);
     const decks = JSON.parse(localStorage.getItem(KEY) ?? '[]') as MyDeck[];
     if (old !== null) {
-      decks.push({ id: newId(), name: tx('list ที่แก้ไว้', 'Edited list'), text: old, updated: Date.now() });
+      decks.push({ id: newId(), name: tx('ลิสต์ที่แก้ไว้', 'Edited list'), text: old, updated: Date.now() });
       write(decks);
       localStorage.removeItem(OLD_KEY);
     }

@@ -35,10 +35,10 @@ const url = siteUrl(Astro.site);
 <Base
   title={t('เด็ค Pokémon TCG ใน meta และตัวจัดเด็ค', 'Pokémon TCG meta decks and deck builder')}
   description={t(
-    'list เด็ค Pokémon TCG ที่ครอง meta จากทัวร์นาเมนต์จริงบน Limitless พร้อมตัวจัดเด็คแบบ Limitless: ค้นการ์ด กดเพิ่ม ดูจำนวนครบ 60 ใบ แล้วเอาไปเล่นกับบอท',
+    'ลิสต์เด็ค Pokémon TCG ตัวท็อปของ meta จากทัวร์จริงบน Limitless พร้อมตัวจัดเด็คที่ใช้เหมือน Limitless ค้นการ์ด กดเพิ่ม จัดให้ครบ 60 ใบ แล้วเอาไปเล่นกับบอทได้เลย',
     "The Pokémon TCG decks that rule the meta, with real tournament lists from Limitless, and a deck builder that works like Limitless's: search, click to add, watch the count reach 60, then play the bot with it.",
   )}
-  words={t('list เด็ค,ตัวจัดเด็ค,deck builder,เด็คติดอันดับ', 'decklists,deck builder,top decks,meta decklists').split(',')}
+  words={t('ลิสต์เด็ค,ตัวจัดเด็ค,deck builder,เด็คติดอันดับ', 'decklists,deck builder,top decks,meta decklists').split(',')}
   jsonLd={[
     breadcrumbLd(url, [
       { name: t('หน้าแรก', 'Home'), path: localePath(lang, '/') },
@@ -48,12 +48,12 @@ const url = siteUrl(Astro.site);
   ]}
 >
   <header class="page-head">
-    <p class="eyebrow">{t('Gym leaders · เด็คใน meta', 'Gym leaders · meta decks')}</p>
+    <p class="eyebrow">{t('หัวหน้ายิม · เด็คใน meta', 'Gym leaders · meta decks')}</p>
     <h1 class="heading-3">{t('เด็คทั้งหมด', 'All decks')}</h1>
     <p class="body-7 lede">
       {
         t(
-          'เด็คอันดับต้นของ meta ตามสัดส่วนบน Limitless คือ Gym leader ของยิมนี้ แต่ละเด็คใช้ list จริงจากทัวร์นาเมนต์ล่าสุด ชนะเด็คไหนได้เหรียญของเด็คนั้น เลือกเด็คเพื่อดูการ์ดทุกใบ หรือจัดเด็คของคุณเองด้านล่าง',
+          'เด็คที่คนใช้มากที่สุดบน Limitless คือหัวหน้ายิมของที่นี่ ทุกเด็คใช้ลิสต์จริงจากทัวร์ล่าสุด ชนะเด็คไหนก็ได้เข็มกลัดของเด็คนั้น แตะเด็คเพื่อดูการ์ดทุกใบ หรือจัดเด็คของคุณเองได้ด้านล่าง',
           "The top decks of the meta by their share on Limitless are this gym's leaders, each playing a real list from a recent tournament. Beat one to earn its badge. Pick one to see every card, or build your own deck below.",
         )
       }

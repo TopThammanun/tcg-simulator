@@ -143,7 +143,7 @@
   function startFrom(slug: string) {
     const d = decks.find((x) => x.slug === slug);
     if (!d) return;
-    replace(fromText(d.text).deck, tx(`ใส่ list ของ ${d.name} แล้ว`, `${d.name}'s list is in`));
+    replace(fromText(d.text).deck, tx(`ใส่ลิสต์ของ ${d.name} แล้ว`, `${d.name}'s list is in`));
     if (!name.trim()) name = mine(d);
     tab = 'deck';
   }
@@ -160,7 +160,7 @@
     const text = toText(deck);
     try {
       await navigator.clipboard.writeText(text);
-      say(tx('คัดลอก list แล้ว วางใน Limitless หรือ Pokémon TCG Live ได้เลย', 'List copied: paste it into Limitless or Pokémon TCG Live'));
+      say(tx('คัดลอกลิสต์แล้ว เอาไปวางใน Limitless หรือ Pokémon TCG Live ได้เลย', 'List copied: paste it into Limitless or Pokémon TCG Live'));
     } catch {
       importing = text; // no clipboard: the list in the import box, to copy by hand
     }
@@ -173,7 +173,7 @@
     savedText = toText(deck);
     savedName = d.name;
     history.replaceState(null, '', `${location.pathname}?id=${d.id}`);
-    say(wrong.length ? tx('บันทึกแล้ว (ยังเล่นไม่ได้จนกว่าเด็คจะครบ)', 'Saved (not playable until the deck is complete)') : tx('บันทึกแล้ว', 'Saved'));
+    say(wrong.length ? tx('บันทึกแล้ว (จัดเด็คให้ครบก่อนถึงจะเล่นได้)', 'Saved (not playable until the deck is complete)') : tx('บันทึกแล้ว', 'Saved'));
     return d.id;
   }
 
@@ -329,8 +329,8 @@
       <div class="actions">
         <button type="button" class="primary" onclick={save} disabled={!deck.length}>{tx('บันทึก', 'Save')}</button>
         <button type="button" class="square" onclick={undo} disabled={!past.length} aria-label={tx('เลิกทำ', 'Undo')} title={tx('เลิกทำ (Ctrl+Z)', 'Undo (Ctrl+Z)')}>↶</button>
-        <button type="button" onclick={() => (importing = '')}>{tx('นำเข้า list', 'Import')}</button>
-        <button type="button" onclick={copyList} disabled={!deck.length}>{tx('คัดลอก list', 'Copy list')}</button>
+        <button type="button" onclick={() => (importing = '')}>{tx('นำเข้าลิสต์', 'Import')}</button>
+        <button type="button" onclick={copyList} disabled={!deck.length}>{tx('คัดลอกลิสต์', 'Copy list')}</button>
         <button type="button" class="play" onclick={play} disabled={!!wrong.length}>{tx('เล่นกับบอท ▶', 'Play the bot ▶')}</button>
       </div>
     </header>
@@ -343,19 +343,19 @@
         {:else if wrong.length}
           {wrong[0]}
         {:else}
-          {tx(`เล่นได้ · บอทจะเล่น list นี้แบบ ${near?.name ?? ''}`, `Playable · the bot plays it like ${near?.name ?? ''}`)}
+          {tx(`พร้อมเล่น · บอทจะเล่นลิสต์นี้แบบ ${near?.name ?? ''}`, `Playable · the bot plays it like ${near?.name ?? ''}`)}
         {/if}
       </span>
       <span class="bar-tools">
         <label class="from">
-          <span class="visually-hidden">{tx('เริ่มจาก list ของ', 'Start from the list of')}</span>
+          <span class="visually-hidden">{tx('เริ่มจากลิสต์ของ', 'Start from the list of')}</span>
           <select
             onchange={(e) => {
               startFrom(e.currentTarget.value);
               e.currentTarget.value = '';
             }}
           >
-            <option value="">{tx('เริ่มจาก list ของ…', 'Start from…')}</option>
+            <option value="">{tx('เริ่มจากลิสต์ของ…', 'Start from…')}</option>
             {#each decks as d (d.slug)}<option value={d.slug}>{d.name}</option>{/each}
           </select>
         </label>
@@ -373,22 +373,22 @@
     {#if report}
       <div class="report" role="status">
         <p>
-          {#if report.unsupported.length}{tx(`ยังไม่รองรับ (ไม่ได้ใส่): ${report.unsupported.join(', ')}`, `Not supported yet (left out): ${report.unsupported.join(', ')}`)}<br />{/if}
-          {#if report.ambiguous.length}{tx(`มีหลายแบบ ต้องระบุชุดและเลข: ${report.ambiguous.join(', ')}`, `Several versions, give the set and number: ${report.ambiguous.join(', ')}`)}<br />{/if}
+          {#if report.unsupported.length}{tx(`ยังไม่รองรับ (เลยไม่ได้ใส่): ${report.unsupported.join(', ')}`, `Not supported yet (left out): ${report.unsupported.join(', ')}`)}<br />{/if}
+          {#if report.ambiguous.length}{tx(`มีหลายเวอร์ชัน ใส่ชื่อชุดและเลขการ์ดด้วย: ${report.ambiguous.join(', ')}`, `Several versions, give the set and number: ${report.ambiguous.join(', ')}`)}<br />{/if}
           {#if report.refused.length}{report.refused.join(' · ')}<br />{/if}
           {#if report.unreadable.length}{tx(`อ่านไม่ออก: ${report.unreadable.join(' · ')}`, `Couldn't read: ${report.unreadable.join(' · ')}`)}{/if}
         </p>
         <button type="button" class="link" onclick={() => (report = null)}>{tx('ปิด', 'Close')}</button>
       </div>
     {/if}
-    {#if notes.length && !report}<p class="note">{notes[0]}{notes.length > 1 ? tx(` (และอีก ${notes.length - 1})`, ` (and ${notes.length - 1} more)`) : ''}</p>{/if}
+    {#if notes.length && !report}<p class="note">{notes[0]}{notes.length > 1 ? tx(` (และอีก ${notes.length - 1} ข้อ)`, ` (and ${notes.length - 1} more)`) : ''}</p>{/if}
 
     <div class="deck-scroll">
       {#if !deck.length}
         <div class="empty">
           <p>
             {tx(
-              'กด + ที่การ์ดในช่องค้นหาเพื่อใส่ลงเด็ค (คลิกขวา = ใส่ 1 ใบ, Ctrl+คลิกขวา = 4 ใบ หรือลากมาวาง) หรือเริ่มจาก list ของเด็คใน meta',
+              'กด + ที่การ์ดในช่องค้นหาเพื่อใส่ลงเด็ค (คลิกขวา = ใส่ 1 ใบ, Ctrl+คลิกขวา = ใส่ 4 ใบ หรือจะลากมาวางก็ได้) หรือเริ่มจากลิสต์ของเด็คใน meta',
               'Press + on a card in the search to put it in the deck (right-click adds one, Ctrl+right-click four, or drag it here), or start from a meta list',
             )}
           </p>
@@ -454,7 +454,7 @@
         {/if}
       </div>
       <p class="found">
-        {tx(`พบ ${results.length} ใบ`, `${results.length} cards found`)}
+        {tx(`เจอ ${results.length} ใบ`, `${results.length} cards found`)}
         <span class="muted">· {tx(`เฉพาะการ์ดที่เว็บนี้เล่นได้ (${SUPPORTED.length} ใบ)`, `only cards this site plays (${SUPPORTED.length})`)}</span>
       </p>
     </div>
@@ -462,7 +462,7 @@
       <div class="grid results" role="list">
         {#each results as c (c.key)}{@render tile(c.key, 'search', results.map((r) => r.key))}{/each}
       </div>
-      {#if !results.length}<p class="none">{tx('ไม่พบการ์ด ลองคำอื่นหรือล้างตัวกรอง', 'No cards found: try other words or clear the filters')}</p>{/if}
+      {#if !results.length}<p class="none">{tx('ไม่เจอการ์ด ลองค้นคำอื่นหรือล้างตัวกรองดู', 'No cards found: try other words or clear the filters')}</p>{/if}
     </div>
   </section>
 </div>
@@ -507,10 +507,10 @@
     }}
   >
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
-      <h2 id="import-title">{tx('นำเข้า list', 'Import a list')}</h2>
+      <h2 id="import-title">{tx('นำเข้าลิสต์', 'Import a list')}</h2>
       <p class="muted">
         {tx(
-          'วาง list ที่ export จาก Limitless หรือ Pokémon TCG Live (เช่น 4 Dreepy TWM 128) list นี้จะแทนการ์ดในเด็คตอนนี้ (กดเลิกทำได้)',
+          'วางลิสต์ที่ export จาก Limitless หรือ Pokémon TCG Live (เช่น 4 Dreepy TWM 128) ลิสต์นี้จะแทนที่การ์ดทั้งหมดในเด็คตอนนี้ (กดเลิกทำได้)',
           'Paste a list exported from Limitless or Pokémon TCG Live (e.g. 4 Dreepy TWM 128). It replaces the cards in the deck now (you can undo).',
         )}
       </p>
@@ -533,7 +533,7 @@
   >
     <div class="dialog help" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <h2 id="help-title">{tx('วิธีใช้ตัวจัดเด็ค', 'Using the deck builder')}</h2>
-      <p class="muted">{tx('ใช้แบบเดียวกับตัวจัดเด็คของ Limitless: ค้นการ์ดทางขวา แล้วใส่ลงเด็คทางซ้าย', "It works like Limitless's deck builder: search for cards on the right and add them to the deck on the left.")}</p>
+      <p class="muted">{tx('ใช้งานเหมือนตัวจัดเด็คของ Limitless ค้นการ์ดทางขวา แล้วใส่ลงเด็คทางซ้าย', "It works like Limitless's deck builder: search for cards on the right and add them to the deck on the left.")}</p>
       <h3>{tx('เมาส์', 'Mouse')}</h3>
       <ul>
         <li>{tx('ชี้ที่การ์ดแล้วกด + / − เพื่อเพิ่มหรือเอาออกทีละใบ', 'Point at a card and press its + / − to add or remove one')}</li>
@@ -542,7 +542,7 @@
         <li>{tx('ลากการ์ดจากช่องค้นหามาวางในเด็ค = ใส่ 1 ใบ (กด Ctrl ค้างไว้ = 4 ใบ) · ลากจากเด็คกลับไป = เอาออกทั้งหมด', 'Drag a search result into the deck: add one (hold Ctrl: four) · drag a deck card back: remove all')}</li>
         <li>{tx('คลิกที่การ์ด = เปิดอ่านข้อความเต็ม', 'Click a card: read its full text')}</li>
       </ul>
-      <h3>{tx('ปุ่มลัด (ชี้ที่การ์ดค้างไว้)', 'Keys (with the mouse on a card)')}</h3>
+      <h3>{tx('ปุ่มลัด (ชี้เมาส์ค้างไว้ที่การ์ด)', 'Keys (with the mouse on a card)')}</h3>
       <ul>
         <li><kbd>+</kbd> / <kbd>A</kbd> {tx('เพิ่ม 1 ใบ', 'add one')} · <kbd>−</kbd> / <kbd>R</kbd> {tx('เอาออก 1 ใบ', 'remove one')} · <kbd>0</kbd>–<kbd>9</kbd> {tx('ตั้งจำนวน', 'set the count')}</li>
         <li><kbd>Space</kbd> {tx('ไปที่ช่องค้นหา', 'go to the search')} · <kbd>H</kbd> {tx('เปิดหน้านี้', 'this help')} · <kbd>Ctrl</kbd>+<kbd>Z</kbd> {tx('เลิกทำ', 'undo')} · <kbd>Esc</kbd> {tx('ปิด', 'close')}</li>
@@ -551,7 +551,7 @@
       <h3>{tx('กติกาเด็ค', 'Deck rules')}</h3>
       <ul>
         <li>{tx('60 ใบพอดี · การ์ดชื่อเดียวกันไม่เกิน 4 ใบ (ยกเว้น Basic Energy) · ACE SPEC ได้ใบเดียว · มี Basic Pokémon อย่างน้อย 1 ใบ', 'Exactly 60 cards · 4 at most with the same name (Basic Energy aside) · 1 ACE SPEC · at least 1 Basic Pokémon')}</li>
-        <li>{tx('เด็คถูกเก็บไว้ในเบราว์เซอร์นี้ คัดลอก list ไปวางใน Limitless หรือ Pokémon TCG Live ได้', 'Decks are kept in this browser; copy the list into Limitless or Pokémon TCG Live')}</li>
+        <li>{tx('เด็คจะเก็บไว้ในเบราว์เซอร์นี้ และคัดลอกลิสต์ไปวางใน Limitless หรือ Pokémon TCG Live ได้', 'Decks are kept in this browser; copy the list into Limitless or Pokémon TCG Live')}</li>
       </ul>
       <div class="dialog-actions"><button type="button" class="primary" onclick={() => (help = false)}>{tx('เข้าใจแล้ว', 'Got it')}</button></div>
     </div>

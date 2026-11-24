@@ -22,9 +22,9 @@
       {:else}{tx('ไม่มี', 'None')}{/if}
     </dd>
     {#if info.tool}<dt>Tool</dt><dd><span class="chip tool">{info.tool}</span></dd>{/if}
-    {#if info.under.length}<dt>{tx('ใต้การ์ด', 'Under it')}</dt><dd>{info.under.join(' → ')}</dd>{/if}
+    {#if info.under.length}<dt>{tx('ซ้อนอยู่ใต้', 'Under it')}</dt><dd>{info.under.join(' → ')}</dd>{/if}
     {#each info.conditions as c}<dt class="warn">{c.name}</dt><dd>{c.does}</dd>{/each}
-    {#each info.marks as m}<dt class="warn">{tx('ผลที่ติดอยู่', 'Effect')}</dt><dd>{m}</dd>{/each}
+    {#each info.marks as m}<dt class="warn">{tx('เอฟเฟกต์ที่ติดอยู่', 'Effect')}</dt><dd>{m}</dd>{/each}
   </dl>
 </section>
 

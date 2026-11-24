@@ -48,7 +48,7 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       ctx.detachSlot(p, slot);
       ps.deck.push(...slot.stack, ...slot.energy, ...(slot.tool !== null ? [slot.tool] : []));
       ctx.shuffle(p);
-      ctx.log(tx('Dudunsparce สับกลับเข้าเด็ค', 'Dudunsparce is shuffled back into the deck'), p);
+      ctx.log(tx('Dudunsparce ถูกสับกลับเข้าเด็ค', 'Dudunsparce is shuffled back into the deck'), p);
     },
   },
   'Recon Directive': {
@@ -115,8 +115,8 @@ export const ABILITIES: Record<string, AbilityImpl> = {
       const damaged = slotsOf(s.players[p]).filter((sl) => sl.damage > 0);
       const [from] = ctx.pickSlots(p, damaged, { purpose: 'target', prompt: tx('Adrena-Brain: ย้ายตัวนับดาเมจจาก Pokémon ของคุณ', 'Adrena-Brain: move damage counters from one of your Pokémon'), source: 'munkidori', hint: 'own' });
       const most = Math.min(3, from!.damage / 10);
-      const n = ctx.pickOption(p, tx('ย้ายกี่ตัว', 'How many?'), Array.from({ length: most }, (_, i) => tx(`${i + 1} ตัว`, String(i + 1))), 'munkidori') + 1;
-      const [to] = ctx.pickSlots(p, adrenaTargets(s, p), { purpose: 'target', prompt: tx('ย้ายไปไว้ที่ Pokémon ฝั่งตรงข้าม', "Move them to one of your opponent's Pokémon"), source: 'munkidori' });
+      const n = ctx.pickOption(p, tx('จะย้ายกี่ตัว?', 'How many?'), Array.from({ length: most }, (_, i) => tx(`${i + 1} ตัว`, String(i + 1))), 'munkidori') + 1;
+      const [to] = ctx.pickSlots(p, adrenaTargets(s, p), { purpose: 'target', prompt: tx('ย้ายไปไว้ที่ Pokémon ตัวไหนของอีกฝั่ง', "Move them to one of your opponent's Pokémon"), source: 'munkidori' });
       from!.damage -= 10 * n;
       to!.damage += 10 * n;
       ctx.log(tx(`Adrena-Brain ย้ายตัวนับดาเมจ ${n} ตัวไปที่ ${topDef(s, to!).name}`, `Adrena-Brain moves ${n} damage ${n === 1 ? 'counter' : 'counters'} to ${topDef(s, to!).name}`), p);
@@ -208,7 +208,7 @@ export function offerTrigger(ctx: Ctx, p: PlayerId, slot: Slot, when: 'bench' | 
     if (!impl || impl.when !== when || !abilityOn(s, slot, a.name)) continue;
     if (impl.shared && ctx.ps(p).namedUsed.includes(impl.shared)) continue;
     if (impl.canUse && !impl.canUse(s, p, slot)) continue;
-    if (!ctx.yesNo(p, tx(`ใช้ Ability ${a.name}?`, `Use Ability ${a.name}?`), topKey(s, slot), a.name)) continue;
+    if (!ctx.yesNo(p, tx(`จะใช้ Ability ${a.name} ไหม?`, `Use Ability ${a.name}?`), topKey(s, slot), a.name)) continue;
     if (impl.shared) ctx.ps(p).namedUsed.push(impl.shared);
     slot.usedAbility[a.name] = s.turn;
     ctx.log(tx(`${ctx.who(p)} ใช้ Ability ${a.name}`, `${ctx.who(p)} ${verb(ctx.who(p), 'use')} Ability ${a.name}`), p);

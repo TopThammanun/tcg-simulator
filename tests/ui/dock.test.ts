@@ -37,14 +37,14 @@ describe('setup: putting Basics on the Bench', () => {
 
   it('counts the Basics left in the hand, not only the room on the Bench', () => {
     expect(benchHint(req(3), 0, 5)).toBe('ลาก Basic ลง Bench ได้อีก 3 ตัว (หรือแตะการ์ด)');
-    expect(benchHint(req(3), 1, 5)).toBe('ลาก Basic ลง Bench ได้อีก 2 ตัว (หรือแตะการ์ด) · แตะตัวบน Bench เพื่อเอาคืน');
+    expect(benchHint(req(3), 1, 5)).toBe('ลาก Basic ลง Bench ได้อีก 2 ตัว (หรือแตะการ์ด) · แตะตัวบน Bench เพื่อเอากลับเข้ามือ');
     // One Basic in hand, put down: the Bench isn't full, the hand has none left.
-    expect(benchHint(req(1), 1, 5)).toBe('ไม่มี Basic ในมือแล้ว · แตะตัวบน Bench เพื่อเอาคืน');
-    expect(benchHint(req(7), 5, 5)).toBe('ลง Bench ครบแล้ว · แตะตัวบน Bench เพื่อเอาคืน');
-    expect(benchHint(req(5), 5, 5)).toBe('ลง Bench ครบแล้ว · แตะตัวบน Bench เพื่อเอาคืน');
+    expect(benchHint(req(1), 1, 5)).toBe('ไม่มี Basic ในมือแล้ว · แตะตัวบน Bench เพื่อเอากลับเข้ามือ');
+    expect(benchHint(req(7), 5, 5)).toBe('ลง Bench ครบแล้ว · แตะตัวบน Bench เพื่อเอากลับเข้ามือ');
+    expect(benchHint(req(5), 5, 5)).toBe('ลง Bench ครบแล้ว · แตะตัวบน Bench เพื่อเอากลับเข้ามือ');
   });
 
   it("says when the Basics come from the opponent's mulligan", () => {
-    expect(benchHint(req(2, 5, 'mulligan'), 0, 5)).toMatch(/^Basic ที่จั่วเพิ่มจาก mulligan ของคู่แข่ง · /);
+    expect(benchHint(req(2, 5, 'mulligan'), 0, 5)).toMatch(/^Basic ที่จั่วเพิ่มเพราะคู่แข่ง mulligan · /);
   });
 });

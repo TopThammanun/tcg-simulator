@@ -23,12 +23,12 @@ const name = deck.meta.name;
 ---
 
 <Base
-  title={t(`${name}: list เด็ค Pokémon TCG และซ้อม matchup`, `${name} Pokémon TCG decklist and matchup practice`)}
+  title={t(`ลิสต์เด็ค ${name} Pokémon TCG และซ้อม matchup`, `${name} Pokémon TCG decklist and matchup practice`)}
   description={t(
-    `list เด็ค Pokémon TCG ${name} (อันดับ ${deck.meta.rank} ของ meta) จากทัวร์นาเมนต์จริง การ์ดทุกใบพร้อมข้อความ เล่นด้วยเด็คนี้หรือซ้อมกับบอทที่ใช้เด็คนี้ในเบราว์เซอร์`,
+    `ลิสต์เด็ค ${name} ของ Pokémon TCG (อันดับ ${deck.meta.rank} ของ meta) จากทัวร์จริง ดูการ์ดทุกใบพร้อมข้อความ แล้วลองเล่นด้วยเด็คนี้ หรือซ้อมกับบอทที่ใช้เด็คนี้ได้ในเบราว์เซอร์`,
     `The ${name} Pokémon TCG decklist (number ${deck.meta.rank} in the meta) from a real tournament, every card with its text. Play it, or practise against a bot playing it, in your browser.`,
   )}
-  words={[name, t(`เด็ค ${name}`, `${name} deck`), t(`list ${name}`, `${name} decklist`)]}
+  words={[name, t(`เด็ค ${name}`, `${name} deck`), t(`ลิสต์ ${name}`, `${name} decklist`)]}
   jsonLd={[
     breadcrumbLd(siteUrl(Astro.site), [
       { name: t('หน้าแรก', 'Home'), path: localePath(lang, '/') },
@@ -40,7 +40,7 @@ const name = deck.meta.name;
   <a class="back" href={localePath(lang, '/decks/')}>← {t('เด็คทั้งหมด', 'All decks')}</a>
   <header class="deck-head">
     <p class="eyebrow">
-      {t('Gym leader · อันดับ', 'Gym leader · rank')} {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> {t('ของ meta', 'of the meta')}
+      {t('หัวหน้ายิม · อันดับ', 'Gym leader · rank')} {deck.meta.rank} · <span class="mono">{deck.meta.metaShare?.toFixed(1)}%</span> {t('ของ meta', 'of the meta')}
     </p>
     <h1 class="heading-3 title">
       {gym && <GymBadge shape={gym.shape} type={gym.type} size={40} />}
@@ -48,11 +48,11 @@ const name = deck.meta.name;
     </h1>
     <p class="source body-6">
       {deck.meta.listSource}
-      {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">{t('list บน Limitless ↗', 'The list on Limitless ↗')}</a>}
+      {deck.meta.listUrl && <a href={deck.meta.listUrl} rel="noopener">{t('ดูลิสต์บน Limitless ↗', 'The list on Limitless ↗')}</a>}
     </p>
     <p class="play">
       <a class="btn primary" href={localePath(lang, `/play/?me=${deck.slug}`)}>{t('เล่นด้วยเด็คนี้', 'Play this deck')}</a>
-      <a class="btn" href={localePath(lang, `/play/?opp=${deck.slug}`)}>{t('ซ้อมกับเด็คนี้', 'Practise against it')}</a>
+      <a class="btn" href={localePath(lang, `/play/?opp=${deck.slug}`)}>{t('ซ้อมกับบอทที่ใช้เด็คนี้', 'Practise against it')}</a>
     </p>
   </header>
 

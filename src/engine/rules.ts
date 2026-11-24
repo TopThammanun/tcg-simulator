@@ -146,7 +146,7 @@ export function trimBenches(ctx: Ctx, order: PlayerId[]): void {
     if (over <= 0) continue;
     const gone = ctx.pickSlots(p, ps.bench, {
       purpose: 'bench-trim',
-      prompt: tx(`ทิ้ง Pokémon บน Bench ${over} ตัวให้เหลือ ${benchLimit(ctx.s, p)}`, `Discard ${over} Benched Pokémon to get down to ${benchLimit(ctx.s, p)}`),
+      prompt: tx(`ทิ้ง Pokémon บน Bench ${over} ตัว ให้เหลือ ${benchLimit(ctx.s, p)} ตัว`, `Discard ${over} Benched Pokémon to get down to ${benchLimit(ctx.s, p)}`),
       min: over,
       max: over,
     });
@@ -233,7 +233,7 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
           durableTried.add(sl.uid);
           if (ctx.flip()) {
             sl.damage = maxHp(s, sl) - 10;
-            ctx.log(tx(`Durable Body: ${topDef(s, sl).name} ไม่ถูก Knock Out เหลือ HP 10`, `Durable Body: ${topDef(s, sl).name} is not Knocked Out and keeps 10 HP`), p);
+            ctx.log(tx(`Durable Body: ${topDef(s, sl).name} ไม่โดน KO และเหลือ HP 10`, `Durable Body: ${topDef(s, sl).name} is not Knocked Out and keeps 10 HP`), p);
             continue;
           }
         }
@@ -247,7 +247,7 @@ export function checkKOs(ctx: Ctx, byAttack: ReadonlySet<SlotId> = new Set()): v
       const attacked = byAttack.has(slot.uid);
       let prizes = d.prizes;
       if (attacked && toolKey(s, slot) === 'lillies-pearl' && isLilliesPokemon(topKey(s, slot))) prizes -= 1;
-      ctx.log(tx(`${d.name} ของ${ctx.who(p)} ถูก Knock Out`, `${possessive(ctx.who(p))} ${d.name} is Knocked Out`), p, slot.uid);
+      ctx.log(tx(`${d.name} ของ${ctx.who(p)}โดน KO`, `${possessive(ctx.who(p))} ${d.name} is Knocked Out`), p, slot.uid);
       ctx.discardSlot(p, slot);
       if (s.current !== p) {
         s.players[p].koThisTurn = true;

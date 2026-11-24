@@ -44,7 +44,7 @@ describe('the command bar', () => {
     expect(ids(energy)).toEqual(['cancel:default']);
     const no = actionBar({ s, myTurn: true, legal, held: { name: 'X', why: 'Bench เต็ม' } });
     expect(no.why).toBe(true);
-    expect(no.text).toBe('ใช้ตอนนี้ไม่ได้: Bench เต็ม');
+    expect(no.text).toBe('ตอนนี้ใช้ไม่ได้: Bench เต็ม');
   });
 
   it('ending the turn with an attack left asks first, the attack being the main answer', () => {
@@ -58,7 +58,7 @@ describe('the command bar', () => {
   it('leaving a game asks first, whoever\'s turn it is; leaving is the red one', () => {
     for (const myTurn of [true, false]) {
       const b = actionBar({ s, myTurn, legal, confirmNew: true });
-      expect(b.title).toBe('ทิ้งเกมนี้?');
+      expect(b.title).toBe('ออกจากเกมนี้?');
       expect(ids(b)).toEqual(['stay:default', 'leave:danger']);
     }
   });

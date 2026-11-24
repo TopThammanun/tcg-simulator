@@ -41,19 +41,19 @@ export interface SlotMenu {
 
 function attackReason(s: GameState, user: Slot, name: string, cost: EnergyType[]): string {
   if (s.turn === 1) return tx('เทิร์นแรกของเกมโจมตีไม่ได้', 'No attacks on the first turn of the game');
-  if (user.marks.some((m) => m.kind === 'cant-attack' && m.turn === s.turn)) return tx('โจมตีไม่ได้ในเทิร์นนี้ (ผลจากท่าของอีกฝั่ง)', "Can't attack this turn (an opponent's attack)");
-  if (user.marks.some((m) => m.kind === 'cant-use' && m.attack === name && m.turn === s.turn)) return tx('ใช้ท่านี้ซ้ำในเทิร์นนี้ไม่ได้', "Can't use this attack again this turn");
+  if (user.marks.some((m) => m.kind === 'cant-attack' && m.turn === s.turn)) return tx('เทิร์นนี้โจมตีไม่ได้ (ติดผลจากท่าของอีกฝั่ง)', "Can't attack this turn (an opponent's attack)");
+  if (user.marks.some((m) => m.kind === 'cant-use' && m.attack === name && m.turn === s.turn)) return tx('เทิร์นนี้ใช้ท่านี้ซ้ำไม่ได้', "Can't use this attack again this turn");
   if (!canPay(energyOf(s, user), cost)) return tx('พลังงานไม่พอ', 'Not enough Energy');
-  return tx('ใช้ไม่ได้ตอนนี้', "Can't be used now");
+  return tx('ตอนนี้ใช้ไม่ได้', "Can't be used now");
 }
 
 function retreatReason(s: GameState, p: PlayerId, user: Slot, cost: number): string {
   const ps = s.players[p];
   if (ps.retreated) return tx('ถอยไปแล้วในเทิร์นนี้', 'Already retreated this turn');
   if (ps.bench.length === 0) return tx('ไม่มี Pokémon บน Bench', 'No Benched Pokémon');
-  if (user.marks.some((m) => m.kind === 'cant-retreat' && m.turn === s.turn)) return tx('ถอยไม่ได้ในเทิร์นนี้ (ผลจากท่าของอีกฝั่ง)', "Can't retreat this turn (an opponent's attack)");
+  if (user.marks.some((m) => m.kind === 'cant-retreat' && m.turn === s.turn)) return tx('เทิร์นนี้ถอยไม่ได้ (ติดผลจากท่าของอีกฝั่ง)', "Can't retreat this turn (an opponent's attack)");
   if (user.energy.length < cost) return tx(`พลังงานไม่พอ (ต้องทิ้ง ${cost} ใบ)`, `Not enough Energy (${cost} to discard)`);
-  return tx('ถอยไม่ได้ตอนนี้', "Can't retreat now");
+  return tx('ตอนนี้ถอยไม่ได้', "Can't retreat now");
 }
 
 /** The menu for one of the current player's Pokémon; null for the other side's. */

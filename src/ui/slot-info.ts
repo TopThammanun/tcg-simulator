@@ -24,12 +24,12 @@ export function condition(c: Condition): { name: string; does: string } {
   return c === 'poisoned'
     ? {
         name: tx('พิษ (Poisoned)', 'Poisoned'),
-        does: tx('โดนดาเมจ 10 ทุกครั้งที่จบเทิร์น จนกว่าจะถอยหรือวิวัฒนาการ', 'Takes 10 damage between turns until it retreats or evolves'),
+        does: tx('โดนดาเมจ 10 ทุกช่วงระหว่างเทิร์น จนกว่าจะถอยหรือวิวัฒนาการ', 'Takes 10 damage between turns until it retreats or evolves'),
       }
     : {
         name: tx('สับสน (Confused)', 'Confused'),
         does: tx(
-          'ก่อนโจมตีต้องโยนเหรียญ: ก้อย = โจมตีไม่ได้และโดน 30 เอง · หายเมื่อถอยหรือวิวัฒนาการ',
+          'ก่อนโจมตีต้องโยนเหรียญ ถ้าออกก้อย ท่าจะไม่ทำงานและโดนดาเมจ 30 เอง · หายเมื่อถอยหรือวิวัฒนาการ',
           'Flip a coin before attacking: tails = no attack and 30 damage to itself · ends when it retreats or evolves',
         ),
       };

@@ -67,7 +67,7 @@
         ? tx('ชนะเกม', 'Game won')
         : shown.winner !== null
           ? tx('จบเกม', 'Game over')
-          : tx(`หลังจบเทิร์น win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`)
+          : tx(`จบเทิร์นแล้ว win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`, `After the turn: win% ${pct(kind === 'bot' && t.alt ? (t.alt.lucky ?? t.alt.win.p) : t.win.p)}`)
       : '',
   );
 
@@ -89,7 +89,7 @@
     try {
       const g = await getGame(id);
       if (!g) {
-        error = tx('ไม่พบเกมนี้ในเบราว์เซอร์นี้', 'This game is not in this browser');
+        error = tx('ไม่เจอเกมนี้ในเบราว์เซอร์นี้', 'This game is not in this browser');
         return;
       }
       game = g;
@@ -159,11 +159,11 @@
     <div class="title-row">
       <h1>
         <span class="res" class:won={game.winner === 0} class:lost={game.winner === 1}>{result(game)}</span>
-        {game.mineName ?? tx('list ของคุณ', 'Your list')} <span class="vs-word">vs</span> {game.opponentName}
+        {game.mineName ?? tx('ลิสต์ของคุณ', 'Your list')} <span class="vs-word">vs</span> {game.opponentName}
       </h1>
       {#if done && key.length}
         <button type="button" class="primary" onclick={nextKey}>
-          {tx('ดูจุดที่ควรดู', 'Turns worth a look')} ({keyAt >= 0 ? keyAt + 1 : 1}/{key.length})
+          {tx('ไล่ดูเทิร์นที่ควรดู', 'Turns worth a look')} ({keyAt >= 0 ? keyAt + 1 : 1}/{key.length})
         </button>
       {/if}
     </div>
@@ -171,12 +171,12 @@
     <p class="summary">
       {reasonText(game.reason)} · {tx(`${game.turns} เทิร์น`, `${game.turns} turns`)}<span class="extra"> · {date(game.savedAt)}</span> ·
       {#if !done}
-        {tx(`กำลังวิเคราะห์ ${turns.length}/${spans.length} เทิร์น…`, `Analysing turn ${turns.length}/${spans.length}…`)}
+        {tx(`กำลังวิเคราะห์เทิร์น ${turns.length}/${spans.length}…`, `Analysing turn ${turns.length}/${spans.length}…`)}
         <progress max={spans.length} value={turns.length}></progress>
       {:else}
-        {tx('พลาดชัด', 'Clear slips')} <strong class="bad">{summary.missed}</strong> · {tx('น่าจะมีทางที่ดีกว่า', 'likely a better way')} <strong class="warn">{summary.better}</strong>
+        {tx('พลาดชัดเจน', 'Clear slips')} <strong class="bad">{summary.missed}</strong> · {tx('น่าจะมีทางที่ดีกว่า', 'likely a better way')} <strong class="warn">{summary.better}</strong>
         {#if summary.widest}<span class="extra"
-            >· {tx(`ห่างจากบอทมากสุด เทิร์น ${summary.widest.turn} (${summary.widest.points} จุด)`, `furthest from the bot: turn ${summary.widest.turn} (${summary.widest.points} points)`)}</span
+            >· {tx(`ต่างจากบอทมากที่สุดคือเทิร์น ${summary.widest.turn} (win% ห่าง ${summary.widest.points}%)`, `furthest from the bot: turn ${summary.widest.turn} (${summary.widest.points} points)`)}</span
           >{/if}
         · {tx(`จาก ${turns.length} เทิร์นของคุณ`, `of your ${turns.length} turns`)}
       {/if}
@@ -193,7 +193,7 @@
             type="button"
             class={`turn-chip ${x.verdict}`}
             aria-pressed={x.turn === t?.turn}
-            aria-label={tx(`เทิร์น ${x.turn}`, `Turn ${x.turn}`) + (lost ? tx(`: ห่างจากที่บอทจะเล่น ${lost} จุด`, `: ${lost} points from the bot's way`) : '')}
+            aria-label={tx(`เทิร์น ${x.turn}`, `Turn ${x.turn}`) + (lost ? tx(`: win% น้อยกว่าทางของบอท ${lost}%`, `: ${lost} points from the bot's way`) : '')}
             onclick={() => select(x.turn)}
           >
             <span class="n">{x.turn}</span><span class="v" aria-hidden="true">{VERDICT[x.verdict]}</span>{#if lost}<span class="d mono">−{lost}</span>{/if}
@@ -207,7 +207,7 @@
     <div class="review" class:wide>
       {#if wide && t && lines && line}
         <section class="stage-card" aria-label={tx(`เทิร์น ${t.turn} บนสนาม`, `Turn ${t.turn} on the table`)}>
-          <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้แบบ', 'See this turn as')}>
+          <div class="seg" role="tablist" aria-label={tx('ดูเทิร์นนี้ในแบบ', 'See this turn as')}>
             <span class="on-table">{tx('เทิร์น', 'Turn')} {t.turn}</span>
             <button type="button" role="tab" aria-selected={kind === 'mine'} class:on={kind === 'mine'} onclick={() => pickLine('mine')}>
               {tx('คุณเล่น', 'You played')} <span class="mono">{pct(t.win.p)}</span>
@@ -247,7 +247,7 @@
         {/if}
         {#if wide && shown}
           <details class="hidden-cards">
-            <summary>{tx('การ์ดที่ตอนนั้นมองไม่เห็น เปิดให้ดูทั้งหมด', 'The cards hidden at the time, all face up')}</summary>
+            <summary>{tx('เปิดดูการ์ดที่ตอนนั้นมองไม่เห็น', 'The cards hidden at the time, all face up')}</summary>
             {#each hiddenPiles as [label, ids] (label)}
               <h4>{label} ({ids.length})</h4>
               <div class="cards">

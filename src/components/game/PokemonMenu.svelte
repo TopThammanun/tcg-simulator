@@ -94,7 +94,7 @@
         {#if ab.action}
           <button type="button" class="use can" onclick={() => onact(ab.action!)}>{tx('ใช้ Ability', 'Use Ability')}</button>
         {:else}
-          <span class="auto">{ab.passive ? tx('ทำงานเอง', 'Always on') : tx('ใช้ไม่ได้ตอนนี้', "Can't be used now")}</span>
+          <span class="auto">{ab.passive ? tx('ทำงานตลอด', 'Always on') : tx('ตอนนี้ใช้ไม่ได้', "Can't be used now")}</span>
         {/if}
       </div>
       <p class="text"><EffectText text={ab.effect} /></p>
@@ -145,7 +145,7 @@
           {/each}
         </div>
         <button type="button" class="use wide" disabled={!retreatPick} onclick={() => retreatPick && onact(retreatPick.action)}>
-          {retreatPick ? tx(`ถอย ให้ ${def(retreatPick.key).name} ขึ้นมาแทน`, `Retreat for ${def(retreatPick.key).name}`) : tx('แตะตัวที่จะขึ้นมาแทน', 'Tap the Pokémon to switch in')}
+          {retreatPick ? tx(`ถอย แล้วให้ ${def(retreatPick.key).name} ขึ้นมาแทน`, `Retreat for ${def(retreatPick.key).name}`) : tx('แตะตัวที่จะขึ้นมาแทน', 'Tap the Pokémon to switch in')}
         </button>
       {:else}
         <button type="button" class="use wide" onclick={() => onact(menu.retreat!.options[0]!.action)}>{tx('สลับขึ้นมา', 'Switch in')}</button>

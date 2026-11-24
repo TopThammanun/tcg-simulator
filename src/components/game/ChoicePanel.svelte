@@ -86,11 +86,11 @@
       <strong>{req.prompt}</strong>
       {#if pile}
         <span class="pile">
-          {req.purpose === 'search' ? tx(`เด็คของคุณ ${pile.length} ใบ`, `Your deck: ${pile.length} cards`) : tx(`การ์ดบนสุดของเด็ค ${pile.length} ใบ`, `Top ${pile.length} cards of your deck`)} · {tx(`เลือกได้ ${takeable} ใบ`, `${takeable} can be taken`)}
+          {req.purpose === 'search' ? tx(`เด็คของคุณ ${pile.length} ใบ`, `Your deck: ${pile.length} cards`) : tx(`การ์ด ${pile.length} ใบบนสุดของเด็ค`, `Top ${pile.length} cards of your deck`)} · {tx(`หยิบได้ ${takeable} ใบ`, `${takeable} can be taken`)}
         </span>
       {/if}
       {#if kind !== 'label'}<span class="need">{needs} · {tx('เลือกแล้ว', 'chosen')} {picks.length}</span>{/if}
-      {#if kind === 'card'}<span class="tip">{tx('กดค้าง / คลิกขวาที่การ์ดเพื่อดูใบใหญ่ · ยืนยันที่แถบด้านล่าง', 'Press and hold / right-click a card to see it large · confirm in the bar below')}</span>{/if}
+      {#if kind === 'card'}<span class="tip">{tx('กดค้างหรือคลิกขวาที่การ์ดเพื่อดูใบใหญ่ · กดยืนยันที่แถบด้านล่าง', 'Press and hold / right-click a card to see it large · confirm in the bar below')}</span>{/if}
     </div>
   </div>
 
@@ -145,7 +145,7 @@
       {/each}
     </div>
   {:else if kind === 'slot'}
-    <p class="hint">{tx('กดเลือก Pokémon ที่ไฮไลต์บนสนาม', 'Choose a lit Pokémon on the table')}{req.repeat ? tx(' (กดซ้ำได้)', ' (again for more)') : ''}</p>
+    <p class="hint">{tx('แตะเลือก Pokémon ที่สว่างบนสนาม', 'Choose a lit Pokémon on the table')}{req.repeat ? tx(' (แตะตัวเดิมซ้ำได้)', ' (again for more)') : ''}</p>
     <div class="labels">
       {#each req.options as o (o.value)}
         <button type="button" class="lbl" class:on={counts.has(o.value)} onclick={() => onpick(o.value)}>

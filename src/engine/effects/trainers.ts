@@ -45,7 +45,7 @@ function attachFromDiscard(ctx: Ctx, p: PlayerId, energyFilter: (k: string) => b
   const energies = discardWhere(ctx.s, p, energyFilter);
   if (energies.length === 0 || targets.length === 0) return;
   const [e] = ctx.pickCards(p, uniqueByKey(ctx.s, energies), { purpose: 'attach', prompt, source });
-  const [to] = ctx.pickSlots(p, targets, { purpose: 'attach', prompt: tx('ติดให้ Pokémon ตัวไหน', 'Attach it to which Pokémon?'), source });
+  const [to] = ctx.pickSlots(p, targets, { purpose: 'attach', prompt: tx('จะติดให้ Pokémon ตัวไหน', 'Attach it to which Pokémon?'), source });
   attachFrom(ctx, p, e!, to!);
 }
 
@@ -204,7 +204,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       // Shuffled, then put on the bottom of the deck.
       ctx.shuffleCards(opp(p), hand);
       o.deck.push(...hand);
-      ctx.log(tx(`${ctx.who(opp(p))} ส่งมือ ${hand.length} ใบไปใต้เด็ค`, `${ctx.who(opp(p))} ${verb(ctx.who(opp(p)), 'put')} ${hand.length} cards from hand on the bottom of the deck`), p);
+      ctx.log(tx(`${ctx.who(opp(p))} ส่งการ์ดในมือ ${hand.length} ใบไปไว้ใต้เด็ค`, `${ctx.who(opp(p))} ${verb(ctx.who(opp(p)), 'put')} ${hand.length} cards from hand on the bottom of the deck`), p);
       ctx.draw(opp(p), 3);
     },
   },
@@ -360,7 +360,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
   kieran: {
     play: (ctx, p) => {
       const canSwitch = ctx.ps(p).bench.length > 0;
-      const i = ctx.pickOption(p, tx('Kieran: เลือก 1 อย่าง', 'Kieran: choose 1'), canSwitch ? [tx('+30 ดาเมจใส่ ex ตัวหลักเทิร์นนี้', '+30 damage to Active Pokémon ex this turn'), tx('สลับตัวหลักกับ Bench', 'Switch your Active Pokémon with a Benched one')] : [tx('+30 ดาเมจใส่ ex ตัวหลักเทิร์นนี้', '+30 damage to Active Pokémon ex this turn')], 'kieran');
+      const i = ctx.pickOption(p, tx('Kieran: เลือก 1 อย่าง', 'Kieran: choose 1'), canSwitch ? [tx('เทิร์นนี้ทำดาเมจใส่ ex ตัวหลักเพิ่ม 30', '+30 damage to Active Pokémon ex this turn'), tx('สลับตัวหลักกับตัวบน Bench', 'Switch your Active Pokémon with a Benched one')] : [tx('เทิร์นนี้ทำดาเมจใส่ ex ตัวหลักเพิ่ม 30', '+30 damage to Active Pokémon ex this turn')], 'kieran');
       if (i === 1) chooseSwitch(ctx, p, 'kieran');
       else ctx.ps(p).buffs.push('kieran');
     },
@@ -405,7 +405,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       const items = o.hand.filter((c) => isTrainerType(key(ctx.s, c), 'Item'));
       const picked = ctx.pickCards(p, items, { purpose: 'discard', prompt: tx('Eri: ทิ้ง Item ในมืออีกฝั่ง (สูงสุด 2)', "Eri: discard up to 2 Items from your opponent's hand"), min: 0, max: 2, source: 'eri' });
       ctx.toDiscard(opp(p), picked);
-      ctx.log(tx(`มืออีกฝั่ง ${o.hand.length} ใบ`, `Opponent's hand: ${o.hand.length} cards`), p);
+      ctx.log(tx(`อีกฝั่งมีการ์ดในมือ ${o.hand.length} ใบ`, `Opponent's hand: ${o.hand.length} cards`), p);
     },
   },
 };

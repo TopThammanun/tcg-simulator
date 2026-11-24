@@ -45,7 +45,7 @@
       >{req.prompt}{#if !single}<span class="count" title={tx('เลือกแล้ว', 'chosen')}>{picks.length}{req.max < 99 ? `/${req.max}` : ''}</span
         >{/if}</strong
     >
-    <span class="how">{how}{req.repeat ? tx(' (แตะซ้ำได้)', ' (tap again for more)') : ''}</span>
+    <span class="how">{how}{req.repeat ? tx(' (แตะตัวเดิมซ้ำได้)', ' (tap again for more)') : ''}</span>
   </div>
   {#if !single}
     <div class="acts">

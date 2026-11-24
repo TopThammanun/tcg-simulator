@@ -40,7 +40,7 @@
   const pct = (p: number) => `${Math.round(p * 100)}%`;
   const result = (g: SavedGame) => (g.winner === 0 ? tx('ชนะ', 'Won') : g.winner === 1 ? tx('แพ้', 'Lost') : tx('เสมอ', 'Draw'));
   const date = (ms: number) => new Date(ms).toLocaleString(lang() === 'en' ? 'en-GB' : 'th-TH', { dateStyle: 'medium', timeStyle: 'short' });
-  const yours = (g: SavedGame) => g.mineName ?? tx('list ของคุณ', 'Your list');
+  const yours = (g: SavedGame) => g.mineName ?? tx('ลิสต์ของคุณ', 'Your list');
   /** The opponent's archetype: list variants ("Festival Lead (Dipplin)") count together. */
   const archetype = (g: SavedGame) => g.opponentName.replace(/ \(.*\)$/, '');
 
@@ -127,7 +127,7 @@
       const fresh = readGamesFile(await file.text()).filter((g) => !have.has(`${g.seed}:${g.savedAt}`));
       for (const g of fresh) await saveGame(g);
       games = await listGames();
-      note = tx(`นำเข้า ${fresh.length} เกม`, `${fresh.length} games imported`);
+      note = tx(`นำเข้าแล้ว ${fresh.length} เกม`, `${fresh.length} games imported`);
     } catch (err) {
       note = (err as Error).message;
     }
@@ -164,7 +164,7 @@
   <div class="empty">
     <p>
       {tx(
-        'ยังไม่มีเกม เล่นกับบอทจนจบเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเทิร์นไหนที่เกมพลิก',
+        'ยังไม่มีเกมเลย ลองเล่นกับบอทให้จบสักเกม แล้วเกมจะถูกเก็บไว้ที่นี่ (ในเบราว์เซอร์นี้) พร้อมบอกว่าเกมพลิกที่เทิร์นไหน',
         'No games yet. Play the bot to the end and the game is kept here (in this browser), with the turn the game turned on.',
       )}
     </p>
@@ -178,7 +178,7 @@
       <div class="totals">
         <div><span class="num">{record.played}</span>{tx('เกม', 'games')}</div>
         <div><span class="num">{pct(record.won / record.played)}</span>{tx('ชนะ', 'won')}</div>
-        {#if gyms.length}<div><span class="num">{earned.size}/{gyms.length}</span>{tx('เหรียญยิม', 'badges')}</div>{/if}
+        {#if gyms.length}<div><span class="num">{earned.size}/{gyms.length}</span>{tx('เข็มกลัดยิม', 'badges')}</div>{/if}
       </div>
       <ol class="vs">
         {#each record.rows as r (r.name)}
@@ -225,13 +225,13 @@
           </span>
         </span>
         <span class="found" class:none={!f}>
-          {#if !f}{tx('ยังไม่ได้ทบทวน', 'Not reviewed yet')}{:else if f.missed || f.better}
-            {#if f.missed}<span class="bad" title={tx('พลาดชัด', 'Clear slip')}>✗{f.missed}</span>{/if}
+          {#if !f}{tx('ยังไม่ได้รีวิว', 'Not reviewed yet')}{:else if f.missed || f.better}
+            {#if f.missed}<span class="bad" title={tx('พลาดชัดเจน', 'Clear slip')}>✗{f.missed}</span>{/if}
             {#if f.better}<span class="warn" title={tx('น่าจะมีทางที่ดีกว่า', 'Likely a better way')}>▲{f.better}</span>{/if}
-          {:else}{tx('ไม่พบจุดพลาด', 'No slip found')}{/if}
+          {:else}{tx('ไม่เจอจุดพลาด', 'No slip found')}{/if}
         </span>
         <span class="act">
-          <a class="button" href={href(`/review/?id=${g.id}`)}>{tx('ทบทวน', 'Review')}</a>
+          <a class="button" href={href(`/review/?id=${g.id}`)}>{tx('รีวิว', 'Review')}</a>
           <button type="button" class="link" onclick={() => remove(g)}>{tx('ลบ', 'Delete')}</button>
         </span>
       </li>
@@ -254,13 +254,13 @@
 
 {#snippet badgeCase()}
   <div class="case">
-    <ul class="case-row" aria-label={tx(`เหรียญยิม ${earned.size} จาก ${gyms.length}`, `Gym badges: ${earned.size} of ${gyms.length}`)}>
+    <ul class="case-row" aria-label={tx(`เข็มกลัดยิม ${earned.size} จาก ${gyms.length} อัน`, `Gym badges: ${earned.size} of ${gyms.length}`)}>
       {#each gyms as gym (gym.name)}
         {@const has = earned.has(gym.name)}
         <li>
           <a
             href={href(`/play/?opp=${gym.slugs[0]}`)}
-            title={has ? tx(`เหรียญของ ${gym.name}: ได้แล้ว`, `${gym.name}'s badge: earned`) : tx(`ท้าชิง ${gym.name}`, `Challenge ${gym.name}`)}
+            title={has ? tx(`เข็มกลัดของ ${gym.name}: ได้แล้ว`, `${gym.name}'s badge: earned`) : tx(`ท้าดวล ${gym.name}`, `Challenge ${gym.name}`)}
           >
             <GymBadge shape={gym.shape} type={gym.type} earned={has} size={36} label={has ? tx(`${gym.name} (ได้แล้ว)`, `${gym.name} (earned)`) : tx(`${gym.name} (ยังไม่ได้)`, `${gym.name} (not yet)`)} />
           </a>
@@ -268,7 +268,7 @@
       {/each}
     </ul>
     <p class="case-next">
-      {#if nextGym}{tx(`เหรียญถัดไป: ชนะ ${nextGym.name}`, `Next badge: beat ${nextGym.name}`)}{:else}{tx('เก็บครบทุกเหรียญแล้ว', 'Every badge collected')}{/if}
+      {#if nextGym}{tx(`เข็มกลัดถัดไป: ชนะ ${nextGym.name} ให้ได้`, `Next badge: beat ${nextGym.name}`)}{:else}{tx('สะสมเข็มกลัดครบทุกอันแล้ว', 'Every badge collected')}{/if}
     </p>
   </div>
 {/snippet}

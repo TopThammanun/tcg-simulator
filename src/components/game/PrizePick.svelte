@@ -36,11 +36,11 @@
 
 <div class="prize-pick dark" role="dialog" aria-modal="true" aria-label={tx('เลือก Prize', 'Choose Prize cards')} transition:fade={{ duration: motion(180) }}>
   <header>
-    <p class="kicker">{knockedOut.length ? tx(`${knockedOut.join(', ')} ของบอทถูก Knock Out`, `The bot's ${knockedOut.join(', ')} Knocked Out`) : 'Knock Out'}</p>
-    <h2>{tx(`เลือก Prize ${take} ใบ`, `Choose ${take} Prize ${take === 1 ? 'card' : 'cards'}`)}</h2>
+    <p class="kicker">{knockedOut.length ? tx(`${knockedOut.join(', ')} ของบอทโดน KO`, `The bot's ${knockedOut.join(', ')} Knocked Out`) : 'Knock Out'}</p>
+    <h2>{tx(`หยิบ Prize ${take} ใบ`, `Choose ${take} Prize ${take === 1 ? 'card' : 'cards'}`)}</h2>
     <p class="how">
-      {tx('การ์ดคว่ำอยู่ทุกใบ เลือกใบไหนก็ได้ ใบที่เลือกจะเข้ามือ ·', 'Every card is face down: pick any, they go into your hand ·')}
-      {tx('เหลือ', '')} <span class="mono">{left}</span> {tx('ใบ เก็บแล้วจะเหลือ', 'left, then')} <span class="mono">{left - take}</span>
+      {tx('การ์ดคว่ำอยู่ทุกใบ เลือกใบไหนก็ได้ ใบที่เลือกจะเข้ามือคุณ ·', 'Every card is face down: pick any, they go into your hand ·')}
+      {tx('ตอนนี้เหลือ', '')} <span class="mono">{left}</span> {tx('ใบ หยิบแล้วจะเหลือ', 'left, then')} <span class="mono">{left - take}</span>
     </p>
   </header>
 
@@ -53,7 +53,7 @@
           type="button"
           class="pz"
           class:on={picks.includes(at)}
-          aria-label={tx(`เก็บ Prize ใบที่ ${i + 1}`, `Take Prize card ${i + 1}`)}
+          aria-label={tx(`หยิบ Prize ใบที่ ${i + 1}`, `Take Prize card ${i + 1}`)}
           aria-pressed={single ? undefined : picks.includes(at)}
           aria-keyshortcuts={String(i + 1)}
           onclick={() => onpick(at)}
@@ -69,11 +69,11 @@
 
   <footer>
     {#if single}
-      <p class="hint">{tx('แตะการ์ดใบที่จะเก็บ', 'Tap the card to take')}<span class="keys">{tx(' (หรือกดเลข 1–6)', ' (or press 1–6)')}</span></p>
+      <p class="hint">{tx('แตะใบที่จะหยิบ', 'Tap the card to take')}<span class="keys">{tx(' (หรือกดเลข 1–6)', ' (or press 1–6)')}</span></p>
     {:else}
       <p class="hint">{tx('เลือกแล้ว', 'Chosen')} <span class="mono">{picks.length}/{take}</span></p>
       <button type="button" class="ghost" onclick={onclear} disabled={picks.length === 0}>{tx('ล้าง', 'Clear')}</button>
-      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>{tx(`เก็บ ${take} ใบ`, `Take ${take}`)}</button>
+      <button type="button" class="go" onclick={onsubmit} disabled={!ready}>{tx(`หยิบ ${take} ใบ`, `Take ${take}`)}</button>
     {/if}
   </footer>
 </div>
