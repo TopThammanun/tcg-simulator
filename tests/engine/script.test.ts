@@ -48,7 +48,9 @@ const zones = (s: GameState) =>
 
 describe('DealScript: recording and replaying a real game', () => {
   it('records every shuffle and coin flip, and the same actions replay the same game under another seed', () => {
-    const { states, actions } = playUntil(recording(11), (_s, n) => n >= 120);
+    // A whole game: every effect that shuffles anything (a hand put under the deck) must go through the script.
+    const { states, actions } = playUntil(recording(11), () => false);
+    expect(states[states.length - 1]!.winner).not.toBeNull();
     const last = states[states.length - 1]!;
     const sc = last.script!;
     expect(sc.orders[0].length).toBeGreaterThanOrEqual(1);

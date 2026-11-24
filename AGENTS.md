@@ -48,6 +48,8 @@ npx tsx scripts/meta/compare.ts [--games 4000] [--weights <net or expert set> --
 npx tsx scripts/meta/variants.ts   # real lists our engine can play, per deck -> .cache/meta/variants.json (gen.ts `variants`, ppo.py --variants)
 npx tsx scripts/meta/pick-lists.ts [--write --only a,b]   # each bot deck's most typical recent top list that the engine can play
 npx tsx scripts/analyze-games.ts <tcg-sim-games-*.json>   # the bot's turns in games exported from /review/ -> .report.md
+npx tsx scripts/pro/agreement.ts [data/pro/*.json] [--deals 8] [--hard]   # BOT-PRO.md P1: the bot's agreement with the pros' moves in transcribed games (/transcribe/), the value head on real games, how the pros pilot each deck -> data/pro/report.md
+npx tsx scripts/pro/synthetic.ts --games 6   # stand-in transcripts (the hard bot as the pro, cards named only as played) for trying the ruler -> .cache/pro/synthetic.json
 # ppo.py --starts <tcg-sim-games-*.json> [--starts-share 0.1]: some self-play games start from those games' positions (gen.ts `starts`)
 npx tsx scripts/threat-gate.ts --games 2400   # phase 7 gate: "ภัยเทิร์นหน้า" chances vs what happened in bot games
 npx tsx scripts/threat-gate.ts --fit --games 4000   # refit src/analysis/calibration.json (after changing bots or decks)

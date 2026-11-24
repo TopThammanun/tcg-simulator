@@ -2,7 +2,6 @@
 // through the rules; only Stadiums with a "use" (Academy at Night) appear in actions.
 import { tx, verb } from '../../i18n';
 import { uniqueByKey, type Ctx } from '../ctx';
-import { shuffleInPlace } from '../rng';
 import {
   basicBelow,
   energyCard,
@@ -203,7 +202,7 @@ export const TRAINERS: Record<string, TrainerImpl> = {
       const hand = o.hand.splice(0);
       if (hand.length === 0) return;
       // Shuffled, then put on the bottom of the deck.
-      ctx.s.rng.shuffle[opp(p)] = shuffleInPlace(hand, ctx.s.rng.shuffle[opp(p)]);
+      ctx.shuffleCards(opp(p), hand);
       o.deck.push(...hand);
       ctx.log(tx(`${ctx.who(opp(p))} ส่งมือ ${hand.length} ใบไปใต้เด็ค`, `${ctx.who(opp(p))} ${verb(ctx.who(opp(p)), 'put')} ${hand.length} cards from hand on the bottom of the deck`), p);
       ctx.draw(opp(p), 3);

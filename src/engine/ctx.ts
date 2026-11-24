@@ -189,19 +189,25 @@ export class Ctx {
   }
 
   shuffle(p: PlayerId): void {
-    const ps = this.ps(p);
+    this.shuffleCards(p, this.ps(p).deck);
+    this.ps(p).knownTop = [];
+  }
+
+  /** Shuffle any cards of p's in place (the deck; a hand put under the deck): a transcribed game records and replays it. */
+  shuffleCards(p: PlayerId, cards: CardId[]): void {
     const sc = this.s.script;
-    if (sc) {
-      const k = this.s.scriptPos!.shuffles[p]++;
-      const order = sc.orders[p][k];
-      if (order) ps.deck = orderDeck(ps.deck, order, p, k);
-      else {
-        this.s.rng.shuffle[p] = shuffleInPlace(ps.deck, this.s.rng.shuffle[p]);
-        if (this.s.phase === 'setup' && sc.mulligans) forceMulligan(this.s, p, k < sc.mulligans[p]);
-        if (sc.record) this.s.script = withOrder(sc, p, k, ps.deck.slice());
-      }
-    } else this.s.rng.shuffle[p] = shuffleInPlace(ps.deck, this.s.rng.shuffle[p]);
-    ps.knownTop = [];
+    if (!sc) {
+      this.s.rng.shuffle[p] = shuffleInPlace(cards, this.s.rng.shuffle[p]);
+      return;
+    }
+    const k = this.s.scriptPos!.shuffles[p]++;
+    const order = sc.orders[p][k];
+    if (order) cards.splice(0, cards.length, ...orderDeck(cards, order, p, k));
+    else {
+      this.s.rng.shuffle[p] = shuffleInPlace(cards, this.s.rng.shuffle[p]);
+      if (this.s.phase === 'setup' && sc.mulligans && cards === this.ps(p).deck) forceMulligan(this.s, p, k < sc.mulligans[p]);
+      if (sc.record) this.s.script = withOrder(sc, p, k, cards.slice());
+    }
   }
 
   // ---------- zones (deck index 0 is the top) ----------
