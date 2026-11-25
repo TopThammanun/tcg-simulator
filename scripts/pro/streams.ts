@@ -1,6 +1,7 @@
 // Read every stream of data/pro/vods.json (BOT-PRO.md P4): each video downloaded, sampled by scripts/pro/stream.ts,
 // deleted, then turned into games and turns by scripts/pro/trace.ts. Resumable: a video whose samples are complete
-// (its .done marker) is skipped. Several videos at once with --workers.
+// (its .done marker) is skipped. Several videos at once with --workers. A video that failed (the connection dropped)
+// is tried again 10 minutes later, 3 times in all.
 //   npx tsx scripts/pro/streams.ts [--workers 2] [--every 4] [--only id,id]
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -31,18 +32,32 @@ const run = (cmd: string[], log: string) =>
     });
   });
 
-let next = 0;
+const queue = videos.map((v) => ({ v, tries: 0 }));
+let waiting = 0;
 async function worker() {
   for (;;) {
-    const v = videos[next++];
-    if (!v) return;
+    const job = queue.shift();
+    if (!job) {
+      // Another worker may still put a failed video back.
+      if (!waiting) return;
+      await new Promise((ok) => setTimeout(ok, 30_000));
+      continue;
+    }
+    const { v } = job;
     const t0 = Date.now();
     console.log(`start ${v.id} (${v.hours} h) ${v.title}`);
     // Finals and top-cut videos every 3 seconds, the long Day streams every EVERY.
     const every = v.hours < 2 ? '3' : EVERY;
     const code = await run(['scripts/pro/stream.ts', '--video', v.id, '--every', every], `.cache/pro/streams/${v.id}.log`);
     if (code !== 0) {
-      console.log(`failed ${v.id} (see .cache/pro/streams/${v.id}.log)`);
+      console.log(`failed ${v.id} (see .cache/pro/streams/${v.id}.log)${++job.tries < 3 ? ', again in 10 min' : ''}`);
+      if (job.tries < 3) {
+        waiting++;
+        setTimeout(() => {
+          queue.push(job);
+          waiting--;
+        }, 600_000);
+      }
       continue;
     }
     await run(['scripts/pro/trace.ts', v.id], `.cache/pro/streams/${v.id}.trace.log`);

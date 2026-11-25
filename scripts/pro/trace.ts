@@ -40,7 +40,15 @@ function lev(a: string, b: string): number {
 }
 
 /** The dictionary entry closest to `text`, when close enough (a quarter of its letters may be misread). */
+const seen = new WeakMap<readonly string[], Map<string, string | null>>();
 function closest(text: string, dict: readonly string[]): string | null {
+  // The same text comes back in hundreds of samples (a board stays up for minutes): each is matched once.
+  const known = seen.get(dict) ?? new Map<string, string | null>();
+  seen.set(dict, known);
+  if (!known.has(text)) known.set(text, nearest(text, dict));
+  return known.get(text)!;
+}
+function nearest(text: string, dict: readonly string[]): string | null {
   const t = norm(text);
   if (t.length < 3) return null;
   let best: string | null = null;
@@ -74,6 +82,11 @@ for (const e of majors)
 for (const c of Object.values(manifest.cards)) (c.category === 'pokemon' ? POKEMON : c.category === 'trainer' ? TRAINERS : new Set()).add(c.name);
 const POKEMON_NAMES = [...POKEMON];
 const TRAINER_NAMES = [...TRAINERS];
+/** The Pokémon each attack or Ability name is on (the engine's cards): a Benched Pokémon's row prints them under its name. */
+const MOVES = new Map<string, Set<string>>();
+for (const c of Object.values(manifest.cards))
+  if (c.category === 'pokemon') for (const m of [...c.attacks, ...c.abilities]) MOVES.set(m.name, (MOVES.get(m.name) ?? new Set()).add(c.name));
+const MOVE_NAMES = [...MOVES.keys()];
 const PLAYERS = [...new Set(majors.flatMap((e) => e.lists.map((l) => l.player)))];
 const vods = (JSON.parse(readFileSync('data/pro/vods.json', 'utf8')) as { videos: { event: number; id: string }[] }).videos;
 /** The finals of data/pro/matches.json: their players by event (the streams open with replays of past finals). */
@@ -160,7 +173,7 @@ const hpOf = (text: string) => {
  * Pokémon name near the top is the Active, below y 330 a Benched Pokémon (top to bottom); an HP pair belongs to the
  * name just above it; the player's name is on the first line.
  */
-function read(s: Sample, home: readonly string[]): Read | null {
+export function read(s: Sample, home: readonly string[]): Read | null {
   if (!s.overlay) return null;
   const sides = ([0, 1] as const).map((side): Side => {
     const lines: OcrLine[] = [...(s.ocr[side === 0 ? 'left' : 'right'] ?? []), ...(s.ocr[side === 0 ? 'lhp' : 'rhp'] ?? [])];
@@ -178,6 +191,23 @@ function read(s: Sample, home: readonly string[]): Read | null {
       if (last && Math.abs(last.y - x.l.y) < 25) continue;
       rows.push({ y: x.l.y, name: x.name });
     }
+    // A Benched Pokémon whose name went unread ("Torch"") is told by its attacks and Abilities, one line each
+    // from 14 px below the name: the one Pokémon that has them all.
+    const moves = lines
+      .filter((l) => l.y > 330 && l.text.length >= 4)
+      .map((l) => ({ y: l.y, mons: MOVES.get(closest(l.text, MOVE_NAMES) ?? '') }))
+      .filter((m): m is { y: number; mons: Set<string> } => m.mons !== undefined)
+      .sort((a, b) => a.y - b.y);
+    for (let j = 0; j < moves.length; ) {
+      let k = j + 1;
+      while (k < moves.length && moves[k]!.y - moves[k - 1]!.y < 22) k++;
+      const row = moves.slice(j, k);
+      j = k;
+      const y = row[0]!.y - 14;
+      const mons = [...row[0]!.mons].filter((n) => row.every((m) => m.mons.has(n)));
+      if (mons.length === 1 && !rows.some((r) => Math.abs(r.y - y) < 25)) rows.push({ y, name: mons[0]! });
+    }
+    rows.sort((a, b) => a.y - b.y);
     const bench: (Mon | null)[] = rows.slice(0, 8).map((r) => {
       const hp = hpBelow(r.y, r.y + 62);
       return { name: r.name, hp: hp?.hp ?? null, max: hp?.max ?? null };
@@ -343,7 +373,11 @@ function diff(start: [Board, Board], end: [Board, Board], side: 0 | 1): Pick<Tur
 
 function trace(samples: Sample[], event: number | undefined): { games: Game[]; replays: number } {
   const home = majors.find((e) => e.id === event)?.lists.map((l) => l.player) ?? [];
-  const reads = smooth(samples.map((s) => read(s, home)).filter((r): r is Read => r !== null));
+  // (an overlay showing no Pokémon on either side, or no Prize card on either, is between games or scenes, not a
+  // board: one player always has some left)
+  const reads = smooth(samples.map((s) => read(s, home)).filter((r): r is Read => r !== null)).filter(
+    (r) => r.sides.some((x) => x.active || x.bench.some((b) => b)) && r.sides.some((x) => x.lit > 0),
+  );
   // Prize icons: whether a lit icon is a Prize taken or left is read off the data: lit counts rise through a game
   // when they are Prizes taken.
   const games: Game[] = [];
@@ -377,7 +411,13 @@ function trace(samples: Sample[], event: number | undefined): { games: Game[]; r
         players[1] &&
         !(same(players[0], game.players[0]) && same(players[1], game.players[1])) &&
         reads.slice(i, i + 4).every((x) => same(x.sides[0].player, players[0]) && same(x.sides[1].player, players[1])));
-    const restart = game && game.turns.length > 2 && fresh(0) && fresh(1) && reads.slice(i, i + 3).every((x) => x.sides.every((s) => s.bench.every((b) => b === null)));
+    // A restart also when both players have their 6 Prize cards again after some were taken.
+    const full = (x: Read) => x.sides.every((s) => s.lit === 6);
+    const restart =
+      game &&
+      game.turns.length > 2 &&
+      ((fresh(0) && fresh(1) && reads.slice(i, i + 3).every((x) => x.sides.every((s) => s.bench.every((b) => b === null)))) ||
+        (game.turns.some((t) => t.end.some((b) => b.prizes > 0 && b.prizes <= 4)) && reads.slice(i, i + 3).every(full) && !reads.slice(Math.max(0, i - 3), i).some(full)));
     if (newMatch || restart) {
       close();
       turn = null;
